@@ -31,7 +31,7 @@ export default function Login() {
           <p className="text-gray-400 mt-2">Predict. Compete. Dominate.</p>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-8 border border-gray-800">
+        <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 border border-gray-800">
           <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
 
           {error && (

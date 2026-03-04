@@ -21,7 +21,6 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
         wagerAmount: parseInt(wager)
       })
       setSplit(data)
-      onVoted()
     } catch (err) {
       setError(err.response?.data?.message || 'Something went wrong')
     } finally {
@@ -30,8 +29,8 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 px-4">
-      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-md">
+    <div className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50">
+      <div className="bg-gray-900 border border-gray-800 rounded-t-2xl sm:rounded-2xl p-6 w-full sm:max-w-md">
 
         {/* Header */}
         <div className="flex items-start justify-between mb-4">
@@ -129,7 +128,10 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             </div>
 
             <button
-              onClick={onClose}
+              onClick={async () => {
+                await onVoted()
+                onClose()
+              }}
               className="w-full bg-gray-800 hover:bg-gray-700 text-white font-semibold py-3 rounded-xl transition-colors"
             >
               Done
