@@ -1,0 +1,84 @@
+package com.fantasyseers.api.service;
+
+import com.fantasyseers.api.dto.PropDto;
+import com.fantasyseers.api.entity.Prop;
+import com.fantasyseers.api.entity.User;
+import com.fantasyseers.api.repository.PropRepository;
+import com.fantasyseers.api.repository.UserRepository;
+import com.fantasyseers.api.repository.VoteRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class PropService {
+
+    private final PropRepository propRepository;
+    private final UserRepository userRepository;
+    private final VoteRepository voteRepository;
+
+    public PropDto.PropResponse createProp(PropDto.CreateRequest request, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Prop prop = Prop.builder()
+                .title(request.title())
+                .description(request.description())
+                .sport(request.sport())
+                .closesAt(request.closesAt())
+                .createdBy(user)
+                .isAdminProp(true)
+                .scope(Prop.Scope.PUBLIC)
+                .status(Prop.Status.OPEN)
+                .build();
+
+        return toResponse(propRepository.save(prop), username);
+    }
+
+    public List<PropDto.PropResponse> getPublicProps(String username) {
+        return propRepository
+                .findByScopeOrdered(Prop.Scope.PUBLIC)
+                .stream()
+                .map(p -> toResponse(p, username))
+                .toList();
+    }
+
+    public PropDto.PropResponse getPropById(Long id, String username) {
+        Prop prop = propRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
+        return toResponse(prop, username);
+    }
+
+    private PropDto.PropResponse toResponse(Prop prop, String username) {
+        String userChoice = null;
+        Boolean userWon = null;
+
+        if (username != null) {
+            var userOpt = userRepository.findByUsername(username);
+            if (userOpt.isPresent()) {
+                var vote = voteRepository.findByPropIdAndUserId(prop.getId(), userOpt.get().getId());
+                if (vote.isPresent()) {
+                    userChoice = vote.get().getChoice().name();
+                    if (prop.getResult() != null) {
+                        userWon = vote.get().getChoice().name().equals(prop.getResult().name());
+                    }
+                }
+            }
+        }
+
+        return new PropDto.PropResponse(
+                prop.getId(),
+                prop.getTitle(),
+                prop.getDescription(),
+                prop.getSport().name(),
+                prop.getStatus().name(),
+                prop.getResult() != null ? prop.getResult().name() : null,
+                prop.getClosesAt(),
+                prop.getCreatedBy().getUsername(),
+                userChoice,
+                userWon
+        );
+    }
+}

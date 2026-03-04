@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: fantasy-seers-db
+    environment:
+      POSTGRES_DB: fantasyseers_db
+      POSTGRES_USER: fantasyseers
+      POSTGRES_PASSWORD: fantasyseers_secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fantasyseers -d fantasyseers_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fantasy-seers-backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fantasyseers_db
+      SPRING_DATASOURCE_USERNAME: fantasyseers
+      SPRING_DATASOURCE_PASSWORD: fantasyseers_secret
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      JWT_SECRET: fantasy-seers-super-secret-jwt-key-change-in-production
+      JWT_EXPIRATION_MS: 86400000
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: fantasy-seers-frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+
+volumes:
+  postgres_data:
