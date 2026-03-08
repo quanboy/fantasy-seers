@@ -11,7 +11,8 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    console.log('interceptor hit', err.response?.status)
+    if (err.response?.status === 401 || err.response?.status === 403) {
       localStorage.removeItem('fs_token')
       window.location.href = '/login'
     }
