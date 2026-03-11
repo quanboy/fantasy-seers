@@ -140,7 +140,7 @@ export default function SubmitPropCard({ onSubmitted }) {
       </div>
 
       {/* Min/Max wager row */}
-      <div className="flex gap-3 mb-4">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <input
           name="minWager"
           type="number"

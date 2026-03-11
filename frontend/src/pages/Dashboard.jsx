@@ -6,7 +6,7 @@ import VoteModal from "../components/VoteModal";
 import SubmitPropCard from "../components/SubmitPropCard";
 
 export default function Dashboard() {
-  const { user, logout, setUser, loading: authLoading } = useAuth();
+  const { user, logout, setUser } = useAuth();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,10 +19,8 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchProps();
-    }
-  }, [authLoading]);
+    fetchProps();
+  }, []);
 
   useEffect(() => {
     const interval = setInterval(async () => {

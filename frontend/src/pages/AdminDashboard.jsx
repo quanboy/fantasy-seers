@@ -6,12 +6,16 @@ export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [actioningId, setActioningId] = useState(null); // Track which prop is being actioned
+  const [fetchError, setFetchError] = useState(false);
+  const [actioningId, setActioningId] = useState(null);
+  const [actionErrors, setActionErrors] = useState({});
 
   const fetchPending = () => {
+    setFetchError(false);
     adminApi
       .getPending()
       .then(({ data }) => setPending(data))
+      .catch(() => setFetchError(true))
       .finally(() => setLoading(false));
   };
 
@@ -22,12 +26,15 @@ export default function AdminDashboard() {
   const handleApprove = async (id) => {
     if (actioningId) return;
     setActioningId(id);
+    setActionErrors((prev) => ({ ...prev, [id]: null }));
     try {
       await adminApi.approve(id);
-      // Remove the prop from the list after approving
       setPending((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error("Failed to approve", err);
+      setActionErrors((prev) => ({
+        ...prev,
+        [id]: "Failed to approve. Try again.",
+      }));
     } finally {
       setActioningId(null);
     }
@@ -36,12 +43,15 @@ export default function AdminDashboard() {
   const handleReject = async (id) => {
     if (actioningId) return;
     setActioningId(id);
+    setActionErrors((prev) => ({ ...prev, [id]: null }));
     try {
       await adminApi.reject(id);
-      // Remove the prop from the list after rejecting
       setPending((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      console.error("Failed to reject", err);
+      setActionErrors((prev) => ({
+        ...prev,
+        [id]: "Failed to reject. Try again.",
+      }));
     } finally {
       setActioningId(null);
     }
@@ -80,7 +90,21 @@ export default function AdminDashboard() {
           </p>
         )}
 
-        {!loading && pending.length === 0 && (
+        {/* Fetch error state */}
+        {!loading && fetchError && (
+          <div className="text-center py-12">
+            <div className="text-4xl mb-3">⚠️</div>
+            <p className="text-gray-400 mb-4">Failed to load pending props.</p>
+            <button
+              onClick={fetchPending}
+              className="bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!loading && !fetchError && pending.length === 0 && (
           <div className="text-center py-12">
             <div className="text-4xl mb-3">✅</div>
             <p className="text-gray-500">
@@ -89,7 +113,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {!loading && pending.length > 0 && (
+        {!loading && !fetchError && pending.length > 0 && (
           <div className="space-y-4">
             {pending.map((prop) => (
               <div
@@ -140,19 +164,26 @@ export default function AdminDashboard() {
                   {prop.maxWager && <span>Max wager: {prop.maxWager} pts</span>}
                 </div>
 
+                {/* Inline action error */}
+                {actionErrors[prop.id] && (
+                  <p className="text-red-400 text-sm mb-3">
+                    {actionErrors[prop.id]}
+                  </p>
+                )}
+
                 {/* Approve / Reject buttons */}
                 <div className="flex gap-3">
                   <button
                     onClick={() => handleApprove(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="bg-green-700 hover:bg-green-600 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
+                    className="bg-green-700 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
                   >
                     {actioningId === prop.id ? "Approving..." : "Approve"}
                   </button>
                   <button
                     onClick={() => handleReject(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="bg-red-900 hover:bg-red-800 text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
+                    className="bg-red-900 hover:bg-red-800 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
                   >
                     {actioningId === prop.id ? "Rejecting..." : "Reject"}
                   </button>
