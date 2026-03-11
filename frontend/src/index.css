@@ -3,7 +3,171 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-oracle: #7C3AED;
+    --color-gold: #F59E0B;
+    --color-bg: #07080F;
+  }
+
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    box-sizing: border-box;
+  }
+
   body {
-    @apply bg-gray-950 text-gray-100 font-sans;
+    @apply bg-void-950 text-slate-200 font-body;
+    background-color: #07080F;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0E1018;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #272B42;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #7C3AED;
+  }
+
+  /* Input / select base reset */
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.4) sepia(1) saturate(2) hue-rotate(220deg);
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  /* === Glass card base === */
+  .glass-card {
+    @apply bg-void-800 border border-void-700 rounded-2xl;
+    background: linear-gradient(145deg, #161825 0%, #0E1018 100%);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+  }
+
+  .glass-card-hover {
+    @apply glass-card transition-all duration-300;
+  }
+  .glass-card-hover:hover {
+    border-color: #4C1D95;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 20px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
+    transform: translateY(-1px);
+  }
+
+  /* === Oracle button === */
+  .btn-oracle {
+    @apply bg-oracle-500 hover:bg-oracle-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 font-body;
+    box-shadow: 0 0 0 0 rgba(124,58,237,0);
+  }
+  .btn-oracle:hover {
+    box-shadow: 0 0 24px rgba(124,58,237,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-oracle:active {
+    transform: translateY(0);
+  }
+  .btn-oracle:disabled {
+    @apply opacity-40 cursor-not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* === Gold button === */
+  .btn-gold {
+    @apply bg-gold-500 hover:bg-gold-400 text-void-950 font-bold px-6 py-3 rounded-xl transition-all duration-200;
+    box-shadow: 0 0 0 0 rgba(245,158,11,0);
+  }
+  .btn-gold:hover {
+    box-shadow: 0 0 20px rgba(245,158,11,0.35);
+    transform: translateY(-1px);
+  }
+
+  /* === Input base === */
+  .input-base {
+    @apply w-full bg-void-900 border border-void-700 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 transition-all duration-200 font-body;
+    outline: none;
+  }
+  .input-base:focus {
+    border-color: #7C3AED;
+    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+  }
+
+  /* === Sport badge === */
+  .sport-badge {
+    @apply text-xs font-bold px-2.5 py-1 rounded-full tracking-wide uppercase font-display;
+  }
+  .sport-nfl {
+    @apply sport-badge;
+    background: rgba(22, 101, 52, 0.4);
+    color: #4ADE80;
+    border: 1px solid rgba(74, 222, 128, 0.2);
+  }
+  .sport-nba {
+    @apply sport-badge;
+    background: rgba(154, 52, 18, 0.4);
+    color: #FB923C;
+    border: 1px solid rgba(251, 146, 60, 0.2);
+  }
+  .sport-mlb {
+    @apply sport-badge;
+    background: rgba(30, 64, 175, 0.4);
+    color: #60A5FA;
+    border: 1px solid rgba(96, 165, 250, 0.2);
+  }
+  .sport-nhl {
+    @apply sport-badge;
+    background: rgba(30, 58, 138, 0.4);
+    color: #93C5FD;
+    border: 1px solid rgba(147, 197, 253, 0.2);
+  }
+  .sport-default {
+    @apply sport-badge;
+    background: rgba(91, 33, 182, 0.4);
+    color: #C4B5FD;
+    border: 1px solid rgba(196, 181, 253, 0.2);
+  }
+
+  /* === Live dot === */
+  .live-dot {
+    @apply w-2 h-2 rounded-full bg-live animate-live-pulse inline-block;
+  }
+
+  /* === Rake chip === */
+  .rake-chip {
+    background: rgba(124,58,237,0.12);
+    border: 1px solid rgba(124,58,237,0.25);
+    @apply text-oracle-300 text-xs rounded-lg px-3 py-1.5 font-body;
+  }
+
+  /* === Auth mesh background === */
+  .auth-mesh {
+    background-color: #07080F;
+    background-image:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,0.06) 0%, transparent 50%),
+      radial-gradient(ellipse 40% 50% at 60% 20%, rgba(91,33,182,0.08) 0%, transparent 40%);
+  }
+
+  /* === Shimmer skeleton === */
+  .skeleton {
+    @apply bg-void-800 rounded-xl overflow-hidden relative;
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.06), transparent);
+    background-size: 400px 100%;
+    animation: shimmer 1.8s linear infinite;
   }
 }

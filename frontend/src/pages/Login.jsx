@@ -1,64 +1,114 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../context/AuthContext'
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+
+function OracleLogo() {
+  return (
+    <div className="flex flex-col items-center gap-0 mb-8">
+      <div className="animate-float">
+        <img
+          src="/logo.png"
+          alt="Fantasy Seers"
+          className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(168,85,247,0.7)]"
+        />
+      </div>
+      <div className="text-center">
+        <h1 className="font-display text-3xl font-800 text-white tracking-tight">
+          See It Before It Happens
+        </h1>
+      </div>
+    </div>
+  );
+}
 
 export default function Login() {
-  const { login } = useAuth()
-  const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', password: '' })
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const [form, setForm] = useState({ username: "", password: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
+    e.preventDefault();
+    setError("");
+    setLoading(true);
     try {
-      await login(form)
-      navigate('/')
+      await login(form);
+      navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid credentials')
+      setError(err.response?.data?.message || "Invalid credentials");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white">Fantasy Seers</h1>
-          <p className="text-gray-400 mt-2">Predict. Compete. Dominate.</p>
-        </div>
+    <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
+      {/* Decorative corner lines */}
+      <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
+        <svg viewBox="0 0 192 192" fill="none">
+          <path
+            d="M0 192V0h192"
+            stroke="#7C3AED"
+            strokeWidth="1"
+            strokeDasharray="4 8"
+          />
+        </svg>
+      </div>
+      <div className="fixed bottom-0 right-0 w-48 h-48 pointer-events-none opacity-20">
+        <svg viewBox="0 0 192 192" fill="none">
+          <path
+            d="M192 0v192H0"
+            stroke="#F59E0B"
+            strokeWidth="1"
+            strokeDasharray="4 8"
+          />
+        </svg>
+      </div>
 
-        <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 border border-gray-800">
-          <h2 className="text-xl font-semibold text-white mb-6">Sign In</h2>
+      <div className="w-full max-w-sm animate-slide-up">
+        <OracleLogo />
+
+        <div className="glass-card p-7">
+          <p className="font-display text-lg font-700 text-white mb-6">
+            Welcome back, Seer
+          </p>
 
           {error && (
-            <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-4 text-sm">
+            <div
+              className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400 font-body"
+              style={{
+                background: "rgba(127,29,29,0.25)",
+                border: "1px solid rgba(239,68,68,0.25)",
+              }}
+            >
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Username</label>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
+                Username
+              </label>
               <input
                 type="text"
                 value={form.username}
-                onChange={e => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                onChange={(e) => setForm({ ...form, username: e.target.value })}
+                className="input-base"
                 placeholder="your_username"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Password</label>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
+                Password
+              </label>
               <input
                 type="password"
                 value={form.password}
-                onChange={e => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                className="input-base"
                 placeholder="••••••••"
                 required
               />
@@ -66,20 +116,36 @@ export default function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors mt-2"
+              className="btn-oracle w-full mt-2 py-3.5"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Entering the arena...
+                </span>
+              ) : (
+                "Enter the Arena"
+              )}
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
-            No account?{' '}
-            <Link to="/register" className="text-blue-400 hover:text-blue-300">
-              Create one
-            </Link>
-          </p>
+          <div className="mt-6 pt-5 border-t border-void-700 text-center">
+            <p className="text-slate-600 text-sm">
+              New to Fantasy Seers?{" "}
+              <Link
+                to="/register"
+                className="text-oracle-400 hover:text-oracle-300 font-semibold transition-colors"
+              >
+                Claim your spot
+              </Link>
+            </p>
+          </div>
         </div>
+
+        <p className="text-center text-slate-700 text-xs mt-6">
+          By signing in you agree to our Terms · 18+ only · Gamble responsibly
+        </p>
       </div>
     </div>
-  )
+  );
 }

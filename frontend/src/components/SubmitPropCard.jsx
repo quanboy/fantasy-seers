@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { propsApi } from "../api/client";
 
+const SPORTS = ["NBA", "NFL", "MLB", "NHL", "UFC", "EPL"];
+
 export default function SubmitPropCard({ onSubmitted }) {
-  // Controls whether the form is expanded or collapsed
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  // Form field state
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -17,7 +17,6 @@ export default function SubmitPropCard({ onSubmitted }) {
     maxWager: "",
   });
 
-  // Generic handler — updates whichever field changed
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
   };
@@ -30,28 +29,14 @@ export default function SubmitPropCard({ onSubmitted }) {
         title: form.title,
         description: form.description || null,
         sport: form.sport,
-        // Backend expects ISO format — datetime-local gives us "2026-03-10T20:00"
-        // which is already valid
         closesAt: form.closesAt,
         minWager: form.minWager ? parseInt(form.minWager) : null,
         maxWager: form.maxWager ? parseInt(form.maxWager) : null,
       });
       setSuccess(true);
-      setForm({
-        title: "",
-        description: "",
-        sport: "NBA",
-        closesAt: "",
-        minWager: "",
-        maxWager: "",
-      });
-      // Tell the parent something was submitted if needed
+      setForm({ title: "", description: "", sport: "NBA", closesAt: "", minWager: "", maxWager: "" });
       if (onSubmitted) onSubmitted();
-      // Collapse after 2 seconds
-      setTimeout(() => {
-        setSuccess(false);
-        setIsExpanded(false);
-      }, 2000);
+      setTimeout(() => { setSuccess(false); setIsExpanded(false); }, 2500);
     } catch (err) {
       console.error("Failed to submit prop", err);
     } finally {
@@ -61,102 +46,138 @@ export default function SubmitPropCard({ onSubmitted }) {
 
   const handleCancel = () => {
     setIsExpanded(false);
-    setForm({
-      title: "",
-      description: "",
-      sport: "NBA",
-      closesAt: "",
-      minWager: "",
-      maxWager: "",
-    });
+    setForm({ title: "", description: "", sport: "NBA", closesAt: "", minWager: "", maxWager: "" });
   };
 
-  // Collapsed state — looks like a regular prop card
   if (!isExpanded) {
     return (
       <div
         onClick={() => setIsExpanded(true)}
-        className="bg-gray-900 border border-gray-800 hover:border-blue-600 rounded-2xl p-6 cursor-pointer transition-all mb-4"
+        className="mb-4 rounded-2xl p-5 cursor-pointer transition-all duration-300 group"
+        style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}
+        onMouseEnter={e => { e.currentTarget.style.borderColor = '#4C1D95'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3), 0 0 20px rgba(124,58,237,0.12)'; }}
+        onMouseLeave={e => { e.currentTarget.style.borderColor = '#1E2235'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)'; }}
       >
-        <p className="text-gray-500 text-sm">✍️ Create your own prop...</p>
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+            style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)' }}>
+            <span className="text-oracle-400 text-sm">✍</span>
+          </div>
+          <div>
+            <p className="text-slate-500 text-sm group-hover:text-slate-400 transition-colors">
+              Make a call — what's your take?
+            </p>
+            <p className="text-slate-700 text-xs mt-0.5">Post a prop for others to challenge</p>
+          </div>
+          <div className="ml-auto">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-oracle-600">
+              <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Success state
   if (success) {
     return (
-      <div className="bg-gray-900 border border-green-800 rounded-2xl p-6 mb-4">
-        <p className="text-green-400 font-semibold text-sm">
-          🎉 Prop submitted! It will go live after admin review.
-        </p>
+      <div className="mb-4 rounded-2xl p-5 animate-scale-in"
+        style={{ background: 'rgba(6,78,59,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">🔮</span>
+          <div>
+            <p className="text-win-400 font-semibold text-sm">Prop submitted!</p>
+            <p className="text-slate-600 text-xs mt-0.5">Goes live after admin review — usually within minutes.</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // Expanded form state
   return (
-    <div className="bg-gray-900 border border-blue-700 rounded-2xl p-6 mb-4">
-      <p className="text-white font-semibold mb-4">Create a Prop</p>
+    <div className="mb-4 rounded-2xl p-6 animate-scale-in"
+      style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #4C1D95', boxShadow: '0 0 24px rgba(124,58,237,0.1)' }}>
+
+      <div className="flex items-center gap-2 mb-5">
+        <span className="font-display text-base font-700 text-white">Create a Prop</span>
+        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(124,58,237,0.4), transparent)' }} />
+      </div>
 
       {/* Title */}
-      <input
-        name="title"
-        value={form.title}
-        onChange={handleChange}
-        placeholder="What's your prop? e.g. Will LeBron score 30+?"
-        className="w-full bg-gray-800 text-white placeholder-gray-500 rounded-lg px-4 py-2 text-sm mb-3 outline-none focus:ring-1 focus:ring-blue-600"
-      />
-
-      {/* Description */}
-      <textarea
-        name="description"
-        value={form.description}
-        onChange={handleChange}
-        placeholder="Add context (optional)"
-        rows={2}
-        className="w-full bg-gray-800 text-white placeholder-gray-500 rounded-lg px-4 py-2 text-sm mb-3 outline-none focus:ring-1 focus:ring-blue-600 resize-none"
-      />
-
-      {/* Sport + Closing Date row */}
-      <div className="flex gap-3 mb-3">
-        <select
-          name="sport"
-          value={form.sport}
-          onChange={handleChange}
-          className="bg-gray-800 text-white rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600"
-        >
-          <option value="NBA">NBA</option>
-          <option value="NFL">NFL</option>
-        </select>
-
+      <div className="mb-3">
+        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Your call</label>
         <input
-          name="closesAt"
-          type="datetime-local"
-          value={form.closesAt}
+          name="title"
+          value={form.title}
           onChange={handleChange}
-          className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600"
+          placeholder='e.g. "Will LeBron drop 35+ tonight?"'
+          className="input-base text-sm"
         />
       </div>
 
-      {/* Min/Max wager row */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-4">
-        <input
-          name="minWager"
-          type="number"
-          value={form.minWager}
+      {/* Description */}
+      <div className="mb-3">
+        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Context <span className="normal-case text-slate-700">(optional)</span></label>
+        <textarea
+          name="description"
+          value={form.description}
           onChange={handleChange}
-          placeholder="Min wager (optional)"
-          className="flex-1 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600"
+          placeholder="Add your reasoning, stats, or context..."
+          rows={2}
+          className="input-base text-sm resize-none"
         />
-        <input
-          name="maxWager"
-          type="number"
-          value={form.maxWager}
-          onChange={handleChange}
-          placeholder="Max wager (optional)"
-          className="flex-1 bg-gray-800 text-white placeholder-gray-500 rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-600"
-        />
+      </div>
+
+      {/* Sport + closing time */}
+      <div className="flex gap-3 mb-3">
+        <div>
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Sport</label>
+          <select
+            name="sport"
+            value={form.sport}
+            onChange={handleChange}
+            className="input-base text-sm w-auto pr-8"
+            style={{ appearance: 'none' }}
+          >
+            {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Closes at</label>
+          <input
+            name="closesAt"
+            type="datetime-local"
+            value={form.closesAt}
+            onChange={handleChange}
+            className="input-base text-sm w-full"
+          />
+        </div>
+      </div>
+
+      {/* Wager limits */}
+      <div className="flex gap-3 mb-5">
+        <div className="flex-1">
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Min wager <span className="normal-case text-slate-700">(optional)</span></label>
+          <input
+            name="minWager"
+            type="number"
+            value={form.minWager}
+            onChange={handleChange}
+            placeholder="e.g. 100"
+            className="input-base text-sm"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Max wager <span className="normal-case text-slate-700">(optional)</span></label>
+          <input
+            name="maxWager"
+            type="number"
+            value={form.maxWager}
+            onChange={handleChange}
+            placeholder="e.g. 5000"
+            className="input-base text-sm"
+          />
+        </div>
       </div>
 
       {/* Actions */}
@@ -164,17 +185,26 @@ export default function SubmitPropCard({ onSubmitted }) {
         <button
           onClick={handleSubmit}
           disabled={loading || !form.title || !form.closesAt}
-          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-semibold px-5 py-2 rounded-lg transition-all"
+          className="btn-oracle flex-1 py-3 text-sm"
         >
-          {loading ? "Submitting..." : "Submit for Review"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Submitting...
+            </span>
+          ) : "Submit for Review"}
         </button>
         <button
           onClick={handleCancel}
-          className="text-gray-500 hover:text-gray-300 text-sm px-3 py-2 transition-all"
+          className="text-slate-500 hover:text-slate-300 text-sm px-4 py-3 rounded-xl transition-all hover:bg-void-800"
         >
           Cancel
         </button>
       </div>
+
+      <p className="text-slate-700 text-xs mt-3">
+        Props are reviewed by our team before going live. Usually approved within 30 minutes.
+      </p>
     </div>
   );
 }
