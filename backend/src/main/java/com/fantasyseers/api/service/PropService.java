@@ -37,6 +37,56 @@ public class PropService {
         return toResponse(propRepository.save(prop), username);
     }
 
+    public PropDto.PropResponse submitProp(PropDto.submitRequest request, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Prop prop = Prop.builder()
+                .title(request.title())
+                .description(request.description())
+                .sport(request.sport())
+                .closesAt(request.closesAt())
+                .minWager(request.minWager())
+                .maxWager(request.maxWager())
+                .createdBy(user)
+                .isAdminProp(false)
+                .scope(Prop.Scope.PUBLIC)
+                .status(Prop.Status.PENDING)
+                .build();
+
+        return toResponse(propRepository.save(prop), username);
+    }
+
+    public PropDto.PropResponse approveProp(Long id) {
+        Prop prop = propRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
+
+        if (prop.getStatus() != Prop.Status.PENDING) {
+            throw new IllegalStateException("Only PENDING props can be approved");
+        }
+
+        prop.setStatus(Prop.Status.OPEN);
+        return toResponse(propRepository.save(prop), null);
+    }
+
+    public void rejectProp(Long id) {
+        Prop prop = propRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
+
+        if (prop.getStatus() != Prop.Status.PENDING) {
+            throw new IllegalStateException("Only PENDING props can be rejected");
+        }
+
+        propRepository.delete(prop);
+    }
+
+    public List<PropDto.PropResponse> getPendingProps() {
+        return propRepository.findByStatusOrderByCreatedAtAsc(Prop.Status.PENDING)
+                .stream()
+                .map(p -> toResponse(p, null))
+                .toList();
+    }
+
     public List<PropDto.PropResponse> getPublicProps(String username) {
         return propRepository
                 .findByScopeOrdered(Prop.Scope.PUBLIC)
@@ -78,7 +128,9 @@ public class PropService {
                 prop.getClosesAt(),
                 prop.getCreatedBy().getUsername(),
                 userChoice,
-                userWon
+                userWon,
+                prop.getMinWager(),
+                prop.getMaxWager()
         );
     }
 }

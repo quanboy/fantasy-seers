@@ -56,7 +56,7 @@ CREATE TABLE props (
     created_by      BIGINT       NOT NULL REFERENCES users(id),
     is_admin_prop   BOOLEAN      NOT NULL DEFAULT FALSE,
     scope           VARCHAR(20)  NOT NULL DEFAULT 'GROUP', -- GROUP | PUBLIC
-    status          VARCHAR(20)  NOT NULL DEFAULT 'OPEN',  -- OPEN | CLOSED | RESOLVED
+    status          VARCHAR(20)  NOT NULL DEFAULT 'OPEN',  -- OPEN | CLOSED | RESOLVED | PENDING
     result          VARCHAR(10),                           -- YES | NO | null
     closes_at       TIMESTAMP    NOT NULL,
     resolved_at     TIMESTAMP,

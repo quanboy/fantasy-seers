@@ -1,0 +1,2 @@
+ALTER TABLE props ADD COLUMN min_wager INTEGER;
+ALTER TABLE props ADD COLUMN max_wager INTEGER;

@@ -24,74 +24,106 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-950 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-white">Fantasy Seers</h1>
-          <p className="text-gray-400 mt-2">Join the prediction arena.</p>
+    <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
+      {/* Decorative elements */}
+      <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
+        <svg viewBox="0 0 192 192" fill="none"><path d="M0 192V0h192" stroke="#7C3AED" strokeWidth="1" strokeDasharray="4 8"/></svg>
+      </div>
+      <div className="fixed bottom-0 right-0 w-48 h-48 pointer-events-none opacity-20">
+        <svg viewBox="0 0 192 192" fill="none"><path d="M192 0v192H0" stroke="#F59E0B" strokeWidth="1" strokeDasharray="4 8"/></svg>
+      </div>
+
+      <div className="w-full max-w-sm animate-slide-up">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="animate-float inline-block mb-4">
+            <img src="/logo.png" alt="Fantasy Seers" className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(168,85,247,0.7)]"  />
+          </div>
+          <h1 className="font-display text-3xl font-800 text-white tracking-tight">Fantasy Seers</h1>
+          <p className="text-slate-500 text-sm mt-1">Your vision. Your edge. Your arena.</p>
         </div>
 
-        <div className="bg-gray-900 rounded-2xl p-6 sm:p-8 border border-gray-800">
-          <h2 className="text-xl font-semibold text-white mb-6">Create Account</h2>
+        <div className="glass-card p-7">
+          <p className="font-display text-lg font-700 text-white mb-1">Create your account</p>
+          <p className="text-slate-600 text-xs mb-6">Join thousands of seers competing daily</p>
 
           {error && (
-            <div className="bg-red-900/40 border border-red-700 text-red-300 rounded-lg px-4 py-3 mb-4 text-sm">
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400"
+              style={{ background: 'rgba(127,29,29,0.25)', border: '1px solid rgba(239,68,68,0.25)' }}>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Username</label>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Username</label>
               <input
                 type="text"
                 value={form.username}
                 onChange={e => setForm({ ...form, username: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
-                placeholder="your_username"
+                className="input-base"
+                placeholder="seer_handle"
                 minLength={3}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Email</label>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Email</label>
               <input
                 type="email"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                className="input-base"
                 placeholder="you@example.com"
                 required
               />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Password</label>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Password</label>
               <input
                 type="password"
                 value={form.password}
                 onChange={e => setForm({ ...form, password: e.target.value })}
-                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                className="input-base"
                 placeholder="Min. 6 characters"
                 minLength={6}
                 required
               />
             </div>
+
+            {/* Bonus callout */}
+            <div className="rounded-xl px-4 py-3 text-xs text-gold-400"
+              style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+              <span className="font-bold">🎁 Welcome bonus:</span> Start with 1,000 free points to wager on your first props.
+            </div>
+
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-lg transition-colors mt-2"
+              className="btn-oracle w-full py-3.5"
             >
-              {loading ? 'Creating account...' : 'Create Account'}
+              {loading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Summoning your account...
+                </span>
+              ) : 'Join the Arena'}
             </button>
           </form>
 
-          <p className="text-center text-gray-500 text-sm mt-6">
-            Already have an account?{' '}
-            <Link to="/login" className="text-blue-400 hover:text-blue-300">
-              Sign in
-            </Link>
-          </p>
+          <div className="mt-6 pt-5 border-t border-void-700 text-center">
+            <p className="text-slate-600 text-sm">
+              Already a Seer?{' '}
+              <Link to="/login" className="text-oracle-400 hover:text-oracle-300 font-semibold transition-colors">
+                Sign in
+              </Link>
+            </p>
+          </div>
         </div>
+
+        <p className="text-center text-slate-700 text-xs mt-6">
+          18+ only · Fantasy Seers is not a licensed gambling site · Play responsibly
+        </p>
       </div>
     </div>
   )

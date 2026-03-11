@@ -26,11 +26,20 @@ public class PropController {
         return ResponseEntity.ok(propService.createProp(request, userDetails.getUsername()));
     }
 
+    @PostMapping("/submit")
+    public ResponseEntity<PropDto.PropResponse> submitProp(
+            @Valid @RequestBody PropDto.submitRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(propService.submitProp(request, userDetails.getUsername()));
+    }
+
     @GetMapping("/public")
     public ResponseEntity<List<PropDto.PropResponse>> getPublicProps(
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.ok(propService.getPublicProps(userDetails.getUsername()));
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(propService.getPublicProps(username));
     }
 
     @GetMapping("/{id}")
