@@ -30,6 +30,13 @@ export const propsApi = {
   getById:   (id)         => api.get(`/props/${id}`),
   vote:      (id, data)   => api.post(`/props/${id}/vote`, data),
   getSplit:  (id)         => api.get(`/props/${id}/split`),
+  submit:    (data)       => api.post('/props/submit', data),
+}
+
+export const adminApi = {
+    getPending: () => api.get('/admin/props/pending'),
+    approve:    (id) => api.post(`/admin/props/${id}/approve`),
+    reject:     (id) => api.post(`/admin/props/${id}/reject`),
 }
 
 export const userApi = {

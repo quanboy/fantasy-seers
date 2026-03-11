@@ -1,16 +1,36 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from './context/AuthContext'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import Dashboard from './pages/Dashboard'
-import './index.css'
+import React from "react";
+import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import "./index.css";
 
 function PrivateRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return <div className="flex items-center justify-center h-screen text-gray-400">Loading...</div>
-  return user ? children : <Navigate to="/login" replace />
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-400">
+        Loading...
+      </div>
+    );
+  return user ? children : <Navigate to="/login" replace />;
+}
+
+// Extends PrivateRoute — must be logged in AND have ADMIN role
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth();
+  if (loading)
+    return (
+      <div className="flex items-center justify-center h-screen text-gray-400">
+        Loading...
+      </div>
+    );
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== "ADMIN") return <Navigate to="/" replace />;
+  return children;
 }
 
 function App() {
@@ -18,17 +38,28 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/login"    element={<Login />} />
+          <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
-          <Route path="/*" element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } />
+          <Route
+            path="/admin"
+            element={
+              <AdminRoute>
+                <AdminDashboard />
+              </AdminRoute>
+            }
+          />
+          <Route
+            path="/*"
+            element={
+              <PrivateRoute>
+                <Dashboard />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-  )
+  );
 }
 
-ReactDOM.createRoot(document.getElementById('root')).render(<App />)
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);

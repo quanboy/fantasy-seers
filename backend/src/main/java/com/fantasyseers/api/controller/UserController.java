@@ -31,4 +31,16 @@ public class UserController {
                 "role",      user.getRole().name()
         ));
     }
+
+    @GetMapping("/me/authorities")
+    public ResponseEntity<?> getAuthorities(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(Map.of(
+                "username", userDetails.getUsername(),
+                "authorities", userDetails.getAuthorities().stream()
+                        .map(a -> a.getAuthority())
+                        .toList()
+        ));
+    }
 }

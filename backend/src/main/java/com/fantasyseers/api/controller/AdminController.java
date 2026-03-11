@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/admin")
 @RequiredArgsConstructor
@@ -35,5 +37,21 @@ public class AdminController {
     ) {
         resolutionService.resolveProp(id, result);
         return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/props/pending")
+    public ResponseEntity<List<PropDto.PropResponse>> getPendingProps() {
+        return ResponseEntity.ok(propService.getPendingProps());
+    }
+
+    @PostMapping("/props/{id}/approve")
+    public ResponseEntity<PropDto.PropResponse> approveProp(@PathVariable Long id) {
+        return ResponseEntity.ok(propService.approveProp(id));
+    }
+
+    @PostMapping("/props/{id}/reject")
+    public ResponseEntity<Void> rejectProp(@PathVariable Long id) {
+        propService.rejectProp(id);
+        return ResponseEntity.noContent().build();
     }
 }

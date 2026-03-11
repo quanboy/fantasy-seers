@@ -16,4 +16,6 @@ public interface PropRepository extends JpaRepository<Prop, Long> {
     List<Prop> findByGroupIdOrderByStatusAscClosesAtAsc(@Param("groupId") Long groupId);
 
     List<Prop> findByStatusAndResultIsNull(Prop.Status status);
+
+    List<Prop> findByStatusOrderByCreatedAtAsc(Prop.Status status);
 }

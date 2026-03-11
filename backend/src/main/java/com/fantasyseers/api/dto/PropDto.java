@@ -13,6 +13,15 @@ public class PropDto {
             @NotNull LocalDateTime closesAt
     ) {}
 
+    public record submitRequest(
+            @NotBlank String title,
+            String description,
+            @NotNull Prop.Sport sport,
+            @NotNull LocalDateTime closesAt,
+            @Min(1) Integer minWager,
+            @Min(1) Integer maxWager
+    ) {}
+
     public record PropResponse(
             Long id,
             String title,
@@ -23,7 +32,9 @@ public class PropDto {
             LocalDateTime closesAt,
             String createdBy,
             String userChoice,
-            Boolean userWon
+            Boolean userWon,
+            Integer minWager,
+            Integer maxWager
     ) {}
 
     public record VoteRequest(
