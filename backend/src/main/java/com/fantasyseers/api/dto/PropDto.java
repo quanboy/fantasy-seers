@@ -19,7 +19,9 @@ public class PropDto {
             @NotNull Prop.Sport sport,
             @NotNull LocalDateTime closesAt,
             @Min(1) Integer minWager,
-            @Min(1) Integer maxWager
+            @Min(1) Integer maxWager,
+            Prop.Scope scope,
+            Long groupId
     ) {}
 
     public record PropResponse(

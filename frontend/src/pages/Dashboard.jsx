@@ -150,6 +150,18 @@ export default function Dashboard() {
               {user?.username}
             </span>
 
+            <a
+              href="/groups"
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
+              style={{
+                background: "rgba(124,58,237,0.1)",
+                border: "1px solid rgba(124,58,237,0.2)",
+                color: "#C4B5FD",
+              }}
+            >
+              Groups
+            </a>
+
             {user?.role === "ADMIN" && (
               <a
                 href="/admin"

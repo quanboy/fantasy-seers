@@ -39,6 +39,14 @@ export const adminApi = {
     reject:     (id) => api.post(`/admin/props/${id}/reject`),
 }
 
+export const groupsApi = {
+  getMyGroups:  ()       => api.get('/groups'),
+  createGroup:  (data)   => api.post('/groups', data),
+  joinGroup:    (data)   => api.post('/groups/join', data),
+  getGroup:     (id)     => api.get(`/groups/${id}`),
+  getGroupProps:(id)     => api.get(`/groups/${id}/props`),
+}
+
 export const userApi = {
   getMe: () => api.get('/users/me')
 }
