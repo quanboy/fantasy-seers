@@ -32,7 +32,7 @@ fantasy-seers/
         ├── main.jsx             # Router setup + AuthContext + PrivateRoute/AdminRoute
         ├── api/client.js        # Axios instance + API methods (propsApi, groupsApi, adminApi)
         ├── context/AuthContext.jsx
-        ├── components/          # PropCard, SubmitPropCard (expandable form), VoteModal
+        ├── components/          # AppLayout, Sidebar, PropCard, SubmitPropCard, VoteModal
         └── pages/               # Login, Register, Dashboard, AdminDashboard,
                                  # GroupsPage, GroupFeedPage
 ```
@@ -88,7 +88,7 @@ cd frontend && npm install && npm run dev
 
 ### vite.config.js (frontend)
 - Dev server: port 5173
-- `/api` proxy → `http://backend:8080` (Docker) / `http://localhost:8080` (local)
+- `/api` proxy → `http://localhost:8080` by default (local dev); override with `VITE_API_TARGET` env var for Docker
 
 ### docker-compose.yml environment variables
 ```
@@ -146,12 +146,17 @@ Defined in `src/main.jsx` using React Router v6.
 ### Frontend API Client (`client.js`)
 Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `usersApi`. Each wraps Axios calls to `/api/*`.
 
+### Layout Architecture
+- **AppLayout** — shared layout wrapper for all authenticated pages. Renders the `Sidebar` and a top navigation bar with username, point bank, and sign out. Uses React Router `<Outlet />` for nested routes. Individual pages no longer have their own navbars.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Trends, Leagues, Leaderboard, Admin Uploads (admin-only). Shows logo, nav links with active state via `NavLink`, and user avatar footer.
+- Mobile top bar shows hamburger + logo on the left; username, points, and sign out on the right.
+
 ### Key UI Patterns
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Fetches user's groups on expand.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes.
-- **Dashboard** — shows OPEN and RESOLVED props in separate sections; refreshes pointBank every 30s; includes Groups nav link.
+- **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s.
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard).
-- **GroupFeedPage** — group header + group-scoped props (open/resolved sections); breadcrumb navigation.
+- **GroupFeedPage** — group header + group-scoped props (open/resolved sections).
 
 ### Theme & Design Tokens
 

@@ -1,10 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { groupsApi } from "../api/client";
-import { useAuth } from "../context/AuthContext";
 
 export default function GroupsPage() {
-  const { user, logout } = useAuth();
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,40 +55,12 @@ export default function GroupsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-void-950">
-      {/* Navbar */}
-      <nav
-        className="sticky top-0 z-40 border-b border-void-700 glass-nav"
-      >
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link to="/" className="flex items-center gap-2.5">
-              <img src="/logo.png" alt="Fantasy Seers" className="w-8 h-8 object-contain" />
-              <span className="font-display text-sm font-700 text-slate-400 hover:text-white transition-colors">
-                Dashboard
-              </span>
-            </Link>
-            <span className="text-slate-700">/</span>
-            <span className="font-display text-sm font-700 text-white">Groups</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-slate-500 text-sm hidden sm:block">{user?.username}</span>
-            <button
-              onClick={logout}
-              className="text-slate-600 hover:text-slate-400 text-xs transition-colors p-1.5 rounded-lg hover:bg-void-800"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Create + Join forms */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">
           {/* Create */}
           <div className="rounded-2xl p-5 glass-card">
-            <h2 className="font-display text-sm font-700 text-white mb-4">Create a Group</h2>
+            <h2 className="font-display text-sm font-700 text-slate-900 mb-4">Create a Group</h2>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
               <input
                 value={createName}
@@ -99,7 +69,7 @@ export default function GroupsPage() {
                 className="input-base text-sm"
                 maxLength={100}
               />
-              {createError && <p className="text-loss-400 text-xs">{createError}</p>}
+              {createError && <p className="text-loss-700 text-xs">{createError}</p>}
               <button
                 type="submit"
                 disabled={createLoading || !createName.trim()}
@@ -112,7 +82,7 @@ export default function GroupsPage() {
 
           {/* Join */}
           <div className="rounded-2xl p-5 glass-card">
-            <h2 className="font-display text-sm font-700 text-white mb-4">Join a Group</h2>
+            <h2 className="font-display text-sm font-700 text-slate-900 mb-4">Join a Group</h2>
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <input
                 value={joinCode}
@@ -121,7 +91,7 @@ export default function GroupsPage() {
                 className="input-base text-sm uppercase"
                 maxLength={20}
               />
-              {joinError && <p className="text-loss-400 text-xs">{joinError}</p>}
+              {joinError && <p className="text-loss-700 text-xs">{joinError}</p>}
               <button
                 type="submit"
                 disabled={joinLoading || !joinCode.trim()}
@@ -135,9 +105,9 @@ export default function GroupsPage() {
 
         {/* Group list */}
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="font-display text-lg font-700 text-white">Your Groups</h2>
+          <h2 className="font-display text-lg font-700 text-slate-900">Your Groups</h2>
           {groups.length > 0 && (
-            <span className="text-slate-600 text-xs">{groups.length} group{groups.length !== 1 ? "s" : ""}</span>
+            <span className="text-slate-400 text-xs">{groups.length} group{groups.length !== 1 ? "s" : ""}</span>
           )}
         </div>
 
@@ -151,7 +121,7 @@ export default function GroupsPage() {
           <div className="glass-card p-10 text-center">
             <div className="text-4xl mb-3">👥</div>
             <p className="text-slate-500 text-sm">No groups yet.</p>
-            <p className="text-slate-600 text-xs mt-1">Create one or join with an invite code.</p>
+            <p className="text-slate-400 text-xs mt-1">Create one or join with an invite code.</p>
           </div>
         )}
 
@@ -165,16 +135,16 @@ export default function GroupsPage() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-white text-sm">{group.name}</p>
-                    <p className="text-slate-600 text-xs mt-0.5">
+                    <p className="font-semibold text-slate-800 text-sm">{group.name}</p>
+                    <p className="text-slate-400 text-xs mt-0.5">
                       {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
                       {" · "}owner: {group.ownerUsername}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">
-                    <p className="text-slate-600 text-xs mb-1">Invite code</p>
+                    <p className="text-slate-400 text-xs mb-1">Invite code</p>
                     <code
-                      className="text-oracle-400 text-xs font-mono px-2 py-1 rounded chip-oracle"
+                      className="text-oracle-600 text-xs font-mono px-2 py-1 rounded chip-oracle"
                       onClick={e => {
                         e.preventDefault();
                         navigator.clipboard.writeText(group.inviteCode);
@@ -189,7 +159,6 @@ export default function GroupsPage() {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 }

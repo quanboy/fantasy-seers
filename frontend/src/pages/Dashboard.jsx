@@ -5,30 +5,12 @@ import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
 import SubmitPropCard from "../components/SubmitPropCard";
 
-function getTierInfo(points) {
-  if (points >= 50000)
-    return { label: "Legend", color: "text-gold-400", chipClass: "chip-gold-strong" };
-  if (points >= 15000)
-    return { label: "Elite", color: "text-oracle-300", chipClass: "chip-oracle" };
-  if (points >= 5000)
-    return { label: "Pro", color: "text-win-400", chipClass: "chip-win" };
-  return { label: "Rookie", color: "text-slate-400", chipClass: "bg-slate-600/15 border border-slate-500/25" };
-}
-
-function NavbarLogo() {
-  return (
-    <span className="font-display text-base font-700 text-white tracking-tight">
-      Fantasy Seers
-    </span>
-  );
-}
-
 function SkeletonCard() {
   return <div className="skeleton h-28 mb-4" />;
 }
 
 export default function Dashboard() {
-  const { user, logout, setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -62,77 +44,12 @@ export default function Dashboard() {
     setSelectedProp(null);
   };
 
-  const tier = getTierInfo(user?.pointBank ?? 0);
   const openProps = props.filter((p) => p.status === "OPEN");
   const resolvedProps = props.filter((p) => p.status === "RESOLVED");
 
   return (
-    <div className="min-h-screen bg-void-950">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 border-b border-void-700 glass-nav">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <NavbarLogo />
-
-          <div className="flex items-center gap-3">
-            {/* Points + tier */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl chip-gold">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-gold-500">
-                  <circle cx="6" cy="6" r="5" fill="currentColor" opacity="0.9" />
-                  <text
-                    x="6"
-                    y="9"
-                    textAnchor="middle"
-                    fontSize="7"
-                    className="text-void-950"
-                    fill="currentColor"
-                    fontWeight="bold"
-                  >
-                    ⚡
-                  </text>
-                </svg>
-                <span className="text-gold-400 font-bold text-sm tabular-nums">
-                  {user?.pointBank?.toLocaleString() ?? 0}
-                </span>
-              </div>
-
-              <div className={`hidden sm:flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold ${tier.chipClass}`}>
-                <span className={tier.color}>{tier.label}</span>
-              </div>
-            </div>
-
-            <span className="text-slate-500 text-sm hidden sm:block">
-              {user?.username}
-            </span>
-
-            <a
-              href="/groups"
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors chip-oracle text-oracle-200"
-            >
-              Groups
-            </a>
-
-            {user?.role === "ADMIN" && (
-              <a
-                href="/admin"
-                className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors chip-gold text-gold-400"
-              >
-                Admin
-              </a>
-            )}
-
-            <button
-              onClick={logout}
-              className="text-slate-600 hover:text-slate-400 text-xs transition-colors p-1.5 rounded-lg hover:bg-void-800"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Feed */}
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <>
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {loading && (
           <div className="space-y-4 mt-4">
             <SkeletonCard />
@@ -148,8 +65,8 @@ export default function Dashboard() {
 
             {/* Open Props header */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-display text-lg font-700 text-white">
-                Open Props
+              <h2 className="font-display text-lg font-700 text-slate-900">
+                Public Props
               </h2>
               {openProps.length > 0 && (
                 <div className="flex items-center gap-1.5">
@@ -169,7 +86,7 @@ export default function Dashboard() {
                 <p className="text-slate-500 text-sm">
                   No open props right now.
                 </p>
-                <p className="text-slate-600 text-xs mt-1">
+                <p className="text-slate-400 text-xs mt-1">
                   Be the first — create one above.
                 </p>
               </div>
@@ -193,7 +110,7 @@ export default function Dashboard() {
                     Resolved
                   </h2>
                   <div className="flex-1 h-px bg-void-700" />
-                  <span className="text-slate-600 text-xs">
+                  <span className="text-slate-400 text-xs">
                     {resolvedProps.length} settled
                   </span>
                 </div>
@@ -210,7 +127,7 @@ export default function Dashboard() {
             )}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Vote Modal */}
       {selectedProp && (
@@ -221,6 +138,6 @@ export default function Dashboard() {
           onVoted={handleVoted}
         />
       )}
-    </div>
+    </>
   );
 }
