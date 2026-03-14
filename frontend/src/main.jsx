@@ -6,13 +6,16 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import GroupsPage from "./pages/GroupsPage";
+import GroupFeedPage from "./pages/GroupFeedPage";
+import AppLayout from "./components/AppLayout";
 import "./index.css";
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-screen text-slate-500">
         Loading...
       </div>
     );
@@ -24,7 +27,7 @@ function AdminRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-screen text-slate-500">
         Loading...
       </div>
     );
@@ -41,21 +44,24 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          />
-          <Route
-            path="/*"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <AppLayout />
               </PrivateRoute>
             }
-          />
+          >
+            <Route index element={<Dashboard />} />
+            <Route path="groups" element={<GroupsPage />} />
+            <Route path="groups/:id" element={<GroupFeedPage />} />
+            <Route
+              path="admin"
+              element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              }
+            />
+          </Route>
         </Routes>
       </BrowserRouter>
     </AuthProvider>

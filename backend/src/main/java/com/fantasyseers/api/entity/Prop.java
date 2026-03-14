@@ -84,7 +84,7 @@ public class Prop {
 
     public enum Sport        { NFL, NBA }
     public enum StatDirection { OVER, UNDER }
-    public enum Scope        { GROUP, PUBLIC }
+    public enum Scope        { GROUP, PUBLIC, FRIENDS, FRIENDS_AND_GROUP }
     public enum Status       { OPEN, CLOSED, RESOLVED, PENDING }
     public enum Result       { YES, NO }
 }

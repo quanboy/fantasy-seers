@@ -48,18 +48,16 @@ export default function PropCard({ prop, onVote }) {
   })();
 
   // Border and background logic
-  const cardStyle = (() => {
+  const cardClass = (() => {
     if (isResolved) {
-      if (prop.userWon === true)  return { border: "1px solid rgba(16,185,129,0.35)", background: "linear-gradient(145deg, #064E3B22, #0E1018)" };
-      if (prop.userWon === false) return { border: "1px solid rgba(239,68,68,0.3)", background: "linear-gradient(145deg, #45000A18, #0E1018)" };
-      return { border: "1px solid #1E2235", background: "linear-gradient(145deg, #161825, #0E1018)" };
+      if (prop.userWon === true)  return "card-win-border";
+      if (prop.userWon === false) return "card-loss-border";
+      return "glass-card";
     }
     if (isVoted) {
-      return prop.userChoice === "YES"
-        ? { border: "1px solid rgba(16,185,129,0.4)", background: "linear-gradient(145deg, #064E3B18, #0E1018)" }
-        : { border: "1px solid rgba(239,68,68,0.35)", background: "linear-gradient(145deg, #45000A15, #0E1018)" };
+      return prop.userChoice === "YES" ? "card-win-border-light" : "card-loss-border-light";
     }
-    return { border: "1px solid #1E2235", background: "linear-gradient(145deg, #161825, #0E1018)" };
+    return "glass-card";
   })();
 
   const hoverClass = (!isResolved && !isVoted) ? "glass-card-hover cursor-pointer" : "";
@@ -67,8 +65,7 @@ export default function PropCard({ prop, onVote }) {
   return (
     <div
       onClick={() => !isResolved && !isVoted && onVote(prop)}
-      className={`rounded-2xl p-5 transition-all duration-300 ${hoverClass} ${isResolved ? "opacity-75" : ""}`}
-      style={{ ...cardStyle, boxShadow: "0 4px 24px rgba(0,0,0,0.35)", ...((!isResolved && !isVoted) ? {} : {}) }}
+      className={`rounded-2xl p-5 transition-all duration-300 shadow-card ${cardClass} ${hoverClass} ${isResolved ? "opacity-75" : ""}`}
     >
       {/* Top row */}
       <div className="flex items-start justify-between gap-2 mb-3">
@@ -90,11 +87,7 @@ export default function PropCard({ prop, onVote }) {
                   You: <span className={`font-bold ${prop.userChoice === "YES" ? "text-win-400" : "text-loss-400"}`}>{prop.userChoice}</span>
                 </span>
               )}
-              <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${prop.result === "YES" ? "text-win-400" : "text-loss-400"}`}
-                style={{
-                  background: prop.result === "YES" ? "rgba(16,185,129,0.12)" : "rgba(239,68,68,0.12)",
-                  border: prop.result === "YES" ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(239,68,68,0.25)"
-                }}>
+              <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${prop.result === "YES" ? "text-win-400 chip-win" : "text-loss-400 chip-loss"}`}>
                 {prop.result}
               </div>
             </div>

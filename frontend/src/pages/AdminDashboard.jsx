@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useAuth } from "../context/AuthContext";
 import { adminApi } from "../api/client";
 
 const SPORT_CLASSES = {
@@ -13,7 +12,6 @@ function getSportClass(sport) {
 }
 
 export default function AdminDashboard() {
-  const { user, logout } = useAuth();
   const [pending, setPending] = useState([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState(false);
@@ -60,40 +58,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-void-950">
-      {/* Navbar */}
-      <nav className="sticky top-0 z-40 border-b border-void-700"
-        style={{ background: 'rgba(7,8,15,0.9)', backdropFilter: 'blur(16px)' }}>
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <a href="/"
-              className="flex items-center gap-1.5 text-slate-600 hover:text-slate-400 text-sm transition-colors px-2 py-1.5 rounded-lg hover:bg-void-800">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                <path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              Feed
-            </a>
-            <div className="w-px h-4 bg-void-700" />
-            <div className="flex items-center gap-2">
-              <span className="font-display text-base font-700 text-white">Admin</span>
-              <div className="px-2 py-0.5 rounded text-xs font-bold"
-                style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(245,158,11,0.25)', color: '#FBBF24' }}>
-                {pending.length > 0 ? `${pending.length} pending` : "All clear"}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <span className="text-slate-500 text-sm hidden sm:block">{user?.username}</span>
-            <button onClick={logout}
-              className="text-slate-600 hover:text-slate-400 text-xs transition-colors px-2 py-1.5 rounded-lg hover:bg-void-800">
-              Sign out
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {loading && (
           <div className="space-y-4">
             {[1,2,3].map(i => <div key={i} className="skeleton h-40" />)}
@@ -103,7 +68,7 @@ export default function AdminDashboard() {
         {!loading && fetchError && (
           <div className="glass-card p-10 text-center">
             <div className="text-4xl mb-3">⚠️</div>
-            <p className="text-slate-400 text-sm mb-5">Failed to load pending props.</p>
+            <p className="text-slate-500 text-sm mb-5">Failed to load pending props.</p>
             <button onClick={fetchPending}
               className="btn-oracle px-6 py-2.5 text-sm">
               Try Again
@@ -114,7 +79,7 @@ export default function AdminDashboard() {
         {!loading && !fetchError && pending.length === 0 && (
           <div className="glass-card p-12 text-center">
             <div className="text-4xl mb-3 animate-float inline-block">✅</div>
-            <p className="font-display text-lg font-700 text-white mb-1">Queue is empty</p>
+            <p className="font-display text-lg font-700 text-slate-900 mb-1">Queue is empty</p>
             <p className="text-slate-500 text-sm">No pending props — you're all caught up.</p>
           </div>
         )}
@@ -122,19 +87,18 @@ export default function AdminDashboard() {
         {!loading && !fetchError && pending.length > 0 && (
           <div className="space-y-4 animate-fade-in">
             {pending.map((prop) => (
-              <div key={prop.id} className="rounded-2xl p-6 transition-all"
-                style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid rgba(217,119,6,0.3)', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
+              <div key={prop.id} className="rounded-2xl p-6 transition-all glass-card card-pending-border shadow-card">
 
                 {/* Top row */}
                 <div className="flex items-center justify-between mb-3">
                   <span className={getSportClass(prop.sport)}>{prop.sport}</span>
-                  <span className="text-slate-600 text-xs">
-                    by <span className="text-slate-500 font-semibold">{prop.createdBy}</span>
+                  <span className="text-slate-400 text-xs">
+                    by <span className="text-slate-600 font-semibold">{prop.createdBy}</span>
                   </span>
                 </div>
 
                 {/* Title */}
-                <p className="font-body font-semibold text-white text-base leading-snug mb-1">
+                <p className="font-body font-semibold text-slate-800 text-base leading-snug mb-1">
                   {prop.title}
                 </p>
 
@@ -144,7 +108,7 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Metadata */}
-                <div className="flex flex-wrap gap-3 text-xs text-slate-600 mb-5">
+                <div className="flex flex-wrap gap-3 text-xs text-slate-400 mb-5">
                   <span>
                     ⏰ Closes {new Date(prop.closesAt).toLocaleDateString("en-US", {
                       weekday: "short", month: "short", day: "numeric",
@@ -156,8 +120,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {actionErrors[prop.id] && (
-                  <p className="text-loss-400 text-xs mb-3 px-3 py-2 rounded-lg"
-                    style={{ background: 'rgba(127,29,29,0.2)' }}>
+                  <p className="text-loss-700 text-xs mb-3 px-3 py-2 rounded-lg alert-error">
                     {actionErrors[prop.id]}
                   </p>
                 )}
@@ -167,12 +130,11 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleApprove(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: 'rgba(6,78,59,0.3)', border: '1px solid rgba(16,185,129,0.3)', color: '#34D399' }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-approve"
                   >
                     {actioningId === prop.id ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="w-3.5 h-3.5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                        <span className="w-3.5 h-3.5 border-2 border-win-700/30 border-t-win-700 rounded-full animate-spin" />
                         Approving...
                       </span>
                     ) : "✓ Approve"}
@@ -180,8 +142,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleReject(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: 'rgba(69,10,10,0.3)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-reject"
                   >
                     {actioningId === prop.id ? "Rejecting..." : "✕ Reject"}
                   </button>
@@ -190,7 +151,6 @@ export default function AdminDashboard() {
             ))}
           </div>
         )}
-      </main>
     </div>
   );
 }
