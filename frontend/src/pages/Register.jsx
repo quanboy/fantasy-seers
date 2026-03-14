@@ -27,17 +27,17 @@ export default function Register() {
     <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
       {/* Decorative elements */}
       <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none"><path d="M0 192V0h192" stroke="#7C3AED" strokeWidth="1" strokeDasharray="4 8"/></svg>
+        <svg viewBox="0 0 192 192" fill="none"><path d="M0 192V0h192" stroke="#4F46E5" strokeWidth="1" strokeDasharray="4 8"/></svg>
       </div>
       <div className="fixed bottom-0 right-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none"><path d="M192 0v192H0" stroke="#F59E0B" strokeWidth="1" strokeDasharray="4 8"/></svg>
+        <svg viewBox="0 0 192 192" fill="none"><path d="M192 0v192H0" stroke="#F97316" strokeWidth="1" strokeDasharray="4 8"/></svg>
       </div>
 
       <div className="w-full max-w-sm animate-slide-up">
         {/* Header */}
         <div className="text-center mb-10">
           <div className="animate-float inline-block mb-4">
-            <img src="/logo.png" alt="Fantasy Seers" className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(168,85,247,0.7)]"  />
+            <img src="/logo.png" alt="Fantasy Seers" className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(79,70,229,0.7)]"  />
           </div>
           <h1 className="font-display text-3xl font-800 text-white tracking-tight">Fantasy Seers</h1>
           <p className="text-slate-500 text-sm mt-1">Your vision. Your edge. Your arena.</p>

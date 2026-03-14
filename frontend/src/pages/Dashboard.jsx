@@ -21,7 +21,7 @@ function NavbarLogo() {
       <img
         src="/logo.png"
         alt="Fantasy Seers"
-        className="w-20 h-20 object-contain drop-shadow-[0_0_22px_rgba(168,85,247,0.6)]"
+        className="w-20 h-20 object-contain drop-shadow-[0_0_22px_rgba(79,70,229,0.6)]"
       />
       <span className="font-display text-lg font-700 text-white tracking-tight">
         Welcome to Fantasy Seers
@@ -85,13 +85,13 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl chip-gold">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                  <circle cx="6" cy="6" r="5" fill="#F59E0B" opacity="0.9" />
+                  <circle cx="6" cy="6" r="5" fill="#F97316" opacity="0.9" />
                   <text
                     x="6"
                     y="9"
                     textAnchor="middle"
                     fontSize="7"
-                    fill="#07080F"
+                    fill="#0B0F1A"
                     fontWeight="bold"
                   >
                     ⚡

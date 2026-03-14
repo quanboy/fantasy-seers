@@ -125,9 +125,9 @@
   }
   .sport-default {
     @apply sport-badge;
-    background: rgba(91, 33, 182, 0.4);
-    color: #C4B5FD;
-    border: 1px solid rgba(196, 181, 253, 0.2);
+    background: rgba(67, 56, 202, 0.4);
+    color: #A5B4FC;
+    border: 1px solid rgba(165, 180, 252, 0.2);
   }
 
   /* === Glass nav === */

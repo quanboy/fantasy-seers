@@ -9,7 +9,7 @@ function OracleLogo() {
         <img
           src="/logo.png"
           alt="Fantasy Seers"
-          className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(168,85,247,0.7)]"
+          className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(79,70,229,0.7)]"
         />
       </div>
       <div className="text-center">
@@ -49,7 +49,7 @@ export default function Login() {
         <svg viewBox="0 0 192 192" fill="none">
           <path
             d="M0 192V0h192"
-            stroke="#7C3AED"
+            stroke="#4F46E5"
             strokeWidth="1"
             strokeDasharray="4 8"
           />
@@ -59,7 +59,7 @@ export default function Login() {
         <svg viewBox="0 0 192 192" fill="none">
           <path
             d="M192 0v192H0"
-            stroke="#F59E0B"
+            stroke="#F97316"
             strokeWidth="1"
             strokeDasharray="4 8"
           />
