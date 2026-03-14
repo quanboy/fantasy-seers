@@ -13,7 +13,7 @@ fantasy-seers/
 │   ├── pom.xml
 │   ├── Dockerfile
 │   └── src/main/java/com/fantasyseers/api/
-│       ├── config/              # Spring config (AppConfig, SecurityConfig)
+│       ├── config/              # Spring config (AppConfig, SecurityConfig, GlobalExceptionHandler)
 │       ├── controller/          # REST controllers
 │       ├── dto/                 # Request/response records
 │       ├── entity/              # JPA entities
@@ -166,13 +166,30 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 
 ---
 
+## Error Handling
+
+`GlobalExceptionHandler` (`@RestControllerAdvice` in `config/`) catches service-layer exceptions and returns JSON `{"message": "..."}`:
+
+| Exception                  | HTTP Status   | Examples                                          |
+|----------------------------|---------------|---------------------------------------------------|
+| `IllegalArgumentException` | 400 Bad Request | "Invalid invite code", "Prop not found"          |
+| `IllegalStateException`    | 409 Conflict   | "Already a member", "Already voted", "Insufficient points" |
+| `AccessDeniedException`    | 403 Forbidden  | "Not a member of this group"                     |
+
+Frontend components read error messages via `err.response?.data?.message` in catch blocks.
+
+**Axios interceptor** (`client.js`): Only redirects to `/login` on 401 or on 403 when no token exists in localStorage. Authenticated 403s (permission errors) propagate to component error handlers.
+
+---
+
 ## Security Notes
 
 - JWT is validated in `JwtAuthFilter` (extends `OncePerRequestFilter`). Token extraction is wrapped in try/catch for `JwtException` to prevent malformed tokens from bubbling up.
 - `@PreAuthorize("hasRole('ADMIN')")` guards all admin endpoints.
-- `AccessDeniedException` from `org.springframework.security.access` returns 403 automatically.
+- `AccessDeniedException` from `org.springframework.security.access` returns 403 via `GlobalExceptionHandler`.
 - `@EnableJpaAuditing` is on `AppConfig`, not the main application class.
 - Group endpoints verify membership before returning data (e.g., `getGroupById`, `getGroupProps`).
+- **Wager limits** are enforced server-side in `VoteService.castVote()` — rejects wagers outside `minWager`/`maxWager` bounds. Frontend `VoteModal` also validates client-side.
 
 ---
 
@@ -185,3 +202,4 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **`FetchType.LAZY`** — `FriendGroup.members` and `FriendGroup.owner` are lazy-loaded. Access them within a `@Transactional` method or they'll throw `LazyInitializationException`.
 - **Two prop creation flows** — `PropService.submitProp()` (user, starts PENDING) vs `PropService.createProp()` (admin, starts OPEN). Don't confuse them.
 - **Invite codes are case-insensitive** — `FriendGroupService.joinGroup()` uppercases the input before lookup.
+- **Spring Security returns 403 for unauthenticated requests** (not 401) — the default filter chain with stateless sessions does this. The Axios interceptor accounts for this by checking whether a token exists in localStorage to distinguish auth failures from permission errors.

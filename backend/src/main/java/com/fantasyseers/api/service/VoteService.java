@@ -34,6 +34,13 @@ public class VoteService {
             throw new IllegalStateException("You have already voted on this prop");
         }
 
+        if (prop.getMinWager() != null && request.wagerAmount() < prop.getMinWager()) {
+            throw new IllegalArgumentException("Minimum wager is " + prop.getMinWager() + " points");
+        }
+        if (prop.getMaxWager() != null && request.wagerAmount() > prop.getMaxWager()) {
+            throw new IllegalArgumentException("Maximum wager is " + prop.getMaxWager() + " points");
+        }
+
         if (user.getPointBank() < request.wagerAmount()) {
             throw new IllegalStateException("Insufficient points");
         }
