@@ -101,15 +101,15 @@
   }
   .sport-nfl {
     @apply sport-badge;
-    background: rgba(22, 101, 52, 0.4);
-    color: #4ADE80;
-    border: 1px solid rgba(74, 222, 128, 0.2);
+    background: theme('colors.win.700 / 0.4');
+    color: theme('colors.win.400');
+    border: 1px solid theme('colors.win.400 / 0.2');
   }
   .sport-nba {
     @apply sport-badge;
-    background: rgba(154, 52, 18, 0.4);
-    color: #FB923C;
-    border: 1px solid rgba(251, 146, 60, 0.2);
+    background: theme('colors.gold.600 / 0.4');
+    color: theme('colors.gold.400');
+    border: 1px solid theme('colors.gold.400 / 0.2');
   }
   .sport-mlb {
     @apply sport-badge;
@@ -125,9 +125,9 @@
   }
   .sport-default {
     @apply sport-badge;
-    background: rgba(67, 56, 202, 0.4);
-    color: #A5B4FC;
-    border: 1px solid rgba(165, 180, 252, 0.2);
+    background: theme('colors.oracle.600 / 0.4');
+    color: theme('colors.oracle.200');
+    border: 1px solid theme('colors.oracle.200 / 0.2');
   }
 
   /* === Glass nav === */

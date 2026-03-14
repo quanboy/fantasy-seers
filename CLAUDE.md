@@ -1,5 +1,7 @@
 # Fantasy Seers — CLAUDE.md
 
+Do not add Co-Authored-By or any Claude attribution to commit messages.
+
 Fantasy Seers is a social sports prediction platform where users wager points on yes/no propositions (props). Users are rewarded for going against the crowd. Built with React + Vite (frontend) and Spring Boot 3 + PostgreSQL (backend), containerized with Docker Compose.
 
 ---

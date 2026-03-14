@@ -27,10 +27,10 @@ export default function Register() {
     <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
       {/* Decorative elements */}
       <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none"><path d="M0 192V0h192" stroke="#4F46E5" strokeWidth="1" strokeDasharray="4 8"/></svg>
+        <svg viewBox="0 0 192 192" fill="none" className="text-oracle-500"><path d="M0 192V0h192" stroke="currentColor" strokeWidth="1" strokeDasharray="4 8"/></svg>
       </div>
       <div className="fixed bottom-0 right-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none"><path d="M192 0v192H0" stroke="#F97316" strokeWidth="1" strokeDasharray="4 8"/></svg>
+        <svg viewBox="0 0 192 192" fill="none" className="text-gold-500"><path d="M192 0v192H0" stroke="currentColor" strokeWidth="1" strokeDasharray="4 8"/></svg>
       </div>
 
       <div className="w-full max-w-sm animate-slide-up">
