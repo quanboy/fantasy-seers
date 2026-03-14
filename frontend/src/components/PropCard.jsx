@@ -84,10 +84,10 @@ export default function PropCard({ prop, onVote }) {
             <div className="flex items-center gap-2">
               {prop.userChoice && (
                 <span className="text-xs text-slate-500">
-                  You: <span className={`font-bold ${prop.userChoice === "YES" ? "text-win-400" : "text-loss-400"}`}>{prop.userChoice}</span>
+                  You: <span className={`font-bold ${prop.userChoice === "YES" ? "text-win-700" : "text-loss-700"}`}>{prop.userChoice}</span>
                 </span>
               )}
-              <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${prop.result === "YES" ? "text-win-400 chip-win" : "text-loss-400 chip-loss"}`}>
+              <div className={`text-xs font-bold px-2.5 py-1 rounded-full ${prop.result === "YES" ? "text-win-700 chip-win" : "text-loss-700 chip-loss"}`}>
                 {prop.result}
               </div>
             </div>
@@ -100,7 +100,7 @@ export default function PropCard({ prop, onVote }) {
       </div>
 
       {/* Title */}
-      <p className={`font-body font-semibold text-base leading-snug ${isResolved ? "text-slate-400" : "text-slate-100"}`}>
+      <p className={`font-body font-semibold text-base leading-snug ${isResolved ? "text-slate-500" : "text-slate-800"}`}>
         {prop.title}
       </p>
 
@@ -109,12 +109,12 @@ export default function PropCard({ prop, onVote }) {
         {!isResolved && (
           <>
             {isVoted ? (
-              <div className={`flex items-center gap-1.5 text-sm font-semibold ${prop.userChoice === "YES" ? "text-win-400" : "text-loss-400"}`}>
+              <div className={`flex items-center gap-1.5 text-sm font-semibold ${prop.userChoice === "YES" ? "text-win-700" : "text-loss-700"}`}>
                 <span>{prop.userChoice === "YES" ? "✓" : "✗"}</span>
                 <span>Voted {prop.userChoice}</span>
               </div>
             ) : (
-              <span className="text-slate-600 text-sm flex items-center gap-1.5">
+              <span className="text-slate-400 text-sm flex items-center gap-1.5">
                 <span className="text-oracle-500">→</span>
                 Tap to place your call
               </span>
@@ -123,14 +123,14 @@ export default function PropCard({ prop, onVote }) {
         )}
 
         {isResolved && prop.userWon !== null && prop.userWon !== undefined && (
-          <span className={`text-sm font-bold ${prop.userWon ? "text-win-400" : "text-loss-500"}`}>
+          <span className={`text-sm font-bold ${prop.userWon ? "text-win-700" : "text-loss-700"}`}>
             {prop.userWon ? "🏆 You won" : "You lost"}
           </span>
         )}
 
         {/* Wager limits hint */}
         {!isResolved && !isVoted && (prop.minWager || prop.maxWager) && (
-          <span className="text-xs text-slate-600 ml-auto">
+          <span className="text-xs text-slate-400 ml-auto">
             {prop.minWager && `Min ${prop.minWager.toLocaleString()}`}
             {prop.minWager && prop.maxWager && " · "}
             {prop.maxWager && `Max ${prop.maxWager.toLocaleString()}`} pts

@@ -9,11 +9,11 @@ export default {
       },
       colors: {
         void: {
-          950: '#0B0F1A',
-          900: '#111827',
-          800: '#1A2035',
-          700: '#243044',
-          600: '#2E3A52',
+          950: '#F8FAFC',
+          900: '#FFFFFF',
+          800: '#F1F5F9',
+          700: '#E2E8F0',
+          600: '#CBD5E1',
         },
         oracle: {
           900: '#1E1B4B',
@@ -49,11 +49,11 @@ export default {
         live: '#F97316',
       },
       backgroundImage: {
-        'oracle-gradient': 'linear-gradient(135deg, #0B0F1A 0%, #111027 40%, #0D1120 100%)',
-        'card-gradient': 'linear-gradient(145deg, #1A2035 0%, #111827 100%)',
-        'oracle-shimmer': 'linear-gradient(90deg, transparent, rgba(99,102,241,0.08), transparent)',
-        'win-gradient': 'linear-gradient(135deg, #052E16, #15803D)',
-        'loss-gradient': 'linear-gradient(135deg, #450A0A, #B91C1C)',
+        'oracle-gradient': 'linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 40%, #F8FAFC 100%)',
+        'card-gradient': 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 100%)',
+        'oracle-shimmer': 'linear-gradient(90deg, transparent, rgba(99,102,241,0.06), transparent)',
+        'win-gradient': 'linear-gradient(135deg, #F0FDF4, #DCFCE7)',
+        'loss-gradient': 'linear-gradient(135deg, #FEF2F2, #FECACA)',
       },
       animation: {
         'gradient-shift': 'gradientShift 8s ease infinite',
@@ -72,7 +72,7 @@ export default {
         },
         pulseGlow: {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(79, 70, 229, 0)' },
-          '50%': { boxShadow: '0 0 20px 4px rgba(79, 70, 229, 0.35)' },
+          '50%': { boxShadow: '0 0 20px 4px rgba(79, 70, 229, 0.15)' },
         },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
@@ -100,13 +100,13 @@ export default {
         },
       },
       boxShadow: {
-        'oracle': '0 0 30px rgba(79, 70, 229, 0.2)',
-        'oracle-lg': '0 0 60px rgba(79, 70, 229, 0.3)',
-        'gold': '0 0 20px rgba(249, 115, 22, 0.25)',
-        'win': '0 0 20px rgba(34, 197, 94, 0.2)',
-        'loss': '0 0 20px rgba(239, 68, 68, 0.2)',
-        'card': '0 4px 24px rgba(0,0,0,0.4)',
-        'modal': '0 24px 80px rgba(0,0,0,0.7)',
+        'oracle': '0 0 30px rgba(79, 70, 229, 0.1)',
+        'oracle-lg': '0 0 60px rgba(79, 70, 229, 0.15)',
+        'gold': '0 0 20px rgba(249, 115, 22, 0.12)',
+        'win': '0 0 20px rgba(34, 197, 94, 0.1)',
+        'loss': '0 0 20px rgba(239, 68, 68, 0.1)',
+        'card': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
+        'modal': '0 24px 80px rgba(0,0,0,0.2)',
       },
     },
   },

@@ -20,11 +20,11 @@ function RakeExplainer({ wager }) {
 
   return (
     <div className="rake-chip mt-3 text-xs leading-relaxed">
-      <span className="font-semibold text-oracle-400">Fantasy Seers fee: 5% of winnings.</span>
+      <span className="font-semibold text-oracle-600">Fantasy Seers fee: 5% of winnings.</span>
       {amt > 0 && (
         <span className="text-slate-500 ml-1">
           If you win a {amt.toLocaleString()} pt bet → you keep{" "}
-          <span className="text-oracle-300 font-semibold">{(amt * 2 - fee).toLocaleString()} pts</span>
+          <span className="text-oracle-600 font-semibold">{(amt * 2 - fee).toLocaleString()} pts</span>
           {" "}({fee.toLocaleString()} pt platform fee).
         </span>
       )}
@@ -39,13 +39,13 @@ function QuickAmounts({ max, onSelect }) {
     <div className="flex gap-2 mt-2">
       {amounts.map(a => (
         <button key={a} onClick={() => onSelect(String(a))}
-          className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-oracle-300 transition-all chip-oracle hover:bg-oracle-500/20"
+          className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-oracle-600 transition-all chip-oracle hover:bg-oracle-100"
         >
           {a.toLocaleString()}
         </button>
       ))}
       <button onClick={() => onSelect(String(max))}
-        className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gold-400 transition-all chip-gold hover:bg-gold-500/20"
+        className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gold-600 transition-all chip-gold hover:bg-gold-200/60"
       >
         Max
       </button>
@@ -88,7 +88,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/85 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-sm"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
@@ -100,13 +100,13 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             <div className="flex items-start justify-between mb-5">
               <span className={getSportClass(prop.sport)}>{prop.sport}</span>
               <button onClick={onClose}
-                className="text-slate-600 hover:text-slate-300 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-void-700 transition-all text-lg">
+                className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-void-800 transition-all text-lg">
                 ✕
               </button>
             </div>
 
             {/* Prop title */}
-            <p className="font-display text-xl font-700 text-white leading-snug mb-6">
+            <p className="font-display text-xl font-700 text-slate-900 leading-snug mb-6">
               {prop.title}
             </p>
 
@@ -136,7 +136,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             <div className="mb-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-slate-500 uppercase tracking-widest">Your wager</label>
-                <span className="text-xs text-gold-500 font-semibold">
+                <span className="text-xs text-gold-600 font-semibold">
                   {userPoints.toLocaleString()} pts available
                 </span>
               </div>
@@ -157,7 +157,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
 
             {/* Wager limits */}
             {(prop.minWager || prop.maxWager) && (
-              <p className="text-xs text-slate-600 mt-2">
+              <p className="text-xs text-slate-400 mt-2">
                 {prop.minWager && `Min: ${prop.minWager.toLocaleString()} pts`}
                 {prop.minWager && prop.maxWager && " · "}
                 {prop.maxWager && `Max: ${prop.maxWager.toLocaleString()} pts`}
@@ -165,7 +165,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             )}
 
             {error && (
-              <p className="text-loss-400 text-sm mt-4 px-3 py-2 rounded-xl alert-error">
+              <p className="text-loss-700 text-sm mt-4 px-3 py-2 rounded-xl alert-error">
                 {error}
               </p>
             )}
@@ -192,7 +192,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
           <div className="animate-scale-in">
             <div className="text-center mb-6">
               <div className="text-3xl mb-2">🔮</div>
-              <p className="font-display text-lg font-700 text-white">Vote locked in</p>
+              <p className="font-display text-lg font-700 text-slate-900">Vote locked in</p>
               <p className="text-slate-500 text-sm mt-1">Here's how the crowd is calling it</p>
             </div>
 
@@ -210,21 +210,21 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
 
             <div className="grid grid-cols-2 gap-3 mb-6">
               <div className="rounded-2xl p-5 text-center chip-win">
-                <div className="font-display text-3xl font-800 text-win-400">{split.yesPct.toFixed(0)}%</div>
+                <div className="font-display text-3xl font-800 text-win-700">{split.yesPct.toFixed(0)}%</div>
                 <div className="text-slate-500 text-xs mt-1">YES · {split.yesCount} votes</div>
-                <div className="text-win-500 text-xs mt-1 font-semibold">{split.yesWagerTotal?.toLocaleString()} pts</div>
+                <div className="text-win-700 text-xs mt-1 font-semibold">{split.yesWagerTotal?.toLocaleString()} pts</div>
               </div>
               <div className="rounded-2xl p-5 text-center chip-loss">
-                <div className="font-display text-3xl font-800 text-loss-400">{split.noPct.toFixed(0)}%</div>
+                <div className="font-display text-3xl font-800 text-loss-700">{split.noPct.toFixed(0)}%</div>
                 <div className="text-slate-500 text-xs mt-1">NO · {split.noCount} votes</div>
-                <div className="text-loss-500 text-xs mt-1 font-semibold">{split.noWagerTotal?.toLocaleString()} pts</div>
+                <div className="text-loss-700 text-xs mt-1 font-semibold">{split.noWagerTotal?.toLocaleString()} pts</div>
               </div>
             </div>
 
             {/* Payout reminder */}
             <div className="rake-chip mb-5 text-center">
-              Winners receive <span className="text-oracle-300 font-bold">95%</span> of net winnings ·
-              <span className="text-slate-600"> 5% Fantasy Seers platform fee</span>
+              Winners receive <span className="text-oracle-600 font-bold">95%</span> of net winnings ·
+              <span className="text-slate-400"> 5% Fantasy Seers platform fee</span>
             </div>
 
             <button

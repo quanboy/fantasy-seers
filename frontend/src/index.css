@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-void-950 text-slate-200 font-body;
+    @apply bg-void-950 text-slate-800 font-body;
   }
 
   /* Custom scrollbar */
@@ -19,7 +19,7 @@
     height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: theme('colors.void.900');
+    background: theme('colors.void.800');
   }
   ::-webkit-scrollbar-thumb {
     background: theme('colors.void.600');
@@ -35,7 +35,6 @@
     -webkit-appearance: none;
   }
   input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.4) sepia(1) saturate(2) hue-rotate(220deg);
     cursor: pointer;
   }
 }
@@ -43,17 +42,16 @@
 @layer components {
   /* === Glass card base === */
   .glass-card {
-    @apply bg-void-800 border border-void-700 rounded-2xl;
-    background: linear-gradient(145deg, theme('colors.void.800') 0%, theme('colors.void.900') 100%);
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
+    @apply bg-void-900 border border-void-700 rounded-2xl;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   }
 
   .glass-card-hover {
     @apply glass-card transition-all duration-300;
   }
   .glass-card-hover:hover {
-    border-color: theme('colors.oracle.700');
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 20px theme('colors.oracle.500 / 0.15'), inset 0 1px 0 rgba(255,255,255,0.03);
+    border-color: theme('colors.oracle.300');
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px theme('colors.oracle.500 / 0.1');
     transform: translateY(-1px);
   }
 
@@ -63,7 +61,7 @@
     box-shadow: 0 0 0 0 theme('colors.oracle.500 / 0');
   }
   .btn-oracle:hover {
-    box-shadow: 0 0 24px theme('colors.oracle.500 / 0.4');
+    box-shadow: 0 4px 16px theme('colors.oracle.500 / 0.25');
     transform: translateY(-1px);
   }
   .btn-oracle:active {
@@ -77,22 +75,22 @@
 
   /* === Gold button === */
   .btn-gold {
-    @apply bg-gold-500 hover:bg-gold-400 text-void-950 font-bold px-6 py-3 rounded-xl transition-all duration-200;
+    @apply bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-3 rounded-xl transition-all duration-200;
     box-shadow: 0 0 0 0 theme('colors.gold.500 / 0');
   }
   .btn-gold:hover {
-    box-shadow: 0 0 20px theme('colors.gold.500 / 0.35');
+    box-shadow: 0 4px 16px theme('colors.gold.500 / 0.2');
     transform: translateY(-1px);
   }
 
   /* === Input base === */
   .input-base {
-    @apply w-full bg-void-900 border border-void-700 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-600 transition-all duration-200 font-body;
+    @apply w-full bg-void-950 border border-void-700 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 transition-all duration-200 font-body;
     outline: none;
   }
   .input-base:focus {
     border-color: theme('colors.oracle.500');
-    box-shadow: 0 0 0 3px theme('colors.oracle.500 / 0.15');
+    box-shadow: 0 0 0 3px theme('colors.oracle.500 / 0.1');
   }
 
   /* === Sport badge === */
@@ -101,84 +99,84 @@
   }
   .sport-nfl {
     @apply sport-badge;
-    background: theme('colors.win.700 / 0.4');
-    color: theme('colors.win.400');
-    border: 1px solid theme('colors.win.400 / 0.2');
+    background: theme('colors.win.500 / 0.1');
+    color: theme('colors.win.700');
+    border: 1px solid theme('colors.win.500 / 0.2');
   }
   .sport-nba {
     @apply sport-badge;
-    background: theme('colors.gold.600 / 0.4');
-    color: theme('colors.gold.400');
-    border: 1px solid theme('colors.gold.400 / 0.2');
+    background: theme('colors.gold.500 / 0.1');
+    color: theme('colors.gold.600');
+    border: 1px solid theme('colors.gold.500 / 0.2');
   }
   .sport-mlb {
     @apply sport-badge;
-    background: rgba(30, 64, 175, 0.4);
-    color: #60A5FA;
-    border: 1px solid rgba(96, 165, 250, 0.2);
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563EB;
+    border: 1px solid rgba(59, 130, 246, 0.2);
   }
   .sport-nhl {
     @apply sport-badge;
-    background: rgba(30, 58, 138, 0.4);
-    color: #93C5FD;
-    border: 1px solid rgba(147, 197, 253, 0.2);
+    background: rgba(37, 99, 235, 0.1);
+    color: #1D4ED8;
+    border: 1px solid rgba(37, 99, 235, 0.2);
   }
   .sport-default {
     @apply sport-badge;
-    background: theme('colors.oracle.600 / 0.4');
-    color: theme('colors.oracle.200');
-    border: 1px solid theme('colors.oracle.200 / 0.2');
+    background: theme('colors.oracle.500 / 0.1');
+    color: theme('colors.oracle.700');
+    border: 1px solid theme('colors.oracle.500 / 0.2');
   }
 
   /* === Glass nav === */
   .glass-nav {
-    @apply bg-void-950/85 backdrop-blur-[16px];
+    @apply bg-white/90 backdrop-blur-[16px];
   }
 
   /* === Chip variants (small bordered badges/buttons) === */
   .chip-oracle {
-    @apply bg-oracle-500/10 border border-oracle-500/20;
+    @apply bg-oracle-100 border border-oracle-500/20;
   }
   .chip-oracle-active {
-    @apply bg-oracle-500/25 border border-oracle-500/60;
+    @apply bg-oracle-100 border border-oracle-500/40;
   }
   .chip-gold {
-    @apply bg-gold-500/10 border border-gold-500/20;
+    @apply bg-gold-200/40 border border-gold-500/20;
   }
   .chip-gold-strong {
-    @apply bg-gold-600/15 border border-gold-500/25;
+    @apply bg-gold-200/60 border border-gold-500/30;
   }
   .chip-win {
-    @apply bg-win-900/20 border border-win-500/20;
+    @apply bg-win-300/20 border border-win-500/20;
   }
   .chip-loss {
-    @apply bg-loss-900/20 border border-loss-500/20;
+    @apply bg-loss-400/10 border border-loss-500/20;
   }
 
   /* === Alert === */
   .alert-error {
-    @apply bg-loss-900/25 border border-loss-500/25;
+    @apply bg-loss-400/10 border border-loss-500/20;
   }
 
   /* === Prop card borders for voted/resolved states === */
   .card-win-border {
-    border: 1px solid theme('colors.win.500 / 0.35');
-    background: linear-gradient(145deg, theme('colors.win.900 / 0.13'), theme('colors.void.900'));
+    border: 1px solid theme('colors.win.500 / 0.3');
+    background: linear-gradient(145deg, theme('colors.win.300 / 0.1'), white);
   }
   .card-win-border-light {
-    border: 1px solid theme('colors.win.500 / 0.4');
-    background: linear-gradient(145deg, theme('colors.win.900 / 0.09'), theme('colors.void.900'));
+    border: 1px solid theme('colors.win.500 / 0.25');
+    background: linear-gradient(145deg, theme('colors.win.300 / 0.06'), white);
   }
   .card-loss-border {
-    border: 1px solid theme('colors.loss.500 / 0.3');
-    background: linear-gradient(145deg, theme('colors.loss.900 / 0.09'), theme('colors.void.900'));
+    border: 1px solid theme('colors.loss.500 / 0.25');
+    background: linear-gradient(145deg, theme('colors.loss.400 / 0.06'), white);
   }
   .card-loss-border-light {
-    border: 1px solid theme('colors.loss.500 / 0.35');
-    background: linear-gradient(145deg, theme('colors.loss.900 / 0.08'), theme('colors.void.900'));
+    border: 1px solid theme('colors.loss.500 / 0.2');
+    background: linear-gradient(145deg, theme('colors.loss.400 / 0.04'), white);
   }
   .card-pending-border {
-    border: 1px solid theme('colors.gold.600 / 0.3');
+    border: 1px solid theme('colors.gold.500 / 0.3');
   }
 
   /* === Vote choice buttons === */
@@ -186,23 +184,23 @@
     background: linear-gradient(135deg, theme('colors.win.700'), theme('colors.win.500'));
     border: 1px solid theme('colors.win.500 / 0.5');
     color: white;
-    box-shadow: 0 0 24px theme('colors.win.500 / 0.3');
+    box-shadow: 0 4px 16px theme('colors.win.500 / 0.2');
   }
   .vote-yes-idle {
-    background: theme('colors.win.500 / 0.08');
+    background: theme('colors.win.500 / 0.06');
     border: 1px solid theme('colors.win.500 / 0.2');
-    @apply text-win-300;
+    @apply text-win-700;
   }
   .vote-no {
     background: linear-gradient(135deg, theme('colors.loss.700'), theme('colors.loss.500'));
     border: 1px solid theme('colors.loss.500 / 0.5');
     color: white;
-    box-shadow: 0 0 24px theme('colors.loss.500 / 0.3');
+    box-shadow: 0 4px 16px theme('colors.loss.500 / 0.2');
   }
   .vote-no-idle {
-    background: theme('colors.loss.500 / 0.08');
+    background: theme('colors.loss.500 / 0.06');
     border: 1px solid theme('colors.loss.500 / 0.2');
-    @apply text-loss-400;
+    @apply text-loss-700;
   }
 
   /* === Split bar gradients === */
@@ -215,7 +213,7 @@
 
   /* === Ghost button (secondary action) === */
   .btn-ghost {
-    @apply bg-void-800 border border-void-700 text-slate-300;
+    @apply bg-void-800 border border-void-700 text-slate-600;
   }
   .btn-ghost:hover {
     @apply bg-void-700;
@@ -223,10 +221,12 @@
 
   /* === Approve / Reject buttons === */
   .btn-approve {
-    @apply bg-win-900/30 border border-win-500/30 text-win-400;
+    @apply border border-win-500/25 text-win-700;
+    background: theme('colors.win.500 / 0.08');
   }
   .btn-reject {
-    @apply bg-loss-900/30 border border-loss-500/25 text-loss-400;
+    @apply border border-loss-500/20 text-loss-700;
+    background: theme('colors.loss.500 / 0.08');
   }
 
   /* === Live dot === */
@@ -236,29 +236,29 @@
 
   /* === Rake chip === */
   .rake-chip {
-    background: theme('colors.oracle.500 / 0.12');
-    border: 1px solid theme('colors.oracle.500 / 0.25');
-    @apply text-oracle-300 text-xs rounded-lg px-3 py-1.5 font-body;
+    background: theme('colors.oracle.500 / 0.06');
+    border: 1px solid theme('colors.oracle.500 / 0.15');
+    @apply text-oracle-700 text-xs rounded-lg px-3 py-1.5 font-body;
   }
 
   /* === Auth mesh background === */
   .auth-mesh {
     background-color: theme('colors.void.950');
     background-image:
-      radial-gradient(ellipse 80% 60% at 20% 10%, theme('colors.oracle.500 / 0.12') 0%, transparent 50%),
-      radial-gradient(ellipse 60% 40% at 80% 80%, theme('colors.gold.500 / 0.06') 0%, transparent 50%),
-      radial-gradient(ellipse 40% 50% at 60% 20%, theme('colors.oracle.600 / 0.08') 0%, transparent 40%);
+      radial-gradient(ellipse 80% 60% at 20% 10%, theme('colors.oracle.500 / 0.06') 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, theme('colors.gold.500 / 0.04') 0%, transparent 50%),
+      radial-gradient(ellipse 40% 50% at 60% 20%, theme('colors.oracle.600 / 0.04') 0%, transparent 40%);
   }
 
   /* === Shimmer skeleton === */
   .skeleton {
-    @apply bg-void-800 rounded-xl overflow-hidden relative;
+    @apply bg-void-700/50 rounded-xl overflow-hidden relative;
   }
   .skeleton::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, theme('colors.oracle.400 / 0.06'), transparent);
+    background: linear-gradient(90deg, transparent, theme('colors.void.900 / 0.6'), transparent);
     background-size: 400px 100%;
     animation: shimmer 1.8s linear infinite;
   }

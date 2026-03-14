@@ -78,16 +78,16 @@ export default function SubmitPropCard({ onSubmitted }) {
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 chip-oracle">
-            <span className="text-oracle-400 text-sm">✍</span>
+            <span className="text-oracle-500 text-sm">✍</span>
           </div>
           <div>
-            <p className="text-slate-500 text-sm group-hover:text-slate-400 transition-colors">
+            <p className="text-slate-500 text-sm group-hover:text-slate-600 transition-colors">
               Make a call — what's your take?
             </p>
-            <p className="text-slate-700 text-xs mt-0.5">Post a prop for others to challenge</p>
+            <p className="text-slate-400 text-xs mt-0.5">Post a prop for others to challenge</p>
           </div>
           <div className="ml-auto">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-oracle-600">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-oracle-500">
               <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
             </svg>
           </div>
@@ -102,8 +102,8 @@ export default function SubmitPropCard({ onSubmitted }) {
         <div className="flex items-center gap-3">
           <span className="text-2xl">🔮</span>
           <div>
-            <p className="text-win-400 font-semibold text-sm">Prop submitted!</p>
-            <p className="text-slate-600 text-xs mt-0.5">Goes live after admin review — usually within minutes.</p>
+            <p className="text-win-700 font-semibold text-sm">Prop submitted!</p>
+            <p className="text-slate-500 text-xs mt-0.5">Goes live after admin review — usually within minutes.</p>
           </div>
         </div>
       </div>
@@ -111,11 +111,11 @@ export default function SubmitPropCard({ onSubmitted }) {
   }
 
   return (
-    <div className="mb-4 rounded-2xl p-6 animate-scale-in glass-card border-oracle-700 shadow-oracle">
+    <div className="mb-4 rounded-2xl p-6 animate-scale-in glass-card border-oracle-300 shadow-oracle">
 
       <div className="flex items-center gap-2 mb-5">
-        <span className="font-display text-base font-700 text-white">Create a Prop</span>
-        <div className="flex-1 h-px bg-gradient-to-r from-oracle-500/40 to-transparent" />
+        <span className="font-display text-base font-700 text-slate-900">Create a Prop</span>
+        <div className="flex-1 h-px bg-gradient-to-r from-oracle-500/30 to-transparent" />
       </div>
 
       {/* Title */}
@@ -132,7 +132,7 @@ export default function SubmitPropCard({ onSubmitted }) {
 
       {/* Description */}
       <div className="mb-3">
-        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Context <span className="normal-case text-slate-700">(optional)</span></label>
+        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Context <span className="normal-case text-slate-400">(optional)</span></label>
         <textarea
           name="description"
           value={form.description}
@@ -180,8 +180,8 @@ export default function SubmitPropCard({ onSubmitted }) {
               onClick={() => setForm(prev => ({ ...prev, scope: s.value, groupId: "" }))}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 form.scope === s.value
-                  ? "chip-oracle-active text-oracle-200"
-                  : "bg-white/[0.04] border border-void-700 text-slate-500"
+                  ? "chip-oracle-active text-oracle-700"
+                  : "bg-void-800 border border-void-700 text-slate-500"
               }`}
             >
               {s.label}
@@ -195,9 +195,9 @@ export default function SubmitPropCard({ onSubmitted }) {
         <div className="mb-3">
           <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Group</label>
           {groups.length === 0 ? (
-            <p className="text-slate-600 text-xs">
+            <p className="text-slate-400 text-xs">
               You have no groups yet.{" "}
-              <a href="/groups" className="text-oracle-400 hover:underline">Create one</a>.
+              <a href="/groups" className="text-oracle-600 hover:underline">Create one</a>.
             </p>
           ) : (
             <select
@@ -219,7 +219,7 @@ export default function SubmitPropCard({ onSubmitted }) {
       {/* Wager limits */}
       <div className="flex gap-3 mb-5">
         <div className="flex-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Min wager <span className="normal-case text-slate-700">(optional)</span></label>
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Min wager <span className="normal-case text-slate-400">(optional)</span></label>
           <input
             name="minWager"
             type="number"
@@ -230,7 +230,7 @@ export default function SubmitPropCard({ onSubmitted }) {
           />
         </div>
         <div className="flex-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Max wager <span className="normal-case text-slate-700">(optional)</span></label>
+          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Max wager <span className="normal-case text-slate-400">(optional)</span></label>
           <input
             name="maxWager"
             type="number"
@@ -258,13 +258,13 @@ export default function SubmitPropCard({ onSubmitted }) {
         </button>
         <button
           onClick={handleCancel}
-          className="text-slate-500 hover:text-slate-300 text-sm px-4 py-3 rounded-xl transition-all hover:bg-void-800"
+          className="text-slate-400 hover:text-slate-600 text-sm px-4 py-3 rounded-xl transition-all hover:bg-void-800"
         >
           Cancel
         </button>
       </div>
 
-      <p className="text-slate-700 text-xs mt-3">
+      <p className="text-slate-400 text-xs mt-3">
         Props are reviewed by our team before going live. Usually approved within 30 minutes.
       </p>
     </div>
