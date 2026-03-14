@@ -75,13 +75,7 @@ export default function Login() {
           </p>
 
           {error && (
-            <div
-              className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400 font-body"
-              style={{
-                background: "rgba(127,29,29,0.25)",
-                border: "1px solid rgba(239,68,68,0.25)",
-              }}
-            >
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400 font-body alert-error">
               {error}
             </div>
           )}

@@ -49,8 +49,7 @@ export default function GroupFeedPage() {
     <div className="min-h-screen bg-void-950">
       {/* Navbar */}
       <nav
-        className="sticky top-0 z-40 border-b border-void-700"
-        style={{ background: "rgba(7,8,15,0.85)", backdropFilter: "blur(16px)" }}
+        className="sticky top-0 z-40 border-b border-void-700 glass-nav"
       >
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -94,7 +93,7 @@ export default function GroupFeedPage() {
 
         {error && (
           <div className="glass-card p-8 text-center">
-            <p className="text-red-400 text-sm">{error}</p>
+            <p className="text-loss-400 text-sm">{error}</p>
             <Link to="/groups" className="text-oracle-400 text-xs mt-2 inline-block hover:underline">
               Back to Groups
             </Link>
@@ -104,8 +103,7 @@ export default function GroupFeedPage() {
         {!loading && !error && group && (
           <div className="animate-fade-in">
             {/* Group header */}
-            <div className="rounded-2xl p-5 mb-6"
-              style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235' }}>
+            <div className="rounded-2xl p-5 mb-6 glass-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h1 className="font-display text-xl font-700 text-white">{group.name}</h1>
@@ -117,8 +115,7 @@ export default function GroupFeedPage() {
                 <div className="shrink-0 text-right">
                   <p className="text-slate-600 text-xs mb-1">Invite code</p>
                   <code
-                    className="text-oracle-400 text-xs font-mono px-2 py-1 rounded cursor-pointer"
-                    style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}
+                    className="text-oracle-400 text-xs font-mono px-2 py-1 rounded cursor-pointer chip-oracle"
                     onClick={() => navigator.clipboard.writeText(group.inviteCode)}
                     title="Click to copy"
                   >

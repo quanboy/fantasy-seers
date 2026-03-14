@@ -48,8 +48,7 @@ export default function Register() {
           <p className="text-slate-600 text-xs mb-6">Join thousands of seers competing daily</p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400"
-              style={{ background: 'rgba(127,29,29,0.25)', border: '1px solid rgba(239,68,68,0.25)' }}>
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400 alert-error">
               {error}
             </div>
           )}
@@ -92,8 +91,7 @@ export default function Register() {
             </div>
 
             {/* Bonus callout */}
-            <div className="rounded-xl px-4 py-3 text-xs text-gold-400"
-              style={{ background: 'rgba(217,119,6,0.1)', border: '1px solid rgba(245,158,11,0.2)' }}>
+            <div className="rounded-xl px-4 py-3 text-xs text-gold-400 chip-gold">
               <span className="font-bold">🎁 Welcome bonus:</span> Start with 1,000 free points to wager on your first props.
             </div>
 

@@ -7,32 +7,12 @@ import SubmitPropCard from "../components/SubmitPropCard";
 
 function getTierInfo(points) {
   if (points >= 50000)
-    return {
-      label: "Legend",
-      color: "text-gold-400",
-      bg: "rgba(217,119,6,0.15)",
-      border: "rgba(245,158,11,0.3)",
-    };
+    return { label: "Legend", color: "text-gold-400", chipClass: "chip-gold-strong" };
   if (points >= 15000)
-    return {
-      label: "Elite",
-      color: "text-oracle-300",
-      bg: "rgba(124,58,237,0.15)",
-      border: "rgba(139,92,246,0.3)",
-    };
+    return { label: "Elite", color: "text-oracle-300", chipClass: "chip-oracle" };
   if (points >= 5000)
-    return {
-      label: "Pro",
-      color: "text-win-400",
-      bg: "rgba(16,185,129,0.12)",
-      border: "rgba(52,211,153,0.25)",
-    };
-  return {
-    label: "Rookie",
-    color: "text-slate-400",
-    bg: "rgba(71,85,105,0.15)",
-    border: "rgba(100,116,139,0.25)",
-  };
+    return { label: "Pro", color: "text-win-400", chipClass: "chip-win" };
+  return { label: "Rookie", color: "text-slate-400", chipClass: "bg-slate-600/15 border border-slate-500/25" };
 }
 
 function NavbarLogo() {
@@ -96,26 +76,14 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-void-950">
       {/* Navbar */}
-      <nav
-        className="sticky top-0 z-40 border-b border-void-700"
-        style={{
-          background: "rgba(7,8,15,0.85)",
-          backdropFilter: "blur(16px)",
-        }}
-      >
+      <nav className="sticky top-0 z-40 border-b border-void-700 glass-nav">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <NavbarLogo />
 
           <div className="flex items-center gap-3">
             {/* Points + tier */}
             <div className="flex items-center gap-2">
-              <div
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl"
-                style={{
-                  background: "rgba(245,158,11,0.1)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                }}
-              >
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl chip-gold">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                   <circle cx="6" cy="6" r="5" fill="#F59E0B" opacity="0.9" />
                   <text
@@ -134,14 +102,7 @@ export default function Dashboard() {
                 </span>
               </div>
 
-              <div
-                className="hidden sm:flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold"
-                style={{
-                  background: tier.bg,
-                  border: `1px solid ${tier.border}`,
-                  color: "inherit",
-                }}
-              >
+              <div className={`hidden sm:flex items-center px-2.5 py-1.5 rounded-lg text-xs font-bold ${tier.chipClass}`}>
                 <span className={tier.color}>{tier.label}</span>
               </div>
             </div>
@@ -152,12 +113,7 @@ export default function Dashboard() {
 
             <a
               href="/groups"
-              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors"
-              style={{
-                background: "rgba(124,58,237,0.1)",
-                border: "1px solid rgba(124,58,237,0.2)",
-                color: "#C4B5FD",
-              }}
+              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg transition-colors chip-oracle text-oracle-200"
             >
               Groups
             </a>
@@ -165,12 +121,7 @@ export default function Dashboard() {
             {user?.role === "ADMIN" && (
               <a
                 href="/admin"
-                className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors"
-                style={{
-                  background: "rgba(217,119,6,0.12)",
-                  border: "1px solid rgba(245,158,11,0.2)",
-                  color: "#FBBF24",
-                }}
+                className="text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors chip-gold text-gold-400"
               >
                 Admin
               </a>

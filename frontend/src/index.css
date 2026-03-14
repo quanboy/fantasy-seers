@@ -3,12 +3,6 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --color-oracle: #7C3AED;
-    --color-gold: #F59E0B;
-    --color-bg: #07080F;
-  }
-
   * {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -17,7 +11,6 @@
 
   body {
     @apply bg-void-950 text-slate-200 font-body;
-    background-color: #07080F;
   }
 
   /* Custom scrollbar */
@@ -26,14 +19,14 @@
     height: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #0E1018;
+    background: theme('colors.void.900');
   }
   ::-webkit-scrollbar-thumb {
-    background: #272B42;
+    background: theme('colors.void.600');
     border-radius: 4px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #7C3AED;
+    background: theme('colors.oracle.500');
   }
 
   /* Input / select base reset */
@@ -51,7 +44,7 @@
   /* === Glass card base === */
   .glass-card {
     @apply bg-void-800 border border-void-700 rounded-2xl;
-    background: linear-gradient(145deg, #161825 0%, #0E1018 100%);
+    background: linear-gradient(145deg, theme('colors.void.800') 0%, theme('colors.void.900') 100%);
     box-shadow: 0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03);
   }
 
@@ -59,18 +52,18 @@
     @apply glass-card transition-all duration-300;
   }
   .glass-card-hover:hover {
-    border-color: #4C1D95;
-    box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 20px rgba(124,58,237,0.15), inset 0 1px 0 rgba(255,255,255,0.03);
+    border-color: theme('colors.oracle.700');
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4), 0 0 20px theme('colors.oracle.500 / 0.15'), inset 0 1px 0 rgba(255,255,255,0.03);
     transform: translateY(-1px);
   }
 
   /* === Oracle button === */
   .btn-oracle {
     @apply bg-oracle-500 hover:bg-oracle-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 font-body;
-    box-shadow: 0 0 0 0 rgba(124,58,237,0);
+    box-shadow: 0 0 0 0 theme('colors.oracle.500 / 0');
   }
   .btn-oracle:hover {
-    box-shadow: 0 0 24px rgba(124,58,237,0.4);
+    box-shadow: 0 0 24px theme('colors.oracle.500 / 0.4');
     transform: translateY(-1px);
   }
   .btn-oracle:active {
@@ -85,10 +78,10 @@
   /* === Gold button === */
   .btn-gold {
     @apply bg-gold-500 hover:bg-gold-400 text-void-950 font-bold px-6 py-3 rounded-xl transition-all duration-200;
-    box-shadow: 0 0 0 0 rgba(245,158,11,0);
+    box-shadow: 0 0 0 0 theme('colors.gold.500 / 0');
   }
   .btn-gold:hover {
-    box-shadow: 0 0 20px rgba(245,158,11,0.35);
+    box-shadow: 0 0 20px theme('colors.gold.500 / 0.35');
     transform: translateY(-1px);
   }
 
@@ -98,8 +91,8 @@
     outline: none;
   }
   .input-base:focus {
-    border-color: #7C3AED;
-    box-shadow: 0 0 0 3px rgba(124,58,237,0.15);
+    border-color: theme('colors.oracle.500');
+    box-shadow: 0 0 0 3px theme('colors.oracle.500 / 0.15');
   }
 
   /* === Sport badge === */
@@ -137,6 +130,105 @@
     border: 1px solid rgba(196, 181, 253, 0.2);
   }
 
+  /* === Glass nav === */
+  .glass-nav {
+    @apply bg-void-950/85 backdrop-blur-[16px];
+  }
+
+  /* === Chip variants (small bordered badges/buttons) === */
+  .chip-oracle {
+    @apply bg-oracle-500/10 border border-oracle-500/20;
+  }
+  .chip-oracle-active {
+    @apply bg-oracle-500/25 border border-oracle-500/60;
+  }
+  .chip-gold {
+    @apply bg-gold-500/10 border border-gold-500/20;
+  }
+  .chip-gold-strong {
+    @apply bg-gold-600/15 border border-gold-500/25;
+  }
+  .chip-win {
+    @apply bg-win-900/20 border border-win-500/20;
+  }
+  .chip-loss {
+    @apply bg-loss-900/20 border border-loss-500/20;
+  }
+
+  /* === Alert === */
+  .alert-error {
+    @apply bg-loss-900/25 border border-loss-500/25;
+  }
+
+  /* === Prop card borders for voted/resolved states === */
+  .card-win-border {
+    border: 1px solid theme('colors.win.500 / 0.35');
+    background: linear-gradient(145deg, theme('colors.win.900 / 0.13'), theme('colors.void.900'));
+  }
+  .card-win-border-light {
+    border: 1px solid theme('colors.win.500 / 0.4');
+    background: linear-gradient(145deg, theme('colors.win.900 / 0.09'), theme('colors.void.900'));
+  }
+  .card-loss-border {
+    border: 1px solid theme('colors.loss.500 / 0.3');
+    background: linear-gradient(145deg, theme('colors.loss.900 / 0.09'), theme('colors.void.900'));
+  }
+  .card-loss-border-light {
+    border: 1px solid theme('colors.loss.500 / 0.35');
+    background: linear-gradient(145deg, theme('colors.loss.900 / 0.08'), theme('colors.void.900'));
+  }
+  .card-pending-border {
+    border: 1px solid theme('colors.gold.600 / 0.3');
+  }
+
+  /* === Vote choice buttons === */
+  .vote-yes {
+    background: linear-gradient(135deg, theme('colors.win.700'), theme('colors.win.500'));
+    border: 1px solid theme('colors.win.500 / 0.5');
+    color: white;
+    box-shadow: 0 0 24px theme('colors.win.500 / 0.3');
+  }
+  .vote-yes-idle {
+    background: theme('colors.win.500 / 0.08');
+    border: 1px solid theme('colors.win.500 / 0.2');
+    @apply text-win-300;
+  }
+  .vote-no {
+    background: linear-gradient(135deg, theme('colors.loss.700'), theme('colors.loss.500'));
+    border: 1px solid theme('colors.loss.500 / 0.5');
+    color: white;
+    box-shadow: 0 0 24px theme('colors.loss.500 / 0.3');
+  }
+  .vote-no-idle {
+    background: theme('colors.loss.500 / 0.08');
+    border: 1px solid theme('colors.loss.500 / 0.2');
+    @apply text-loss-400;
+  }
+
+  /* === Split bar gradients === */
+  .bar-yes {
+    background: linear-gradient(90deg, theme('colors.win.700'), theme('colors.win.500'));
+  }
+  .bar-no {
+    background: linear-gradient(90deg, theme('colors.loss.700'), theme('colors.loss.500'));
+  }
+
+  /* === Ghost button (secondary action) === */
+  .btn-ghost {
+    @apply bg-void-800 border border-void-700 text-slate-300;
+  }
+  .btn-ghost:hover {
+    @apply bg-void-700;
+  }
+
+  /* === Approve / Reject buttons === */
+  .btn-approve {
+    @apply bg-win-900/30 border border-win-500/30 text-win-400;
+  }
+  .btn-reject {
+    @apply bg-loss-900/30 border border-loss-500/25 text-loss-400;
+  }
+
   /* === Live dot === */
   .live-dot {
     @apply w-2 h-2 rounded-full bg-live animate-live-pulse inline-block;
@@ -144,18 +236,18 @@
 
   /* === Rake chip === */
   .rake-chip {
-    background: rgba(124,58,237,0.12);
-    border: 1px solid rgba(124,58,237,0.25);
+    background: theme('colors.oracle.500 / 0.12');
+    border: 1px solid theme('colors.oracle.500 / 0.25');
     @apply text-oracle-300 text-xs rounded-lg px-3 py-1.5 font-body;
   }
 
   /* === Auth mesh background === */
   .auth-mesh {
-    background-color: #07080F;
+    background-color: theme('colors.void.950');
     background-image:
-      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(124,58,237,0.12) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(245,158,11,0.06) 0%, transparent 50%),
-      radial-gradient(ellipse 40% 50% at 60% 20%, rgba(91,33,182,0.08) 0%, transparent 40%);
+      radial-gradient(ellipse 80% 60% at 20% 10%, theme('colors.oracle.500 / 0.12') 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, theme('colors.gold.500 / 0.06') 0%, transparent 50%),
+      radial-gradient(ellipse 40% 50% at 60% 20%, theme('colors.oracle.600 / 0.08') 0%, transparent 40%);
   }
 
   /* === Shimmer skeleton === */
@@ -166,7 +258,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(139,92,246,0.06), transparent);
+    background: linear-gradient(90deg, transparent, theme('colors.oracle.400 / 0.06'), transparent);
     background-size: 400px 100%;
     animation: shimmer 1.8s linear infinite;
   }

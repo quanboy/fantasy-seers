@@ -74,14 +74,10 @@ export default function SubmitPropCard({ onSubmitted }) {
     return (
       <div
         onClick={() => setIsExpanded(true)}
-        className="mb-4 rounded-2xl p-5 cursor-pointer transition-all duration-300 group"
-        style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}
-        onMouseEnter={e => { e.currentTarget.style.borderColor = '#4C1D95'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3), 0 0 20px rgba(124,58,237,0.12)'; }}
-        onMouseLeave={e => { e.currentTarget.style.borderColor = '#1E2235'; e.currentTarget.style.boxShadow = '0 4px 24px rgba(0,0,0,0.3)'; }}
+        className="mb-4 rounded-2xl p-5 cursor-pointer transition-all duration-300 group glass-card-hover shadow-card"
       >
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
-            style={{ background: 'rgba(124,58,237,0.15)', border: '1px solid rgba(124,58,237,0.25)' }}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 chip-oracle">
             <span className="text-oracle-400 text-sm">✍</span>
           </div>
           <div>
@@ -102,8 +98,7 @@ export default function SubmitPropCard({ onSubmitted }) {
 
   if (success) {
     return (
-      <div className="mb-4 rounded-2xl p-5 animate-scale-in"
-        style={{ background: 'rgba(6,78,59,0.15)', border: '1px solid rgba(16,185,129,0.3)' }}>
+      <div className="mb-4 rounded-2xl p-5 animate-scale-in chip-win">
         <div className="flex items-center gap-3">
           <span className="text-2xl">🔮</span>
           <div>
@@ -116,12 +111,11 @@ export default function SubmitPropCard({ onSubmitted }) {
   }
 
   return (
-    <div className="mb-4 rounded-2xl p-6 animate-scale-in"
-      style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #4C1D95', boxShadow: '0 0 24px rgba(124,58,237,0.1)' }}>
+    <div className="mb-4 rounded-2xl p-6 animate-scale-in glass-card border-oracle-700 shadow-oracle">
 
       <div className="flex items-center gap-2 mb-5">
         <span className="font-display text-base font-700 text-white">Create a Prop</span>
-        <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, rgba(124,58,237,0.4), transparent)' }} />
+        <div className="flex-1 h-px bg-gradient-to-r from-oracle-500/40 to-transparent" />
       </div>
 
       {/* Title */}
@@ -184,11 +178,11 @@ export default function SubmitPropCard({ onSubmitted }) {
               key={s.value}
               type="button"
               onClick={() => setForm(prev => ({ ...prev, scope: s.value, groupId: "" }))}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-              style={form.scope === s.value
-                ? { background: 'rgba(124,58,237,0.25)', border: '1px solid rgba(124,58,237,0.6)', color: '#C4B5FD' }
-                : { background: 'rgba(255,255,255,0.04)', border: '1px solid #1E2235', color: '#64748B' }
-              }
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                form.scope === s.value
+                  ? "chip-oracle-active text-oracle-200"
+                  : "bg-white/[0.04] border border-void-700 text-slate-500"
+              }`}
             >
               {s.label}
             </button>

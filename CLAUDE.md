@@ -151,6 +151,30 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard).
 - **GroupFeedPage** — group header + group-scoped props (open/resolved sections); breadcrumb navigation.
 
+### Theme & Design Tokens
+
+All colors are defined in `tailwind.config.js` under `theme.extend.colors`. **Never use raw hex/rgba values in components** — use Tailwind classes with these tokens or the CSS component classes from `index.css`.
+
+| Token    | Purpose                                  |
+|----------|------------------------------------------|
+| `void`   | Dark backgrounds (950–600)               |
+| `oracle` | Primary purple / brand (900–100)         |
+| `gold`   | Points, rewards, admin accents (600–200) |
+| `win`    | Success / YES votes (900–300)            |
+| `loss`   | Failure / NO votes (900–400)             |
+| `live`   | Live indicator orange (flat)             |
+
+**CSS component classes** (defined in `index.css`, use instead of inline styles):
+- **Layout:** `.glass-card`, `.glass-card-hover`, `.glass-nav`
+- **Chips:** `.chip-oracle`, `.chip-oracle-active`, `.chip-gold`, `.chip-gold-strong`, `.chip-win`, `.chip-loss`
+- **Buttons:** `.btn-oracle`, `.btn-gold`, `.btn-ghost`, `.btn-approve`, `.btn-reject`
+- **Alerts:** `.alert-error`
+- **Cards:** `.card-win-border`, `.card-win-border-light`, `.card-loss-border`, `.card-loss-border-light`, `.card-pending-border`
+- **Vote UI:** `.vote-yes`, `.vote-yes-idle`, `.vote-no`, `.vote-no-idle`, `.bar-yes`, `.bar-no`
+- **Other:** `.input-base`, `.rake-chip`, `.skeleton`, `.sport-*` badges, `.live-dot`
+
+For error text, use `text-loss-400` (not `text-red-400`). For muted/secondary text, `text-slate-*` is fine (built-in Tailwind). For backgrounds with opacity, use Tailwind's `/` modifier in markup (e.g., `bg-oracle-500/10`) but in `@apply` or CSS use `theme('colors.oracle.500 / 0.1')` instead.
+
 ---
 
 ## Domain Model
@@ -203,3 +227,4 @@ Frontend components read error messages via `err.response?.data?.message` in cat
 - **Two prop creation flows** — `PropService.submitProp()` (user, starts PENDING) vs `PropService.createProp()` (admin, starts OPEN). Don't confuse them.
 - **Invite codes are case-insensitive** — `FriendGroupService.joinGroup()` uppercases the input before lookup.
 - **Spring Security returns 403 for unauthenticated requests** (not 401) — the default filter chain with stateless sessions does this. The Axios interceptor accounts for this by checking whether a token exists in localStorage to distinguish auth failures from permission errors.
+- **`@apply` does not support Tailwind opacity modifiers** — `@apply bg-oracle-500/10` fails at build time. Use `background: theme('colors.oracle.500 / 0.1')` in CSS instead. The `/` modifier works fine in JSX `className` strings.

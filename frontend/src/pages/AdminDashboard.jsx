@@ -62,8 +62,7 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-void-950">
       {/* Navbar */}
-      <nav className="sticky top-0 z-40 border-b border-void-700"
-        style={{ background: 'rgba(7,8,15,0.9)', backdropFilter: 'blur(16px)' }}>
+      <nav className="sticky top-0 z-40 border-b border-void-700 glass-nav">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <a href="/"
@@ -76,8 +75,7 @@ export default function AdminDashboard() {
             <div className="w-px h-4 bg-void-700" />
             <div className="flex items-center gap-2">
               <span className="font-display text-base font-700 text-white">Admin</span>
-              <div className="px-2 py-0.5 rounded text-xs font-bold"
-                style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(245,158,11,0.25)', color: '#FBBF24' }}>
+              <div className="px-2 py-0.5 rounded text-xs font-bold chip-gold-strong text-gold-400">
                 {pending.length > 0 ? `${pending.length} pending` : "All clear"}
               </div>
             </div>
@@ -122,8 +120,7 @@ export default function AdminDashboard() {
         {!loading && !fetchError && pending.length > 0 && (
           <div className="space-y-4 animate-fade-in">
             {pending.map((prop) => (
-              <div key={prop.id} className="rounded-2xl p-6 transition-all"
-                style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid rgba(217,119,6,0.3)', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }}>
+              <div key={prop.id} className="rounded-2xl p-6 transition-all glass-card card-pending-border shadow-card">
 
                 {/* Top row */}
                 <div className="flex items-center justify-between mb-3">
@@ -156,8 +153,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {actionErrors[prop.id] && (
-                  <p className="text-loss-400 text-xs mb-3 px-3 py-2 rounded-lg"
-                    style={{ background: 'rgba(127,29,29,0.2)' }}>
+                  <p className="text-loss-400 text-xs mb-3 px-3 py-2 rounded-lg alert-error">
                     {actionErrors[prop.id]}
                   </p>
                 )}
@@ -167,12 +163,11 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleApprove(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: 'rgba(6,78,59,0.3)', border: '1px solid rgba(16,185,129,0.3)', color: '#34D399' }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-approve"
                   >
                     {actioningId === prop.id ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="w-3.5 h-3.5 border-2 border-emerald-400/30 border-t-emerald-400 rounded-full animate-spin" />
+                        <span className="w-3.5 h-3.5 border-2 border-win-400/30 border-t-win-400 rounded-full animate-spin" />
                         Approving...
                       </span>
                     ) : "✓ Approve"}
@@ -180,8 +175,7 @@ export default function AdminDashboard() {
                   <button
                     onClick={() => handleReject(prop.id)}
                     disabled={actioningId === prop.id}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ background: 'rgba(69,10,10,0.3)', border: '1px solid rgba(239,68,68,0.25)', color: '#F87171' }}
+                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-reject"
                   >
                     {actioningId === prop.id ? "Rejecting..." : "✕ Reject"}
                   </button>

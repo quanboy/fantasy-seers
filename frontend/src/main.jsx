@@ -14,7 +14,7 @@ function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-screen text-slate-400">
         Loading...
       </div>
     );
@@ -26,7 +26,7 @@ function AdminRoute({ children }) {
   const { user, loading } = useAuth();
   if (loading)
     return (
-      <div className="flex items-center justify-center h-screen text-gray-400">
+      <div className="flex items-center justify-center h-screen text-slate-400">
         Loading...
       </div>
     );

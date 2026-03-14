@@ -60,8 +60,7 @@ export default function GroupsPage() {
     <div className="min-h-screen bg-void-950">
       {/* Navbar */}
       <nav
-        className="sticky top-0 z-40 border-b border-void-700"
-        style={{ background: "rgba(7,8,15,0.85)", backdropFilter: "blur(16px)" }}
+        className="sticky top-0 z-40 border-b border-void-700 glass-nav"
       >
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -90,8 +89,7 @@ export default function GroupsPage() {
         {/* Create + Join forms */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">
           {/* Create */}
-          <div className="rounded-2xl p-5"
-            style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235' }}>
+          <div className="rounded-2xl p-5 glass-card">
             <h2 className="font-display text-sm font-700 text-white mb-4">Create a Group</h2>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
               <input
@@ -101,7 +99,7 @@ export default function GroupsPage() {
                 className="input-base text-sm"
                 maxLength={100}
               />
-              {createError && <p className="text-red-400 text-xs">{createError}</p>}
+              {createError && <p className="text-loss-400 text-xs">{createError}</p>}
               <button
                 type="submit"
                 disabled={createLoading || !createName.trim()}
@@ -113,8 +111,7 @@ export default function GroupsPage() {
           </div>
 
           {/* Join */}
-          <div className="rounded-2xl p-5"
-            style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235' }}>
+          <div className="rounded-2xl p-5 glass-card">
             <h2 className="font-display text-sm font-700 text-white mb-4">Join a Group</h2>
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <input
@@ -124,7 +121,7 @@ export default function GroupsPage() {
                 className="input-base text-sm uppercase"
                 maxLength={20}
               />
-              {joinError && <p className="text-red-400 text-xs">{joinError}</p>}
+              {joinError && <p className="text-loss-400 text-xs">{joinError}</p>}
               <button
                 type="submit"
                 disabled={joinLoading || !joinCode.trim()}
@@ -164,10 +161,7 @@ export default function GroupsPage() {
               <Link
                 key={group.id}
                 to={`/groups/${group.id}`}
-                className="block rounded-2xl p-5 transition-all"
-                style={{ background: 'linear-gradient(145deg, #161825, #0E1018)', border: '1px solid #1E2235' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = '#4C1D95'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = '#1E2235'; }}
+                className="block rounded-2xl p-5 transition-all glass-card-hover"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -180,8 +174,7 @@ export default function GroupsPage() {
                   <div className="shrink-0 text-right">
                     <p className="text-slate-600 text-xs mb-1">Invite code</p>
                     <code
-                      className="text-oracle-400 text-xs font-mono px-2 py-1 rounded"
-                      style={{ background: 'rgba(124,58,237,0.1)', border: '1px solid rgba(124,58,237,0.2)' }}
+                      className="text-oracle-400 text-xs font-mono px-2 py-1 rounded chip-oracle"
                       onClick={e => {
                         e.preventDefault();
                         navigator.clipboard.writeText(group.inviteCode);
