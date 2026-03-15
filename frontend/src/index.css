@@ -158,23 +158,71 @@
     border: 1px solid rgba(239, 68, 68, 0.15);
   }
 
-  /* === Prop card borders for voted/resolved states === */
-  .card-win-border {
-    border: 1px solid theme('colors.win.500 / 0.3');
-    background: linear-gradient(145deg, theme('colors.win.900 / 0.3'), theme('colors.void.900'));
+  /* === Prop card accent bars === */
+  .accent-bar-gold {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.gold.400');
+    border-radius: 12px 0 0 12px;
   }
-  .card-win-border-light {
-    border: 1px solid theme('colors.win.500 / 0.2');
-    background: linear-gradient(145deg, theme('colors.win.900 / 0.15'), theme('colors.void.900'));
+  .accent-bar-muted {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.void.600');
+    border-radius: 12px 0 0 12px;
   }
-  .card-loss-border {
-    border: 1px solid theme('colors.loss.500 / 0.25');
-    background: linear-gradient(145deg, theme('colors.loss.900 / 0.3'), theme('colors.void.900'));
+  .accent-bar-win {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.win.500');
+    border-radius: 12px 0 0 12px;
   }
-  .card-loss-border-light {
-    border: 1px solid theme('colors.loss.500 / 0.15');
-    background: linear-gradient(145deg, theme('colors.loss.900 / 0.15'), theme('colors.void.900'));
+  .accent-bar-loss {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.loss.500');
+    border-radius: 12px 0 0 12px;
   }
+
+  /* === Prop card borders by state === */
+  .card-open {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+  .card-closed {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(58, 66, 89, 0.6);
+  }
+  .card-win {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+  .card-loss {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  /* === Status pills === */
+  .chip-open {
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+  }
+  .chip-closed {
+    background: rgba(58, 66, 89, 0.3);
+    border: 1px solid rgba(58, 66, 89, 0.5);
+  }
+
+  /* === Vote chip ghost (inactive side) === */
+  .chip-vote-ghost {
+    background: transparent;
+    border: 1px solid rgba(58, 66, 89, 0.5);
+    opacity: 0.4;
+  }
+
   .card-pending-border {
     border: 1px solid theme('colors.gold.500 / 0.3');
   }

@@ -159,7 +159,14 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 
 ### Key UI Patterns
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Fetches user's groups on expand.
-- **PropCard** — inline voting UI. Open props show Yes/No buttons and a wager input directly on the card. Clicking either opens VoteModal pre-filled with the choice and wager. Voted props show "You voted: [YES] [NO]" chips (user's pick highlighted), a "Voting Splits" bar with yes%/no%, and a contrarian payout hint. Resolved props show both YES/NO chips with the winning result colored and user's pick ringed. Timer shows "X days left" with a green dot (amber + pulse when ≤ 2 days).
+- **PropCard** — unified card with 6 visual states sharing a consistent layout: left accent bar (3px, color by state), state-tinted border, sport badge top-left, vote chips or timer top-right, title in Cinzel, divider, and bottom row (status pill left, value right). States:
+  - **Open unvoted:** gold accent bar, amber dot + "X days left" timer, inline Yes/No buttons + wager input, "Open" pill, wager range right
+  - **Open voted:** gold accent bar, vote chips (active=filled, inactive=ghost at 40% opacity), split bar with yes%/no%, contrarian payout hint if majority, "Open · X days left" pill, "X pts wagered" right
+  - **Closed voted:** muted accent bar, vote chips, split bar, contrarian hint with minority phrasing, "Closed · resolving soon" pill, "X pts wagered" right
+  - **Resolved correct:** green accent bar, vote chips, split bar, "Correct" pill (chip-win), "+X pts" in gold right
+  - **Resolved contrarian:** green accent bar, "Correct · contrarian" pill, "+X pts" in gold
+  - **Resolved incorrect:** red accent bar, vote chips, split bar, "Incorrect" pill (chip-loss), "−X pts" strikethrough right
+  - Clicking Yes/No opens VoteModal pre-filled via `_initialChoice`/`_initialWager` props. Split data fetched via `propsApi.getSplit()` for all voted states. Payout delta from `userWager`/`userPayout` fields in PropResponse DTO.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes. Accepts `_initialChoice` and `_initialWager` from PropCard to pre-fill the form.
 - **LeaderboardPage** — global and per-group leaderboard with tabs. Shows rank, username, picks, correct, accuracy %. Top 3 get medal colors. Current user's row is highlighted. Fetches groups for tab switcher.
 - **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s and re-fetches props after voting. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null.
@@ -200,7 +207,9 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **Chips:** `.chip-oracle`, `.chip-oracle-active`, `.chip-gold`, `.chip-gold-strong`, `.chip-win`, `.chip-loss`
 - **Buttons:** `.btn-oracle`, `.btn-gold`, `.btn-ghost`, `.btn-approve`, `.btn-reject`
 - **Alerts:** `.alert-error`
-- **Cards:** `.card-win-border`, `.card-win-border-light`, `.card-loss-border`, `.card-loss-border-light`, `.card-pending-border`
+- **Cards:** `.card-open`, `.card-closed`, `.card-win`, `.card-loss`, `.card-pending-border`
+- **Accent bars:** `.accent-bar-gold`, `.accent-bar-muted`, `.accent-bar-win`, `.accent-bar-loss`
+- **Status pills:** `.chip-open`, `.chip-closed`, `.chip-vote-ghost`
 - **Vote UI:** `.vote-yes`, `.vote-yes-idle`, `.vote-no`, `.vote-no-idle`, `.bar-yes`, `.bar-no`
 - **Other:** `.input-base`, `.rake-chip`, `.skeleton`, `.sport-*` badges, `.live-dot`
 
