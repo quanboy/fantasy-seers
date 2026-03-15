@@ -39,6 +39,8 @@ export const adminApi = {
     getPending: () => api.get('/admin/props/pending'),
     approve:    (id) => api.post(`/admin/props/${id}/approve`),
     reject:     (id) => api.post(`/admin/props/${id}/reject`),
+    createProp: (data) => api.post('/admin/props', data),
+    getAllGroups: () => api.get('/admin/groups'),
 }
 
 export const groupsApi = {
@@ -51,10 +53,14 @@ export const groupsApi = {
   getMyInvites:  ()         => api.get('/groups/invites'),
   acceptInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/accept`),
   rejectInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/reject`),
+  renameGroup:   (id, data) => api.patch(`/groups/${id}`, data),
+  kickMember:    (id, userId) => api.delete(`/groups/${id}/members/${userId}`),
+  leaveGroup:    (id) => api.delete(`/groups/${id}/members/me`),
 }
 
 export const userApi = {
-  getMe: () => api.get('/users/me')
+  getMe: () => api.get('/users/me'),
+  updateProfile: (data) => api.put('/users/me', data),
 }
 
 export default api

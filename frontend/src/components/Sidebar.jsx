@@ -15,15 +15,6 @@ const navItems = [
     ),
   },
   {
-    label: "Trends",
-    path: "/trends",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
-  },
-  {
     label: "Leagues",
     path: "/groups",
     icon: (
@@ -46,6 +37,25 @@ const navItems = [
         <path d="M10 22V8a2 2 0 0 0-2-2H6" />
         <path d="M14 22V8a2 2 0 0 1 2-2h2" />
         <rect x="6" y="14" width="12" height="8" rx="1" />
+      </svg>
+    ),
+  },
+  {
+    label: "Trends",
+    path: "/trends",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+      </svg>
+    ),
+  },
+  {
+    label: "Profile",
+    path: "/profile",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
       </svg>
     ),
   },
@@ -83,7 +93,7 @@ export default function Sidebar({ open, onClose }) {
         className={`
           fixed top-0 left-0 z-50 h-full w-60 bg-void-900 border-r border-void-700
           flex flex-col transition-transform duration-200 ease-in-out
-          lg:translate-x-0 lg:static lg:z-auto
+          lg:translate-x-0 lg:static lg:z-auto lg:min-h-screen
           ${open ? "translate-x-0" : "-translate-x-full"}
         `}
       >
@@ -107,7 +117,7 @@ export default function Sidebar({ open, onClose }) {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="px-3 py-4 space-y-1 overflow-y-auto">
           {items.map((item) => (
             <NavLink
               key={item.path}
@@ -129,7 +139,7 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         {/* User footer */}
-        <div className="px-4 py-4 border-t border-void-700">
+        <div className="mt-auto px-4 py-4 border-t border-void-700">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-oracle-100 flex items-center justify-center text-oracle-600 text-xs font-bold">
               {user?.username?.charAt(0)?.toUpperCase() ?? "?"}

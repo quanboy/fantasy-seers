@@ -24,7 +24,7 @@ fantasy-seers/
 │       └── service/             # Business logic
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway SQL migrations (V1, V2, V3)
+│       └── db/migration/        # Flyway SQL migrations (V1, V2, V3, V4)
 └── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
     ├── package.json
     ├── vite.config.js
@@ -34,7 +34,7 @@ fantasy-seers/
         ├── context/AuthContext.jsx
         ├── components/          # AppLayout, Sidebar, PropCard, SubmitPropCard, VoteModal
         └── pages/               # Login, Register, Dashboard, AdminDashboard,
-                                 # GroupsPage, GroupFeedPage
+                                 # GroupsPage, GroupFeedPage, GroupSettingsPage, ProfilePage
 ```
 
 ---
@@ -107,8 +107,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V1__initial_schema.sql** — full schema: users, friend_groups, friend_group_members, props, prop_groups, votes, point_transactions, badges, user_badges, follows
 - **V2__add_prop_submission_columns.sql** — added `min_wager` and `max_wager` to props
 - **V3__add_group_invites.sql** — `group_invites` table with UNIQUE constraint on `(group_id, invitee_id)` to prevent duplicate invites
+- **V4__add_user_profile_fields.sql** — added `favorite_nfl_team` (varchar 50), `favorite_nba_team` (varchar 50), `alma_mater` (varchar 100) as nullable columns on users
 
-**Adding a new migration:** Create `V4__description.sql`. Do not modify existing migration files.
+**Adding a new migration:** Create `V5__description.sql`. Do not modify existing migration files.
 
 ---
 
@@ -119,11 +120,11 @@ All endpoints are prefixed `/api` and return JSON.
 | Controller         | Prefix           | Key Endpoints                                                                 |
 |--------------------|------------------|-------------------------------------------------------------------------------|
 | AuthController     | `/api/auth`      | `POST /register`, `POST /login`                                               |
-| UserController     | `/api/users`     | `GET /me`, `GET /me/authorities`                                              |
+| UserController     | `/api/users`     | `GET /me`, `PUT /me` (update profile), `GET /me/authorities`                  |
 | PropController     | `/api/props`     | `POST /submit` (user), `GET /public`, `GET /{id}`                            |
 | VoteController     | `/api/props`     | `POST /{id}/vote`, `GET /{id}/split`                                         |
-| AdminController    | `/api/admin`     | `GET /props/pending`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve` |
-| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props`, `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
+| AdminController    | `/api/admin`     | `GET /props/pending`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve`, `POST /props` (create with optional groupId), `GET /groups` (all groups) |
+| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props`, `PATCH /{id}` (rename, owner), `DELETE /{id}/members/{userId}` (kick, owner), `DELETE /{id}/members/me` (leave), `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
 
 ---
 
@@ -138,6 +139,8 @@ Defined in `src/main.jsx` using React Router v6.
 | `/`           | Dashboard       | PrivateRoute |
 | `/groups`     | GroupsPage      | PrivateRoute |
 | `/groups/:id` | GroupFeedPage   | PrivateRoute |
+| `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
+| `/profile`    | ProfilePage     | PrivateRoute |
 | `/admin`      | AdminDashboard  | AdminRoute   |
 
 - **PrivateRoute** — redirects unauthenticated users to `/login`
@@ -145,19 +148,22 @@ Defined in `src/main.jsx` using React Router v6.
 - **AuthContext** — stores user + JWT in localStorage, provides `login`/`logout`
 
 ### Frontend API Client (`client.js`)
-Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `usersApi`. Each wraps Axios calls to `/api/*`.
+Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `userApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
 - **AppLayout** — shared layout wrapper for all authenticated pages. Renders the `Sidebar` and a top navigation bar with username, point bank, and sign out. Uses React Router `<Outlet />` for nested routes. Individual pages no longer have their own navbars.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Trends, Leagues, Leaderboard, Admin Uploads (admin-only). Shows logo, nav links with active state via `NavLink`, and user avatar footer.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Leagues, Leaderboard, Trends, Profile, Admin Uploads (admin-only). Shows logo, nav links with active state via `NavLink`, and user avatar footer pinned to bottom.
 - Mobile top bar shows hamburger + logo on the left; username, points, and sign out on the right.
 
 ### Key UI Patterns
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Fetches user's groups on expand.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes.
-- **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s.
+- **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null.
+- **ProfilePage** — view/edit profile. Read-only Account section (username, email, plus current team/alma mater values) and editable Identity section (NFL team dropdown, NBA team dropdown, alma mater text input). Uses `PUT /api/users/me`.
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard). Shows "Pending Invites" section with accept/reject buttons when the user has pending group invites.
-- **GroupFeedPage** — group header + "Invite Member" form (username input) + group-scoped props (open/resolved sections).
+- **GroupFeedPage** — group header (with Settings link) + "Invite Member" form (username input) + group-scoped props (open/closed/resolved sections).
+- **GroupSettingsPage** — group management page: rename group (owner only), member list with kick buttons (owner only), leave group (all members, auto-transfers ownership if owner leaves). Accessible via `/groups/:id/settings`.
+- **AdminDashboard** — pending props queue (approve/reject) + "Create Prop" form with optional group assignment dropdown.
 
 ### Theme & Design Tokens
 
@@ -189,13 +195,13 @@ For error text, use `text-loss-400` (not `text-red-400`). For muted/secondary te
 
 - **Prop** — a yes/no proposition with `minWager`/`maxWager` limits. Scopes: `PUBLIC`, `FRIENDS`, `GROUP`, `FRIENDS_AND_GROUP`. Statuses: `PENDING` → `OPEN` → `CLOSED` → `RESOLVED`. Has `isAdminProp` flag to distinguish admin-created vs user-submitted props.
 - **Vote** — a user's YES/NO choice on a prop with a wager amount. One vote per user per prop.
-- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`. Users can join via invite code or be invited by username.
+- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`. Users can join via invite code or be invited by username. Owner can rename, kick members. Any member can leave; if the owner leaves, ownership auto-transfers to the alphabetically first remaining member. If the last member leaves, the group is deleted.
 - **GroupInvite** — a pending/accepted/rejected invite for a user to join a group. Statuses: `PENDING` → `ACCEPTED` or `REJECTED`. UNIQUE constraint on `(group_id, invitee_id)` prevents duplicate invites. Only group members can send invites. Accepting adds the invitee to the group's member set.
-- **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Tier system: Rookie (0–4999), Pro (5000–14999), Elite (15000–49999), Legend (50000+).
+- **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Optional profile fields: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater`. Tier system: Rookie (0–4999), Pro (5000–14999), Elite (15000–49999), Legend (50000+).
 - **Prop lifecycle:**
   - **User-submitted:** `PENDING` → admin approval → `OPEN` → `CLOSED` → `RESOLVED`
   - **Admin-created:** `OPEN` → `CLOSED` → `RESOLVED` (skips PENDING)
-- **Prop scoping:** Props can be scoped to groups. `PropRepository.findVisibleToUser()` handles visibility filtering based on scope and group membership.
+- **Prop scoping:** Props can be scoped to groups via the `prop_groups` join table (ManyToMany). `PropRepository.findVisibleToUser()` handles visibility filtering based on scope and group membership. Admin-created props can optionally be assigned to a group (sets scope to GROUP).
 
 ---
 
@@ -207,7 +213,7 @@ For error text, use `text-loss-400` (not `text-red-400`). For muted/secondary te
 |----------------------------|---------------|---------------------------------------------------|
 | `IllegalArgumentException` | 400 Bad Request | "Invalid invite code", "Prop not found"          |
 | `IllegalStateException`    | 409 Conflict   | "Already a member", "Already voted", "Insufficient points", "Invite already sent" |
-| `AccessDeniedException`    | 403 Forbidden  | "Not a member of this group"                     |
+| `AccessDeniedException`    | 403 Forbidden  | "Not a member of this group", "Only the group owner can rename/kick" |
 
 Frontend components read error messages via `err.response?.data?.message` in catch blocks.
 
@@ -221,7 +227,7 @@ Frontend components read error messages via `err.response?.data?.message` in cat
 - `@PreAuthorize("hasRole('ADMIN')")` guards all admin endpoints.
 - `AccessDeniedException` from `org.springframework.security.access` returns 403 via `GlobalExceptionHandler`.
 - `@EnableJpaAuditing` is on `AppConfig`, not the main application class.
-- Group endpoints verify membership before returning data (e.g., `getGroupById`, `getGroupProps`).
+- Group endpoints verify membership before returning data (e.g., `getGroupById`, `getGroupProps`). Owner-only actions (rename, kick) check `group.getOwner()` match.
 - **Wager limits** are enforced server-side in `VoteService.castVote()` — rejects wagers outside `minWager`/`maxWager` bounds. Frontend `VoteModal` also validates client-side.
 
 ---
@@ -233,7 +239,8 @@ Frontend components read error messages via `err.response?.data?.message` in cat
 - **Flyway owns the schema** — never change `ddl-auto` to `create` or `update` in any environment.
 - **`@Builder.Default`** — Lombok `@Builder` fields with defaults (e.g., `Set<User> members`) need `@Builder.Default` or the default is ignored when using the builder.
 - **`FetchType.LAZY`** — `FriendGroup.members`, `FriendGroup.owner`, and `GroupInvite.group`/`inviter`/`invitee` are lazy-loaded. Access them within a `@Transactional` method or they'll throw `LazyInitializationException`.
-- **Two prop creation flows** — `PropService.submitProp()` (user, starts PENDING) vs `PropService.createProp()` (admin, starts OPEN). Don't confuse them.
+- **Two prop creation flows** — `PropService.submitProp()` (user, starts PENDING) vs `PropService.createProp()` (admin, starts OPEN). Both support optional `groupId` to scope props to a group. Don't confuse them.
+- **Owner leave auto-transfer** — when the group owner leaves, ownership transfers to the alphabetically first remaining member. If no members remain, the group is deleted. The owner cannot be kicked.
 - **Invite codes are case-insensitive** — `FriendGroupService.joinGroup()` uppercases the input before lookup.
 - **Group invites have a UNIQUE constraint** — `(group_id, invitee_id)` prevents duplicate invites. The service checks for existing PENDING invites before creating new ones.
 - **Invite validation order** — `inviteUser()` checks: inviter is member → invitee exists → invitee not already a member → no pending invite exists. Errors use `IllegalArgumentException` (not found) or `IllegalStateException` (business rule).

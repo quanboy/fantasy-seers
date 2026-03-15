@@ -1,6 +1,8 @@
 package com.fantasyseers.api.controller;
 
+import com.fantasyseers.api.dto.FriendGroupDto;
 import com.fantasyseers.api.entity.Prop;
+import com.fantasyseers.api.service.FriendGroupService;
 import com.fantasyseers.api.service.PropService;
 import com.fantasyseers.api.service.ResolutionService;
 import com.fantasyseers.api.dto.PropDto;
@@ -20,6 +22,7 @@ public class AdminController {
 
     private final PropService propService;
     private final ResolutionService resolutionService;
+    private final FriendGroupService friendGroupService;
 
     @PostMapping("/props")
     public ResponseEntity<PropDto.PropResponse> createProp(
@@ -53,5 +56,10 @@ public class AdminController {
     public ResponseEntity<Void> rejectProp(@PathVariable Long id) {
         propService.rejectProp(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/groups")
+    public ResponseEntity<List<FriendGroupDto.GroupResponse>> getAllGroups() {
+        return ResponseEntity.ok(friendGroupService.getAllGroups());
     }
 }

@@ -2,10 +2,35 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
+const NFL_TEAMS = [
+  'Arizona Cardinals', 'Atlanta Falcons', 'Baltimore Ravens', 'Buffalo Bills',
+  'Carolina Panthers', 'Chicago Bears', 'Cincinnati Bengals', 'Cleveland Browns',
+  'Dallas Cowboys', 'Denver Broncos', 'Detroit Lions', 'Green Bay Packers',
+  'Houston Texans', 'Indianapolis Colts', 'Jacksonville Jaguars', 'Kansas City Chiefs',
+  'Las Vegas Raiders', 'Los Angeles Chargers', 'Los Angeles Rams', 'Miami Dolphins',
+  'Minnesota Vikings', 'New England Patriots', 'New Orleans Saints', 'New York Giants',
+  'New York Jets', 'Philadelphia Eagles', 'Pittsburgh Steelers', 'San Francisco 49ers',
+  'Seattle Seahawks', 'Tampa Bay Buccaneers', 'Tennessee Titans', 'Washington Commanders',
+]
+
+const NBA_TEAMS = [
+  'Atlanta Hawks', 'Boston Celtics', 'Brooklyn Nets', 'Charlotte Hornets',
+  'Chicago Bulls', 'Cleveland Cavaliers', 'Dallas Mavericks', 'Denver Nuggets',
+  'Detroit Pistons', 'Golden State Warriors', 'Houston Rockets', 'Indiana Pacers',
+  'Los Angeles Clippers', 'Los Angeles Lakers', 'Memphis Grizzlies', 'Miami Heat',
+  'Milwaukee Bucks', 'Minnesota Timberwolves', 'New Orleans Pelicans', 'New York Knicks',
+  'Oklahoma City Thunder', 'Orlando Magic', 'Philadelphia 76ers', 'Phoenix Suns',
+  'Portland Trail Blazers', 'Sacramento Kings', 'San Antonio Spurs', 'Toronto Raptors',
+  'Utah Jazz', 'Washington Wizards',
+]
+
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', email: '', password: '' })
+  const [form, setForm] = useState({
+    username: '', email: '', password: '',
+    favoriteNflTeam: '', favoriteNbaTeam: '', almaMater: '',
+  })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -14,7 +39,12 @@ export default function Register() {
     setError('')
     setLoading(true)
     try {
-      await register(form)
+      await register({
+        ...form,
+        favoriteNflTeam: form.favoriteNflTeam || null,
+        favoriteNbaTeam: form.favoriteNbaTeam || null,
+        almaMater: form.almaMater.trim() || null,
+      })
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
@@ -88,6 +118,53 @@ export default function Register() {
                 minLength={6}
                 required
               />
+            </div>
+
+            {/* Your Identity section */}
+            <div className="pt-4 mt-2 border-t border-void-700">
+              <div className="flex items-center gap-2 mb-4">
+                <p className="text-xs text-slate-500 uppercase tracking-widest">Your Identity</p>
+                <span className="chip-gold text-[10px] px-2 py-0.5 rounded-full font-semibold">Optional</span>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
+                  <select
+                    value={form.favoriteNflTeam}
+                    onChange={e => setForm({ ...form, favoriteNflTeam: e.target.value })}
+                    className="input-base"
+                  >
+                    <option value="">Select a team</option>
+                    {NFL_TEAMS.map(team => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
+                  <select
+                    value={form.favoriteNbaTeam}
+                    onChange={e => setForm({ ...form, favoriteNbaTeam: e.target.value })}
+                    className="input-base"
+                  >
+                    <option value="">Select a team</option>
+                    {NBA_TEAMS.map(team => (
+                      <option key={team} value={team}>{team}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
+                  <input
+                    type="text"
+                    value={form.almaMater}
+                    onChange={e => setForm({ ...form, almaMater: e.target.value })}
+                    className="input-base"
+                    placeholder="e.g. University of Michigan"
+                    maxLength={100}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Bonus callout */}

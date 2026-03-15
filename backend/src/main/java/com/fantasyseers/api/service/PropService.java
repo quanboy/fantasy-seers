@@ -24,9 +24,12 @@ public class PropService {
     private final VoteRepository voteRepository;
     private final FriendGroupRepository friendGroupRepository;
 
+    @Transactional
     public PropDto.PropResponse createProp(PropDto.CreateRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        Prop.Scope scope = request.groupId() != null ? Prop.Scope.GROUP : Prop.Scope.PUBLIC;
 
         Prop prop = Prop.builder()
                 .title(request.title())
@@ -35,11 +38,20 @@ public class PropService {
                 .closesAt(request.closesAt())
                 .createdBy(user)
                 .isAdminProp(true)
-                .scope(Prop.Scope.PUBLIC)
+                .scope(scope)
                 .status(Prop.Status.OPEN)
                 .build();
 
-        return toResponse(propRepository.save(prop), username);
+        Prop saved = propRepository.save(prop);
+
+        if (request.groupId() != null) {
+            FriendGroup group = friendGroupRepository.findById(request.groupId())
+                    .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+            saved.getGroups().add(group);
+            saved = propRepository.save(saved);
+        }
+
+        return toResponse(saved, username);
     }
 
     @Transactional

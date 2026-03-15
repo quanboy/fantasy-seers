@@ -42,6 +42,15 @@ public class User {
     @Builder.Default
     private Boolean isPublic = true;
 
+    @Column(name = "favorite_nfl_team", length = 50)
+    private String favoriteNflTeam;
+
+    @Column(name = "favorite_nba_team", length = 50)
+    private String favoriteNbaTeam;
+
+    @Column(name = "alma_mater", length = 100)
+    private String almaMater;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "user_badges",

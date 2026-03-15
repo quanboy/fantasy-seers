@@ -41,6 +41,9 @@ public class AuthService {
             .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .pointBank(1000)
+            .favoriteNflTeam(request.favoriteNflTeam())
+            .favoriteNbaTeam(request.favoriteNbaTeam())
+            .almaMater(request.almaMater())
             .build();
 
         userRepository.save(user);

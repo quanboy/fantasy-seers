@@ -8,6 +8,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import GroupsPage from "./pages/GroupsPage";
 import GroupFeedPage from "./pages/GroupFeedPage";
+import GroupSettingsPage from "./pages/GroupSettingsPage";
+import ProfilePage from "./pages/ProfilePage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
 
@@ -53,6 +55,8 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:id" element={<GroupFeedPage />} />
+            <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
+            <Route path="profile" element={<ProfilePage />} />
             <Route
               path="admin"
               element={
