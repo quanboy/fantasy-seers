@@ -9,11 +9,11 @@ function OracleLogo() {
         <img
           src="/logo.png"
           alt="Fantasy Seers"
-          className="w-72 h-72 object-contain drop-shadow-[0_0_60px_rgba(168,85,247,0.7)]"
+          className="w-72 h-72 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"
         />
       </div>
       <div className="text-center">
-        <h1 className="font-display text-3xl font-800 text-white tracking-tight">
+        <h1 className="font-display text-3xl font-800 text-slate-900 tracking-tight">
           See It Before It Happens
         </h1>
       </div>
@@ -46,20 +46,20 @@ export default function Login() {
     <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
       {/* Decorative corner lines */}
       <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none">
+        <svg viewBox="0 0 192 192" fill="none" className="text-oracle-500">
           <path
             d="M0 192V0h192"
-            stroke="#7C3AED"
+            stroke="currentColor"
             strokeWidth="1"
             strokeDasharray="4 8"
           />
         </svg>
       </div>
       <div className="fixed bottom-0 right-0 w-48 h-48 pointer-events-none opacity-20">
-        <svg viewBox="0 0 192 192" fill="none">
+        <svg viewBox="0 0 192 192" fill="none" className="text-gold-500">
           <path
             d="M192 0v192H0"
-            stroke="#F59E0B"
+            stroke="currentColor"
             strokeWidth="1"
             strokeDasharray="4 8"
           />
@@ -70,18 +70,12 @@ export default function Login() {
         <OracleLogo />
 
         <div className="glass-card p-7">
-          <p className="font-display text-lg font-700 text-white mb-6">
+          <p className="font-display text-lg font-700 text-slate-900 mb-6">
             Welcome back, Seer
           </p>
 
           {error && (
-            <div
-              className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-400 font-body"
-              style={{
-                background: "rgba(127,29,29,0.25)",
-                border: "1px solid rgba(239,68,68,0.25)",
-              }}
-            >
+            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-700 font-body alert-error">
               {error}
             </div>
           )}
@@ -130,11 +124,11 @@ export default function Login() {
           </form>
 
           <div className="mt-6 pt-5 border-t border-void-700 text-center">
-            <p className="text-slate-600 text-sm">
+            <p className="text-slate-400 text-sm">
               New to Fantasy Seers?{" "}
               <Link
                 to="/register"
-                className="text-oracle-400 hover:text-oracle-300 font-semibold transition-colors"
+                className="text-oracle-600 hover:text-oracle-500 font-semibold transition-colors"
               >
                 Claim your spot
               </Link>
@@ -142,7 +136,7 @@ export default function Login() {
           </div>
         </div>
 
-        <p className="text-center text-slate-700 text-xs mt-6">
+        <p className="text-center text-slate-400 text-xs mt-6">
           By signing in you agree to our Terms · 18+ only · Gamble responsibly
         </p>
       </div>

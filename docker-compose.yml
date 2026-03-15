@@ -44,6 +44,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: fantasy-seers-frontend
+    environment:
+      VITE_API_TARGET: http://backend:8080
     ports:
       - "5173:5173"
     depends_on:
@@ -51,6 +53,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+      - /app/node_modules
 
 volumes:
   postgres_data:

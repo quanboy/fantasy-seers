@@ -12,8 +12,10 @@ api.interceptors.response.use(
   res => res,
   err => {
     console.log('interceptor hit', err.response?.status)
-    if (err.response?.status === 401 || err.response?.status === 403) {
+    if (err.response?.status === 401) {
       localStorage.removeItem('fs_token')
+      window.location.href = '/login'
+    } else if (err.response?.status === 403 && !localStorage.getItem('fs_token')) {
       window.location.href = '/login'
     }
     return Promise.reject(err)
@@ -37,6 +39,18 @@ export const adminApi = {
     getPending: () => api.get('/admin/props/pending'),
     approve:    (id) => api.post(`/admin/props/${id}/approve`),
     reject:     (id) => api.post(`/admin/props/${id}/reject`),
+}
+
+export const groupsApi = {
+  getMyGroups:  ()       => api.get('/groups'),
+  createGroup:  (data)   => api.post('/groups', data),
+  joinGroup:    (data)   => api.post('/groups/join', data),
+  getGroup:     (id)     => api.get(`/groups/${id}`),
+  getGroupProps:(id)     => api.get(`/groups/${id}/props`),
+  inviteUser:    (id, data) => api.post(`/groups/${id}/invite`, data),
+  getMyInvites:  ()         => api.get('/groups/invites'),
+  acceptInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/accept`),
+  rejectInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/reject`),
 }
 
 export const userApi = {
