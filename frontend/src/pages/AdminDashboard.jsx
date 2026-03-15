@@ -7,6 +7,7 @@ const SPORT_CLASSES = {
   MLB: "sport-mlb",
   NHL: "sport-nhl",
 };
+const SPORTS = ["NFL", "NBA", "MLB", "NHL"];
 function getSportClass(sport) {
   return SPORT_CLASSES[sport] ?? "sport-default";
 }
@@ -18,6 +19,12 @@ export default function AdminDashboard() {
   const [actioningId, setActioningId] = useState(null);
   const [actionErrors, setActionErrors] = useState({});
 
+  // Create prop state
+  const [groups, setGroups] = useState([]);
+  const [createForm, setCreateForm] = useState({ title: "", description: "", sport: "NFL", closesAt: "", groupId: "" });
+  const [creating, setCreating] = useState(false);
+  const [createMsg, setCreateMsg] = useState(null);
+
   const fetchPending = () => {
     setFetchError(false);
     adminApi
@@ -27,7 +34,32 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchPending(); }, []);
+  useEffect(() => {
+    fetchPending();
+    adminApi.getAllGroups().then(({ data }) => setGroups(data)).catch(() => {});
+  }, []);
+
+  const handleCreateProp = async (e) => {
+    e.preventDefault();
+    setCreating(true);
+    setCreateMsg(null);
+    try {
+      const payload = {
+        title: createForm.title,
+        description: createForm.description || null,
+        sport: createForm.sport,
+        closesAt: createForm.closesAt,
+        groupId: createForm.groupId ? Number(createForm.groupId) : null,
+      };
+      await adminApi.createProp(payload);
+      setCreateMsg({ type: "success", text: "Prop created!" });
+      setCreateForm({ title: "", description: "", sport: "NFL", closesAt: "", groupId: "" });
+    } catch (err) {
+      setCreateMsg({ type: "error", text: err.response?.data?.message ?? "Failed to create prop" });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const handleApprove = async (id) => {
     if (actioningId) return;
@@ -59,6 +91,64 @@ export default function AdminDashboard() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+        {/* Create Prop */}
+        <div className="glass-card rounded-2xl p-6 mb-8">
+          <h2 className="font-display text-lg font-700 text-slate-900 mb-4">Create Prop</h2>
+          <form onSubmit={handleCreateProp} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Prop title"
+              value={createForm.title}
+              onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+              className="input-base w-full text-sm"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Description (optional)"
+              value={createForm.description}
+              onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+              className="input-base w-full text-sm"
+            />
+            <div className="flex gap-3">
+              <select
+                value={createForm.sport}
+                onChange={(e) => setCreateForm({ ...createForm, sport: e.target.value })}
+                className="input-base text-sm flex-1"
+              >
+                {SPORTS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <input
+                type="datetime-local"
+                value={createForm.closesAt}
+                onChange={(e) => setCreateForm({ ...createForm, closesAt: e.target.value })}
+                className="input-base text-sm flex-1"
+                required
+              />
+            </div>
+            <select
+              value={createForm.groupId}
+              onChange={(e) => setCreateForm({ ...createForm, groupId: e.target.value })}
+              className="input-base w-full text-sm"
+            >
+              <option value="">Global (no group)</option>
+              {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+            <button type="submit" disabled={creating} className="btn-oracle w-full py-2.5 text-sm">
+              {creating ? "Creating…" : "Create Prop"}
+            </button>
+            {createMsg && (
+              <p className={`text-xs ${createMsg.type === "success" ? "text-win-400" : "text-loss-400"}`}>
+                {createMsg.text}
+              </p>
+            )}
+          </form>
+        </div>
+
+        {/* Pending Props */}
+        <h2 className="font-display text-lg font-700 text-slate-900 mb-4">Pending Props</h2>
+
         {loading && (
           <div className="space-y-4">
             {[1,2,3].map(i => <div key={i} className="skeleton h-40" />)}

@@ -77,6 +77,34 @@ public class FriendGroupController {
         return ResponseEntity.ok(friendGroupService.getMyGroups(userDetails.getUsername()));
     }
 
+    @PatchMapping("/{id}")
+    public ResponseEntity<FriendGroupDto.GroupResponse> renameGroup(
+            @PathVariable Long id,
+            @Valid @RequestBody FriendGroupDto.RenameRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(friendGroupService.renameGroup(id, request, userDetails.getUsername()));
+    }
+
+    @DeleteMapping("/{id}/members/{userId}")
+    public ResponseEntity<Void> kickMember(
+            @PathVariable Long id,
+            @PathVariable Long userId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        friendGroupService.kickMember(id, userId, userDetails.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{id}/members/me")
+    public ResponseEntity<Void> leaveGroup(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        friendGroupService.leaveGroup(id, userDetails.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<FriendGroupDto.GroupResponse> getGroupById(
             @PathVariable Long id,

@@ -150,6 +150,80 @@ public class FriendGroupService {
         return toResponse(group);
     }
 
+    @Transactional
+    public FriendGroupDto.GroupResponse renameGroup(Long groupId, FriendGroupDto.RenameRequest request, String username) {
+        FriendGroup group = friendGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        if (!group.getOwner().getUsername().equals(username)) {
+            throw new org.springframework.security.access.AccessDeniedException("Only the group owner can rename the group");
+        }
+
+        group.setName(request.name());
+        return toResponse(friendGroupRepository.save(group));
+    }
+
+    @Transactional
+    public void kickMember(Long groupId, Long userId, String username) {
+        FriendGroup group = friendGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        if (!group.getOwner().getUsername().equals(username)) {
+            throw new org.springframework.security.access.AccessDeniedException("Only the group owner can kick members");
+        }
+
+        if (group.getOwner().getId().equals(userId)) {
+            throw new IllegalStateException("Cannot kick the group owner");
+        }
+
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!group.getMembers().contains(target)) {
+            throw new IllegalArgumentException("User is not a member of this group");
+        }
+
+        group.getMembers().remove(target);
+        friendGroupRepository.save(group);
+    }
+
+    @Transactional
+    public void leaveGroup(Long groupId, String username) {
+        FriendGroup group = friendGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        User user = findUser(username);
+
+        if (!group.getMembers().contains(user)) {
+            throw new IllegalArgumentException("You are not a member of this group");
+        }
+
+        group.getMembers().remove(user);
+
+        if (group.getOwner().getUsername().equals(username)) {
+            if (group.getMembers().isEmpty()) {
+                friendGroupRepository.delete(group);
+                return;
+            }
+            // Transfer ownership to the first remaining member (alphabetical)
+            User newOwner = group.getMembers().stream()
+                    .sorted(java.util.Comparator.comparing(User::getUsername))
+                    .findFirst()
+                    .get();
+            group.setOwner(newOwner);
+        }
+
+        friendGroupRepository.save(group);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendGroupDto.GroupResponse> getAllGroups() {
+        return friendGroupRepository.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
     private User findUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
@@ -173,13 +247,19 @@ public class FriendGroupService {
                 .sorted()
                 .toList();
 
+        List<FriendGroupDto.MemberInfo> members = group.getMembers().stream()
+                .map(u -> new FriendGroupDto.MemberInfo(u.getId(), u.getUsername()))
+                .sorted(java.util.Comparator.comparing(FriendGroupDto.MemberInfo::username))
+                .toList();
+
         return new FriendGroupDto.GroupResponse(
                 group.getId(),
                 group.getName(),
                 group.getInviteCode(),
                 group.getOwner().getUsername(),
                 group.getMembers().size(),
-                memberUsernames
+                memberUsernames,
+                members
         );
     }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { propsApi, userApi } from "../api/client";
 import PropCard from "../components/PropCard";
@@ -14,6 +15,8 @@ export default function Dashboard() {
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
 
   const fetchProps = () => {
     propsApi
@@ -24,6 +27,11 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchProps();
+    userApi.getMe().then(({ data }) => {
+      if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
+        setProfileIncomplete(true);
+      }
+    });
   }, []);
 
   useEffect(() => {
@@ -60,6 +68,26 @@ export default function Dashboard() {
 
         {!loading && (
           <div className="animate-fade-in">
+            {/* Profile completion banner */}
+            {profileIncomplete && !profileBannerDismissed && (
+              <div className="chip-gold rounded-xl px-4 py-3 mb-5 flex items-center justify-between">
+                <p className="text-sm text-gold-600">
+                  Complete your profile — add your favorite teams and alma mater.{' '}
+                  <Link to="/profile" className="font-semibold underline underline-offset-2">
+                    Go to Profile
+                  </Link>
+                </p>
+                <button
+                  onClick={() => setProfileBannerDismissed(true)}
+                  className="text-gold-500 hover:text-gold-700 ml-3 shrink-0"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            )}
+
             {/* Composer */}
             <SubmitPropCard onSubmitted={fetchProps} />
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { groupsApi, userApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import PropCard from "../components/PropCard";
@@ -61,6 +61,7 @@ export default function GroupFeedPage() {
   };
 
   const openProps = props.filter(p => p.status === "OPEN");
+  const closedProps = props.filter(p => p.status === "CLOSED");
   const resolvedProps = props.filter(p => p.status === "RESOLVED");
 
   return (
@@ -95,15 +96,20 @@ export default function GroupFeedPage() {
                     {" · "}owner: {group.ownerUsername}
                   </p>
                 </div>
-                <div className="shrink-0 text-right">
-                  <p className="text-slate-400 text-xs mb-1">Invite code</p>
-                  <code
-                    className="text-oracle-600 text-xs font-mono px-2 py-1 rounded cursor-pointer chip-oracle"
-                    onClick={() => navigator.clipboard.writeText(group.inviteCode)}
-                    title="Click to copy"
-                  >
-                    {group.inviteCode}
-                  </code>
+                <div className="shrink-0 text-right flex flex-col items-end gap-2">
+                  <Link to={`/groups/${id}/settings`} className="btn-ghost text-xs px-2.5 py-1">
+                    Settings
+                  </Link>
+                  <div>
+                    <p className="text-slate-400 text-xs mb-1">Invite code</p>
+                    <code
+                      className="text-oracle-600 text-xs font-mono px-2 py-1 rounded cursor-pointer chip-oracle"
+                      onClick={() => navigator.clipboard.writeText(group.inviteCode)}
+                      title="Click to copy"
+                    >
+                      {group.inviteCode}
+                    </code>
+                  </div>
                 </div>
               </div>
             </div>
@@ -154,6 +160,22 @@ export default function GroupFeedPage() {
                   <PropCard key={prop.id} prop={prop} onVote={setSelectedProp} />
                 ))}
               </div>
+            )}
+
+            {/* Closed */}
+            {closedProps.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="font-display text-base font-700 text-slate-500">Closed</h2>
+                  <div className="flex-1 h-px bg-void-700" />
+                  <span className="text-slate-400 text-xs">{closedProps.length} awaiting resolution</span>
+                </div>
+                <div className="space-y-3 mb-10">
+                  {closedProps.map(prop => (
+                    <PropCard key={prop.id} prop={prop} onVote={setSelectedProp} />
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Resolved */}

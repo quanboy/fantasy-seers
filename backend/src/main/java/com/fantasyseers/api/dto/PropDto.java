@@ -10,7 +10,8 @@ public class PropDto {
             @NotBlank String title,
             String description,
             @NotNull Prop.Sport sport,
-            @NotNull LocalDateTime closesAt
+            @NotNull LocalDateTime closesAt,
+            Long groupId
     ) {}
 
     public record submitRequest(
