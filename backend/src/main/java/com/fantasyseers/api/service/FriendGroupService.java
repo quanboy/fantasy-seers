@@ -2,8 +2,10 @@ package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.dto.FriendGroupDto;
 import com.fantasyseers.api.entity.FriendGroup;
+import com.fantasyseers.api.entity.GroupInvite;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.FriendGroupRepository;
+import com.fantasyseers.api.repository.GroupInviteRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -16,6 +18,7 @@ import java.util.List;
 public class FriendGroupService {
 
     private final FriendGroupRepository friendGroupRepository;
+    private final GroupInviteRepository groupInviteRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -46,6 +49,85 @@ public class FriendGroupService {
         return toResponse(friendGroupRepository.save(group));
     }
 
+    @Transactional
+    public FriendGroupDto.InviteResponse inviteUser(Long groupId, FriendGroupDto.InviteRequest request, String inviterUsername) {
+        FriendGroup group = friendGroupRepository.findById(groupId)
+                .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+
+        User inviter = findUser(inviterUsername);
+
+        boolean isInviterMember = group.getMembers().stream()
+                .anyMatch(m -> m.getUsername().equals(inviterUsername));
+        if (!isInviterMember) {
+            throw new IllegalStateException("You are not a member of this group");
+        }
+
+        User invitee = userRepository.findByUsername(request.username())
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + request.username()));
+
+        if (group.getMembers().contains(invitee)) {
+            throw new IllegalStateException(request.username() + " is already a member of this group");
+        }
+
+        if (groupInviteRepository.existsByGroupIdAndInviteeIdAndStatus(groupId, invitee.getId(), GroupInvite.Status.PENDING)) {
+            throw new IllegalStateException(request.username() + " already has a pending invite to this group");
+        }
+
+        GroupInvite invite = GroupInvite.builder()
+                .group(group)
+                .inviter(inviter)
+                .invitee(invitee)
+                .build();
+
+        return toInviteResponse(groupInviteRepository.save(invite));
+    }
+
+    @Transactional(readOnly = true)
+    public List<FriendGroupDto.InviteResponse> getMyInvites(String username) {
+        return groupInviteRepository.findAllByInviteeUsernameAndStatus(username, GroupInvite.Status.PENDING)
+                .stream()
+                .map(this::toInviteResponse)
+                .toList();
+    }
+
+    @Transactional
+    public FriendGroupDto.GroupResponse acceptInvite(Long inviteId, String username) {
+        GroupInvite invite = groupInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new IllegalArgumentException("Invite not found"));
+
+        if (!invite.getInvitee().getUsername().equals(username)) {
+            throw new IllegalStateException("This invite is not for you");
+        }
+
+        if (invite.getStatus() != GroupInvite.Status.PENDING) {
+            throw new IllegalStateException("This invite has already been " + invite.getStatus().name().toLowerCase());
+        }
+
+        invite.setStatus(GroupInvite.Status.ACCEPTED);
+        groupInviteRepository.save(invite);
+
+        FriendGroup group = invite.getGroup();
+        group.getMembers().add(invite.getInvitee());
+        return toResponse(friendGroupRepository.save(group));
+    }
+
+    @Transactional
+    public void rejectInvite(Long inviteId, String username) {
+        GroupInvite invite = groupInviteRepository.findById(inviteId)
+                .orElseThrow(() -> new IllegalArgumentException("Invite not found"));
+
+        if (!invite.getInvitee().getUsername().equals(username)) {
+            throw new IllegalStateException("This invite is not for you");
+        }
+
+        if (invite.getStatus() != GroupInvite.Status.PENDING) {
+            throw new IllegalStateException("This invite has already been " + invite.getStatus().name().toLowerCase());
+        }
+
+        invite.setStatus(GroupInvite.Status.REJECTED);
+        groupInviteRepository.save(invite);
+    }
+
     @Transactional(readOnly = true)
     public List<FriendGroupDto.GroupResponse> getMyGroups(String username) {
         return friendGroupRepository.findAllByMemberUsername(username)
@@ -71,6 +153,18 @@ public class FriendGroupService {
     private User findUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+    }
+
+    private FriendGroupDto.InviteResponse toInviteResponse(GroupInvite invite) {
+        return new FriendGroupDto.InviteResponse(
+                invite.getId(),
+                invite.getGroup().getId(),
+                invite.getGroup().getName(),
+                invite.getInviter().getUsername(),
+                invite.getInvitee().getUsername(),
+                invite.getStatus().name(),
+                invite.getCreatedAt()
+        );
     }
 
     private FriendGroupDto.GroupResponse toResponse(FriendGroup group) {

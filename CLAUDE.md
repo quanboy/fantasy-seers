@@ -24,7 +24,7 @@ fantasy-seers/
 │       └── service/             # Business logic
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway SQL migrations (V1, V2)
+│       └── db/migration/        # Flyway SQL migrations (V1, V2, V3)
 └── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
     ├── package.json
     ├── vite.config.js
@@ -106,8 +106,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 
 - **V1__initial_schema.sql** — full schema: users, friend_groups, friend_group_members, props, prop_groups, votes, point_transactions, badges, user_badges, follows
 - **V2__add_prop_submission_columns.sql** — added `min_wager` and `max_wager` to props
+- **V3__add_group_invites.sql** — `group_invites` table with UNIQUE constraint on `(group_id, invitee_id)` to prevent duplicate invites
 
-**Adding a new migration:** Create `V3__description.sql`. Do not modify existing migration files.
+**Adding a new migration:** Create `V4__description.sql`. Do not modify existing migration files.
 
 ---
 
@@ -122,7 +123,7 @@ All endpoints are prefixed `/api` and return JSON.
 | PropController     | `/api/props`     | `POST /submit` (user), `GET /public`, `GET /{id}`                            |
 | VoteController     | `/api/props`     | `POST /{id}/vote`, `GET /{id}/split`                                         |
 | AdminController    | `/api/admin`     | `GET /props/pending`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve` |
-| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props` |
+| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props`, `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
 
 ---
 
@@ -155,8 +156,8 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Fetches user's groups on expand.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes.
 - **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s.
-- **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard).
-- **GroupFeedPage** — group header + group-scoped props (open/resolved sections).
+- **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard). Shows "Pending Invites" section with accept/reject buttons when the user has pending group invites.
+- **GroupFeedPage** — group header + "Invite Member" form (username input) + group-scoped props (open/resolved sections).
 
 ### Theme & Design Tokens
 
@@ -188,7 +189,8 @@ For error text, use `text-loss-400` (not `text-red-400`). For muted/secondary te
 
 - **Prop** — a yes/no proposition with `minWager`/`maxWager` limits. Scopes: `PUBLIC`, `FRIENDS`, `GROUP`, `FRIENDS_AND_GROUP`. Statuses: `PENDING` → `OPEN` → `CLOSED` → `RESOLVED`. Has `isAdminProp` flag to distinguish admin-created vs user-submitted props.
 - **Vote** — a user's YES/NO choice on a prop with a wager amount. One vote per user per prop.
-- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`.
+- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`. Users can join via invite code or be invited by username.
+- **GroupInvite** — a pending/accepted/rejected invite for a user to join a group. Statuses: `PENDING` → `ACCEPTED` or `REJECTED`. UNIQUE constraint on `(group_id, invitee_id)` prevents duplicate invites. Only group members can send invites. Accepting adds the invitee to the group's member set.
 - **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Tier system: Rookie (0–4999), Pro (5000–14999), Elite (15000–49999), Legend (50000+).
 - **Prop lifecycle:**
   - **User-submitted:** `PENDING` → admin approval → `OPEN` → `CLOSED` → `RESOLVED`
@@ -204,7 +206,7 @@ For error text, use `text-loss-400` (not `text-red-400`). For muted/secondary te
 | Exception                  | HTTP Status   | Examples                                          |
 |----------------------------|---------------|---------------------------------------------------|
 | `IllegalArgumentException` | 400 Bad Request | "Invalid invite code", "Prop not found"          |
-| `IllegalStateException`    | 409 Conflict   | "Already a member", "Already voted", "Insufficient points" |
+| `IllegalStateException`    | 409 Conflict   | "Already a member", "Already voted", "Insufficient points", "Invite already sent" |
 | `AccessDeniedException`    | 403 Forbidden  | "Not a member of this group"                     |
 
 Frontend components read error messages via `err.response?.data?.message` in catch blocks.
@@ -230,8 +232,11 @@ Frontend components read error messages via `err.response?.data?.message` in cat
 - **PostgreSQL + `DISTINCT` + `ORDER BY`** — if `ORDER BY` uses an expression not in the `SELECT` list, PostgreSQL rejects it. Prefer `EXISTS` subqueries over `LEFT JOIN` + `DISTINCT` to avoid this.
 - **Flyway owns the schema** — never change `ddl-auto` to `create` or `update` in any environment.
 - **`@Builder.Default`** — Lombok `@Builder` fields with defaults (e.g., `Set<User> members`) need `@Builder.Default` or the default is ignored when using the builder.
-- **`FetchType.LAZY`** — `FriendGroup.members` and `FriendGroup.owner` are lazy-loaded. Access them within a `@Transactional` method or they'll throw `LazyInitializationException`.
+- **`FetchType.LAZY`** — `FriendGroup.members`, `FriendGroup.owner`, and `GroupInvite.group`/`inviter`/`invitee` are lazy-loaded. Access them within a `@Transactional` method or they'll throw `LazyInitializationException`.
 - **Two prop creation flows** — `PropService.submitProp()` (user, starts PENDING) vs `PropService.createProp()` (admin, starts OPEN). Don't confuse them.
 - **Invite codes are case-insensitive** — `FriendGroupService.joinGroup()` uppercases the input before lookup.
+- **Group invites have a UNIQUE constraint** — `(group_id, invitee_id)` prevents duplicate invites. The service checks for existing PENDING invites before creating new ones.
+- **Invite validation order** — `inviteUser()` checks: inviter is member → invitee exists → invitee not already a member → no pending invite exists. Errors use `IllegalArgumentException` (not found) or `IllegalStateException` (business rule).
 - **Spring Security returns 403 for unauthenticated requests** (not 401) — the default filter chain with stateless sessions does this. The Axios interceptor accounts for this by checking whether a token exists in localStorage to distinguish auth failures from permission errors.
 - **`@apply` does not support Tailwind opacity modifiers** — `@apply bg-oracle-500/10` fails at build time. Use `background: theme('colors.oracle.500 / 0.1')` in CSS instead. The `/` modifier works fine in JSX `className` strings.
+- **Docker frontend duplicate React** — The Docker frontend container can produce "Invalid hook call" errors due to duplicate React instances when volume-mounting `src/`. For local development, prefer running the frontend directly (`cd frontend && npm run dev`) while keeping backend + DB in Docker.

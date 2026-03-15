@@ -47,6 +47,10 @@ export const groupsApi = {
   joinGroup:    (data)   => api.post('/groups/join', data),
   getGroup:     (id)     => api.get(`/groups/${id}`),
   getGroupProps:(id)     => api.get(`/groups/${id}/props`),
+  inviteUser:    (id, data) => api.post(`/groups/${id}/invite`, data),
+  getMyInvites:  ()         => api.get('/groups/invites'),
+  acceptInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/accept`),
+  rejectInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/reject`),
 }
 
 export const userApi = {

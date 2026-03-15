@@ -5,6 +5,8 @@ import { groupsApi } from "../api/client";
 export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [invites, setInvites] = useState([]);
+  const [respondingId, setRespondingId] = useState(null);
 
   const [createName, setCreateName] = useState("");
   const [createLoading, setCreateLoading] = useState(false);
@@ -20,7 +22,34 @@ export default function GroupsPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchGroups(); }, []);
+  const fetchInvites = () => {
+    groupsApi.getMyInvites()
+      .then(({ data }) => setInvites(data))
+      .catch(() => {});
+  };
+
+  const handleAccept = async (inviteId) => {
+    setRespondingId(inviteId);
+    try {
+      await groupsApi.acceptInvite(inviteId);
+      fetchInvites();
+      fetchGroups();
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  const handleReject = async (inviteId) => {
+    setRespondingId(inviteId);
+    try {
+      await groupsApi.rejectInvite(inviteId);
+      fetchInvites();
+    } finally {
+      setRespondingId(null);
+    }
+  };
+
+  useEffect(() => { fetchGroups(); fetchInvites(); }, []);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -102,6 +131,44 @@ export default function GroupsPage() {
             </form>
           </div>
         </div>
+
+        {/* Pending Invites */}
+        {invites.length > 0 && (
+          <div className="mb-8">
+            <h2 className="font-display text-lg font-700 text-slate-900 mb-4">
+              Pending Invites
+              <span className="ml-2 chip-gold text-xs px-2 py-0.5 rounded-full">{invites.length}</span>
+            </h2>
+            <div className="space-y-3">
+              {invites.map(invite => (
+                <div key={invite.id} className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-800">{invite.groupName}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Invited by {invite.inviterUsername}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button
+                      onClick={() => handleAccept(invite.id)}
+                      disabled={respondingId === invite.id}
+                      className="btn-approve text-xs px-3 py-1.5"
+                    >
+                      Accept
+                    </button>
+                    <button
+                      onClick={() => handleReject(invite.id)}
+                      disabled={respondingId === invite.id}
+                      className="btn-reject text-xs px-3 py-1.5"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Group list */}
         <div className="flex items-center gap-3 mb-4">

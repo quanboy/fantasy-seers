@@ -37,6 +37,39 @@ public class FriendGroupController {
         return ResponseEntity.ok(friendGroupService.joinGroup(request, userDetails.getUsername()));
     }
 
+    @PostMapping("/{id}/invite")
+    public ResponseEntity<FriendGroupDto.InviteResponse> inviteUser(
+            @PathVariable Long id,
+            @Valid @RequestBody FriendGroupDto.InviteRequest request,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(friendGroupService.inviteUser(id, request, userDetails.getUsername()));
+    }
+
+    @GetMapping("/invites")
+    public ResponseEntity<List<FriendGroupDto.InviteResponse>> getMyInvites(
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(friendGroupService.getMyInvites(userDetails.getUsername()));
+    }
+
+    @PostMapping("/invites/{inviteId}/accept")
+    public ResponseEntity<FriendGroupDto.GroupResponse> acceptInvite(
+            @PathVariable Long inviteId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(friendGroupService.acceptInvite(inviteId, userDetails.getUsername()));
+    }
+
+    @PostMapping("/invites/{inviteId}/reject")
+    public ResponseEntity<Void> rejectInvite(
+            @PathVariable Long inviteId,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        friendGroupService.rejectInvite(inviteId, userDetails.getUsername());
+        return ResponseEntity.ok().build();
+    }
+
     @GetMapping
     public ResponseEntity<List<FriendGroupDto.GroupResponse>> getMyGroups(
             @AuthenticationPrincipal UserDetails userDetails

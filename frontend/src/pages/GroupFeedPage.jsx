@@ -14,6 +14,25 @@ export default function GroupFeedPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProp, setSelectedProp] = useState(null);
+  const [inviteUsername, setInviteUsername] = useState("");
+  const [inviteMsg, setInviteMsg] = useState(null);
+  const [inviting, setInviting] = useState(false);
+
+  const handleInvite = async (e) => {
+    e.preventDefault();
+    if (!inviteUsername.trim()) return;
+    setInviting(true);
+    setInviteMsg(null);
+    try {
+      const { data } = await groupsApi.inviteUser(id, { username: inviteUsername.trim() });
+      setInviteMsg({ type: "success", text: `Invite sent to ${inviteUsername.trim()}!` });
+      setInviteUsername("");
+    } catch (err) {
+      setInviteMsg({ type: "error", text: err.response?.data?.message ?? "Failed to invite user" });
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const fetchAll = () => {
     Promise.all([
@@ -87,6 +106,28 @@ export default function GroupFeedPage() {
                   </code>
                 </div>
               </div>
+            </div>
+
+            {/* Invite Member */}
+            <div className="glass-card rounded-2xl p-4 mb-6">
+              <h3 className="text-sm font-semibold text-slate-700 mb-2">Invite Member</h3>
+              <form onSubmit={handleInvite} className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Enter username"
+                  value={inviteUsername}
+                  onChange={(e) => setInviteUsername(e.target.value)}
+                  className="input-base flex-1 text-sm"
+                />
+                <button type="submit" disabled={inviting || !inviteUsername.trim()} className="btn-oracle text-sm">
+                  {inviting ? "Inviting…" : "Invite"}
+                </button>
+              </form>
+              {inviteMsg && (
+                <p className={`text-xs mt-2 ${inviteMsg.type === "success" ? "text-win-400" : "text-loss-400"}`}>
+                  {inviteMsg.text}
+                </p>
+              )}
             </div>
 
             {/* Open Props */}
