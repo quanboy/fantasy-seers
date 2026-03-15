@@ -88,8 +88,8 @@ export default function GroupsPage() {
         {/* Create + Join forms */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">
           {/* Create */}
-          <div className="rounded-2xl p-5 glass-card">
-            <h2 className="font-display text-sm font-700 text-slate-900 mb-4">Create a Group</h2>
+          <div className="rounded-xl p-5 glass-card">
+            <h2 className="font-display text-sm font-700 text-slate-100 mb-4">Create a Group</h2>
             <form onSubmit={handleCreate} className="flex flex-col gap-3">
               <input
                 value={createName}
@@ -98,7 +98,7 @@ export default function GroupsPage() {
                 className="input-base text-sm"
                 maxLength={100}
               />
-              {createError && <p className="text-loss-700 text-xs">{createError}</p>}
+              {createError && <p className="text-loss-400 text-xs">{createError}</p>}
               <button
                 type="submit"
                 disabled={createLoading || !createName.trim()}
@@ -110,8 +110,8 @@ export default function GroupsPage() {
           </div>
 
           {/* Join */}
-          <div className="rounded-2xl p-5 glass-card">
-            <h2 className="font-display text-sm font-700 text-slate-900 mb-4">Join a Group</h2>
+          <div className="rounded-xl p-5 glass-card">
+            <h2 className="font-display text-sm font-700 text-slate-100 mb-4">Join a Group</h2>
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <input
                 value={joinCode}
@@ -120,7 +120,7 @@ export default function GroupsPage() {
                 className="input-base text-sm uppercase"
                 maxLength={20}
               />
-              {joinError && <p className="text-loss-700 text-xs">{joinError}</p>}
+              {joinError && <p className="text-loss-400 text-xs">{joinError}</p>}
               <button
                 type="submit"
                 disabled={joinLoading || !joinCode.trim()}
@@ -135,15 +135,15 @@ export default function GroupsPage() {
         {/* Pending Invites */}
         {invites.length > 0 && (
           <div className="mb-8">
-            <h2 className="font-display text-lg font-700 text-slate-900 mb-4">
+            <h2 className="font-display text-lg font-700 text-slate-100 mb-4">
               Pending Invites
               <span className="ml-2 chip-gold text-xs px-2 py-0.5 rounded-full">{invites.length}</span>
             </h2>
             <div className="space-y-3">
               {invites.map(invite => (
-                <div key={invite.id} className="glass-card rounded-2xl p-4 flex items-center justify-between gap-3">
+                <div key={invite.id} className="glass-card rounded-xl p-4 flex items-center justify-between gap-3">
                   <div>
-                    <p className="text-sm font-semibold text-slate-800">{invite.groupName}</p>
+                    <p className="text-sm font-semibold text-slate-200">{invite.groupName}</p>
                     <p className="text-xs text-slate-400 mt-0.5">
                       Invited by {invite.inviterUsername}
                     </p>
@@ -172,7 +172,7 @@ export default function GroupsPage() {
 
         {/* Group list */}
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="font-display text-lg font-700 text-slate-900">Your Groups</h2>
+          <h2 className="font-display text-lg font-700 text-slate-100">Your Groups</h2>
           {groups.length > 0 && (
             <span className="text-slate-400 text-xs">{groups.length} group{groups.length !== 1 ? "s" : ""}</span>
           )}
@@ -185,10 +185,8 @@ export default function GroupsPage() {
         )}
 
         {!loading && groups.length === 0 && (
-          <div className="glass-card p-10 text-center">
-            <div className="text-4xl mb-3">👥</div>
+          <div className="glass-card p-8 text-center">
             <p className="text-slate-500 text-sm">No groups yet.</p>
-            <p className="text-slate-400 text-xs mt-1">Create one or join with an invite code.</p>
           </div>
         )}
 
@@ -198,11 +196,11 @@ export default function GroupsPage() {
               <Link
                 key={group.id}
                 to={`/groups/${group.id}`}
-                className="block rounded-2xl p-5 transition-all glass-card-hover"
+                className="block rounded-xl p-5 transition-all glass-card-hover"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-slate-800 text-sm">{group.name}</p>
+                    <p className="font-semibold text-slate-200 text-sm">{group.name}</p>
                     <p className="text-slate-400 text-xs mt-0.5">
                       {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
                       {" · "}owner: {group.ownerUsername}
@@ -211,7 +209,7 @@ export default function GroupsPage() {
                   <div className="shrink-0 text-right">
                     <p className="text-slate-400 text-xs mb-1">Invite code</p>
                     <code
-                      className="text-oracle-600 text-xs font-mono px-2 py-1 rounded chip-oracle"
+                      className="text-oracle-400 text-xs font-mono px-2 py-1 rounded chip-oracle"
                       onClick={e => {
                         e.preventDefault();
                         navigator.clipboard.writeText(group.inviteCode);

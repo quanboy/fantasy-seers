@@ -74,7 +74,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fade-in">
-      <h1 className="font-display text-2xl font-800 text-slate-900 mb-6">Profile</h1>
+      <h1 className="font-display text-2xl font-800 text-slate-100 mb-6">Profile</h1>
 
       {/* Account section — read-only */}
       <div className="glass-card p-6 mb-6">
@@ -82,28 +82,28 @@ export default function ProfilePage() {
         <div className="space-y-3">
           <div>
             <label className="block text-xs text-slate-400 mb-1">Username</label>
-            <p className="text-sm font-semibold text-slate-800">{profile?.username}</p>
+            <p className="text-sm font-semibold text-slate-200">{profile?.username}</p>
           </div>
           <div>
             <label className="block text-xs text-slate-400 mb-1">Email</label>
-            <p className="text-sm font-semibold text-slate-800">{profile?.email}</p>
+            <p className="text-sm font-semibold text-slate-200">{profile?.email}</p>
           </div>
           {profile?.favoriteNflTeam && (
             <div>
               <label className="block text-xs text-slate-400 mb-1">Favorite NFL Team</label>
-              <p className="text-sm font-semibold text-slate-800">{profile.favoriteNflTeam}</p>
+              <p className="text-sm font-semibold text-slate-200">{profile.favoriteNflTeam}</p>
             </div>
           )}
           {profile?.favoriteNbaTeam && (
             <div>
               <label className="block text-xs text-slate-400 mb-1">Favorite NBA Team</label>
-              <p className="text-sm font-semibold text-slate-800">{profile.favoriteNbaTeam}</p>
+              <p className="text-sm font-semibold text-slate-200">{profile.favoriteNbaTeam}</p>
             </div>
           )}
           {profile?.almaMater && (
             <div>
               <label className="block text-xs text-slate-400 mb-1">Alma Mater</label>
-              <p className="text-sm font-semibold text-slate-800">{profile.almaMater}</p>
+              <p className="text-sm font-semibold text-slate-200">{profile.almaMater}</p>
             </div>
           )}
         </div>
@@ -114,13 +114,13 @@ export default function ProfilePage() {
         <h2 className="text-xs text-slate-500 uppercase tracking-widest mb-4">Identity</h2>
 
         {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-700 alert-error">
+          <div className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 alert-error">
             {error}
           </div>
         )}
 
         {success && (
-          <div className="mb-4 px-4 py-3 rounded-xl text-sm text-win-700 chip-gold">
+          <div className="mb-4 px-4 py-3 rounded-lg text-sm text-win-400 chip-gold">
             {success}
           </div>
         )}

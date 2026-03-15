@@ -93,7 +93,7 @@ export default function Sidebar({ open, onClose }) {
         className={`
           fixed top-0 left-0 z-50 h-full w-60 bg-void-900 border-r border-void-700
           flex flex-col transition-transform duration-200 ease-in-out
-          lg:translate-x-0 lg:static lg:z-auto lg:min-h-screen
+          lg:translate-x-0 lg:static lg:z-auto lg:self-stretch lg:sticky lg:top-0 lg:h-screen
           ${open ? "translate-x-0" : "-translate-x-full"}
         `}
       >
@@ -101,7 +101,7 @@ export default function Sidebar({ open, onClose }) {
         <div className="px-5 py-5 border-b border-void-700 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Fantasy Seers" className="w-16 h-16 object-contain" />
-            <span className="font-display text-base font-bold text-slate-900 tracking-tight">
+            <span className="font-cinzel text-base font-bold text-slate-100 tracking-tight">
               Fantasy Seers
             </span>
           </div>
@@ -125,10 +125,10 @@ export default function Sidebar({ open, onClose }) {
               end={item.path === "/"}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150 ${
                   isActive
-                    ? "bg-oracle-100 text-oracle-700 font-semibold"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-void-800"
+                    ? "bg-oracle-500/15 text-oracle-300 font-semibold"
+                    : "text-slate-400 hover:text-slate-200 hover:bg-void-800"
                 }`
               }
             >
@@ -141,11 +141,11 @@ export default function Sidebar({ open, onClose }) {
         {/* User footer */}
         <div className="mt-auto px-4 py-4 border-t border-void-700">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-oracle-100 flex items-center justify-center text-oracle-600 text-xs font-bold">
+            <div className="w-8 h-8 rounded-full bg-oracle-500/15 flex items-center justify-center text-oracle-300 text-xs font-bold">
               {user?.username?.charAt(0)?.toUpperCase() ?? "?"}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 truncate">{user?.username}</p>
+              <p className="text-sm font-semibold text-slate-200 truncate">{user?.username}</p>
               <p className="text-xs text-slate-400">{user?.role}</p>
             </div>
           </div>

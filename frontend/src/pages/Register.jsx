@@ -69,16 +69,16 @@ export default function Register() {
           <div className="animate-float inline-block mb-4">
             <img src="/logo.png" alt="Fantasy Seers" className="w-72 h-72 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"  />
           </div>
-          <h1 className="font-display text-3xl font-800 text-slate-900 tracking-tight">Fantasy Seers</h1>
+          <h1 className="font-display text-3xl font-800 text-slate-100 tracking-tight">Fantasy Seers</h1>
           <p className="text-slate-500 text-sm mt-1">Your vision. Your edge. Your arena.</p>
         </div>
 
         <div className="glass-card p-7">
-          <p className="font-display text-lg font-700 text-slate-900 mb-1">Create your account</p>
+          <p className="font-display text-lg font-700 text-slate-100 mb-1">Create your account</p>
           <p className="text-slate-400 text-xs mb-6">Join thousands of seers competing daily</p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-700 alert-error">
+            <div className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 alert-error">
               {error}
             </div>
           )}
@@ -168,8 +168,8 @@ export default function Register() {
             </div>
 
             {/* Bonus callout */}
-            <div className="rounded-xl px-4 py-3 text-xs text-gold-600 chip-gold">
-              <span className="font-bold">🎁 Welcome bonus:</span> Start with 1,000 free points to wager on your first props.
+            <div className="rounded-lg px-4 py-3 text-xs text-gold-400 chip-gold">
+              <span className="font-bold">Welcome bonus:</span> Start with <span className="font-mono">1,000</span> free points.
             </div>
 
             <button
@@ -189,7 +189,7 @@ export default function Register() {
           <div className="mt-6 pt-5 border-t border-void-700 text-center">
             <p className="text-slate-400 text-sm">
               Already a Seer?{' '}
-              <Link to="/login" className="text-oracle-600 hover:text-oracle-500 font-semibold transition-colors">
+              <Link to="/login" className="text-oracle-400 hover:text-oracle-500 font-semibold transition-colors">
                 Sign in
               </Link>
             </p>

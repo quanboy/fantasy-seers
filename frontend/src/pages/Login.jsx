@@ -13,7 +13,7 @@ function OracleLogo() {
         />
       </div>
       <div className="text-center">
-        <h1 className="font-display text-3xl font-800 text-slate-900 tracking-tight">
+        <h1 className="font-display text-3xl font-800 text-slate-100 tracking-tight">
           See It Before It Happens
         </h1>
       </div>
@@ -70,12 +70,12 @@ export default function Login() {
         <OracleLogo />
 
         <div className="glass-card p-7">
-          <p className="font-display text-lg font-700 text-slate-900 mb-6">
+          <p className="font-display text-lg font-700 text-slate-100 mb-6">
             Welcome back, Seer
           </p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-xl text-sm text-loss-700 font-body alert-error">
+            <div className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 font-body alert-error">
               {error}
             </div>
           )}
@@ -128,7 +128,7 @@ export default function Login() {
               New to Fantasy Seers?{" "}
               <Link
                 to="/register"
-                className="text-oracle-600 hover:text-oracle-500 font-semibold transition-colors"
+                className="text-oracle-400 hover:text-oracle-500 font-semibold transition-colors"
               >
                 Claim your spot
               </Link>

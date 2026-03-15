@@ -117,6 +117,13 @@ public class PropService {
                 .toList();
     }
 
+    public List<PropDto.PropResponse> getClosedProps() {
+        return propRepository.findByStatusOrderByCreatedAtAsc(Prop.Status.CLOSED)
+                .stream()
+                .map(p -> toResponse(p, null))
+                .toList();
+    }
+
     public List<PropDto.PropResponse> getPublicProps(String username) {
         if (username != null) {
             return propRepository.findVisibleToUser(
