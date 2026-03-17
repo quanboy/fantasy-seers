@@ -77,8 +77,8 @@ export default function GroupFeedPage() {
 
         {error && (
           <div className="glass-card p-8 text-center">
-            <p className="text-loss-700 text-sm">{error}</p>
-            <Link to="/groups" className="text-oracle-600 text-xs mt-2 inline-block hover:underline">
+            <p className="text-loss-400 text-sm">{error}</p>
+            <Link to="/groups" className="text-oracle-400 text-xs mt-2 inline-block hover:underline">
               Back to Groups
             </Link>
           </div>
@@ -87,10 +87,10 @@ export default function GroupFeedPage() {
         {!loading && !error && group && (
           <div className="animate-fade-in">
             {/* Group header */}
-            <div className="rounded-2xl p-5 mb-6 glass-card">
+            <div className="rounded-xl p-5 mb-6 glass-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h1 className="font-display text-xl font-700 text-slate-900">{group.name}</h1>
+                  <h1 className="font-display text-xl font-700 text-slate-100">{group.name}</h1>
                   <p className="text-slate-500 text-sm mt-1">
                     {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
                     {" · "}owner: {group.ownerUsername}
@@ -103,7 +103,7 @@ export default function GroupFeedPage() {
                   <div>
                     <p className="text-slate-400 text-xs mb-1">Invite code</p>
                     <code
-                      className="text-oracle-600 text-xs font-mono px-2 py-1 rounded cursor-pointer chip-oracle"
+                      className="text-oracle-400 text-xs font-mono px-2 py-1 rounded cursor-pointer chip-oracle"
                       onClick={() => navigator.clipboard.writeText(group.inviteCode)}
                       title="Click to copy"
                     >
@@ -115,8 +115,8 @@ export default function GroupFeedPage() {
             </div>
 
             {/* Invite Member */}
-            <div className="glass-card rounded-2xl p-4 mb-6">
-              <h3 className="text-sm font-semibold text-slate-700 mb-2">Invite Member</h3>
+            <div className="glass-card rounded-xl p-4 mb-6">
+              <h3 className="text-sm font-semibold text-slate-300 mb-2">Invite Member</h3>
               <form onSubmit={handleInvite} className="flex gap-2">
                 <input
                   type="text"
@@ -138,7 +138,7 @@ export default function GroupFeedPage() {
 
             {/* Open Props */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-display text-lg font-700 text-slate-900">Open Props</h2>
+              <h2 className="font-display text-lg font-700 text-slate-100">Open Props</h2>
               {openProps.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot" />
@@ -150,8 +150,7 @@ export default function GroupFeedPage() {
             </div>
 
             {openProps.length === 0 ? (
-              <div className="glass-card p-10 text-center mb-10">
-                <div className="text-4xl mb-3">🔮</div>
+              <div className="glass-card p-8 text-center mb-10">
                 <p className="text-slate-500 text-sm">No open props in this group.</p>
               </div>
             ) : (
@@ -166,7 +165,7 @@ export default function GroupFeedPage() {
             {closedProps.length > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-display text-base font-700 text-slate-500">Closed</h2>
+                  <h2 className="font-cinzel text-base font-700 text-slate-500">Closed</h2>
                   <div className="flex-1 h-px bg-void-700" />
                   <span className="text-slate-400 text-xs">{closedProps.length} awaiting resolution</span>
                 </div>
@@ -182,7 +181,7 @@ export default function GroupFeedPage() {
             {resolvedProps.length > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-display text-base font-700 text-slate-500">Resolved</h2>
+                  <h2 className="font-cinzel text-base font-700 text-slate-500">Resolved</h2>
                   <div className="flex-1 h-px bg-void-700" />
                   <span className="text-slate-400 text-xs">{resolvedProps.length} settled</span>
                 </div>

@@ -33,4 +33,7 @@ public interface PropRepository extends JpaRepository<Prop, Long> {
     List<Prop> findByStatusAndResultIsNull(Prop.Status status);
 
     List<Prop> findByStatusOrderByCreatedAtAsc(Prop.Status status);
+
+    @Query("SELECT p FROM Prop p WHERE p.status = :status AND p.closesAt <= :before")
+    List<Prop> findOpenPropsClosedBefore(@Param("status") Prop.Status status, @Param("before") java.time.LocalDateTime before);
 }

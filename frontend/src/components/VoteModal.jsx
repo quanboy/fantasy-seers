@@ -20,11 +20,11 @@ function RakeExplainer({ wager }) {
 
   return (
     <div className="rake-chip mt-3 text-xs leading-relaxed">
-      <span className="font-semibold text-oracle-600">Fantasy Seers fee: 5% of winnings.</span>
+      <span className="font-semibold text-slate-300">Platform fee: 5% of winnings.</span>
       {amt > 0 && (
         <span className="text-slate-500 ml-1">
           If you win a {amt.toLocaleString()} pt bet → you keep{" "}
-          <span className="text-oracle-600 font-semibold">{(amt * 2 - fee).toLocaleString()} pts</span>
+          <span className="text-slate-200 font-semibold">{(amt * 2 - fee).toLocaleString()} pts</span>
           {" "}({fee.toLocaleString()} pt platform fee).
         </span>
       )}
@@ -39,13 +39,13 @@ function QuickAmounts({ max, onSelect }) {
     <div className="flex gap-2 mt-2">
       {amounts.map(a => (
         <button key={a} onClick={() => onSelect(String(a))}
-          className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-oracle-600 transition-all chip-oracle hover:bg-oracle-100"
+          className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-300 transition-all bg-void-800 border border-void-700 hover:border-void-600"
         >
           {a.toLocaleString()}
         </button>
       ))}
       <button onClick={() => onSelect(String(max))}
-        className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gold-600 transition-all chip-gold hover:bg-gold-200/60"
+        className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gold-400 transition-all chip-gold hover:bg-gold-200/60"
       >
         Max
       </button>
@@ -54,8 +54,8 @@ function QuickAmounts({ max, onSelect }) {
 }
 
 export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
-  const [choice, setChoice] = useState(null);
-  const [wager, setWager] = useState("");
+  const [choice, setChoice] = useState(prop._initialChoice || null);
+  const [wager, setWager] = useState(prop._initialWager || "");
   const [split, setSplit] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +92,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
-        className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-3xl sm:rounded-2xl p-7 animate-slide-up glass-card shadow-modal"
+        className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-xl p-7 animate-slide-up glass-card shadow-modal"
       >
         {!split ? (
           <>
@@ -106,7 +106,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             </div>
 
             {/* Prop title */}
-            <p className="font-display text-xl font-700 text-slate-900 leading-snug mb-6">
+            <p className="font-cinzel text-xl font-700 text-slate-100 leading-snug mb-6">
               {prop.title}
             </p>
 
@@ -114,7 +114,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <button
                 onClick={() => setChoice("YES")}
-                className={`py-5 rounded-2xl font-display font-700 text-lg transition-all duration-200 ${
+                className={`py-5 rounded-lg font-display font-700 text-lg transition-all duration-200 ${
                   choice === "YES"
                     ? "vote-yes scale-95"
                     : "vote-yes-idle hover:scale-102"
@@ -124,7 +124,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
               </button>
               <button
                 onClick={() => setChoice("NO")}
-                className={`py-5 rounded-2xl font-display font-700 text-lg transition-all duration-200 ${
+                className={`py-5 rounded-lg font-display font-700 text-lg transition-all duration-200 ${
                   choice === "NO" ? "vote-no scale-95" : "vote-no-idle"
                 }`}
               >
@@ -136,7 +136,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             <div className="mb-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-xs text-slate-500 uppercase tracking-widest">Your wager</label>
-                <span className="text-xs text-gold-600 font-semibold">
+                <span className="text-xs text-gold-400 font-mono">
                   {userPoints.toLocaleString()} pts available
                 </span>
               </div>
@@ -144,7 +144,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
                 type="number"
                 value={wager}
                 onChange={(e) => setWager(e.target.value)}
-                className="input-base text-lg font-bold"
+                className="input-base text-lg font-mono font-bold"
                 placeholder="0"
                 min={prop.minWager || 1}
                 max={maxWager}
@@ -157,7 +157,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
 
             {/* Wager limits */}
             {(prop.minWager || prop.maxWager) && (
-              <p className="text-xs text-slate-400 mt-2">
+              <p className="text-xs text-slate-500 font-mono mt-2">
                 {prop.minWager && `Min: ${prop.minWager.toLocaleString()} pts`}
                 {prop.minWager && prop.maxWager && " · "}
                 {prop.maxWager && `Max: ${prop.maxWager.toLocaleString()} pts`}
@@ -165,7 +165,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             )}
 
             {error && (
-              <p className="text-loss-700 text-sm mt-4 px-3 py-2 rounded-xl alert-error">
+              <p className="text-loss-400 text-sm mt-4 px-3 py-2 rounded-lg alert-error">
                 {error}
               </p>
             )}
@@ -191,8 +191,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
           /* Split reveal */
           <div className="animate-scale-in">
             <div className="text-center mb-6">
-              <div className="text-3xl mb-2">🔮</div>
-              <p className="font-display text-lg font-700 text-slate-900">Vote locked in</p>
+              <p className="font-display text-lg font-700 text-slate-100">Vote locked in</p>
               <p className="text-slate-500 text-sm mt-1">Here's how the crowd is calling it</p>
             </div>
 
@@ -209,27 +208,27 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             </div>
 
             <div className="grid grid-cols-2 gap-3 mb-6">
-              <div className="rounded-2xl p-5 text-center chip-win">
-                <div className="font-display text-3xl font-800 text-win-700">{split.yesPct.toFixed(0)}%</div>
-                <div className="text-slate-500 text-xs mt-1">YES · {split.yesCount} votes</div>
-                <div className="text-win-700 text-xs mt-1 font-semibold">{split.yesWagerTotal?.toLocaleString()} pts</div>
+              <div className="rounded-xl p-5 text-center chip-win">
+                <div className="font-mono text-3xl font-bold text-win-400">{split.yesPct.toFixed(0)}%</div>
+                <div className="text-slate-500 text-xs mt-1 font-mono">YES · {split.yesCount} votes</div>
+                <div className="text-win-400 text-xs mt-1 font-mono">{split.yesWagerTotal?.toLocaleString()} pts</div>
               </div>
-              <div className="rounded-2xl p-5 text-center chip-loss">
-                <div className="font-display text-3xl font-800 text-loss-700">{split.noPct.toFixed(0)}%</div>
-                <div className="text-slate-500 text-xs mt-1">NO · {split.noCount} votes</div>
-                <div className="text-loss-700 text-xs mt-1 font-semibold">{split.noWagerTotal?.toLocaleString()} pts</div>
+              <div className="rounded-xl p-5 text-center chip-loss">
+                <div className="font-mono text-3xl font-bold text-loss-400">{split.noPct.toFixed(0)}%</div>
+                <div className="text-slate-500 text-xs mt-1 font-mono">NO · {split.noCount} votes</div>
+                <div className="text-loss-400 text-xs mt-1 font-mono">{split.noWagerTotal?.toLocaleString()} pts</div>
               </div>
             </div>
 
             {/* Payout reminder */}
             <div className="rake-chip mb-5 text-center">
-              Winners receive <span className="text-oracle-600 font-bold">95%</span> of net winnings ·
+              Winners receive <span className="text-slate-200 font-bold">95%</span> of net winnings ·
               <span className="text-slate-400"> 5% Fantasy Seers platform fee</span>
             </div>
 
             <button
               onClick={async () => { await onVoted(); onClose(); }}
-              className="w-full py-4 rounded-2xl font-semibold transition-all btn-ghost"
+              className="w-full py-4 rounded-lg font-semibold transition-all btn-ghost"
             >
               Back to Feed
             </button>

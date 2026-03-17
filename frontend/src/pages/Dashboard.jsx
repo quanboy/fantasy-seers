@@ -50,9 +50,11 @@ export default function Dashboard() {
     localStorage.setItem("fs_user", JSON.stringify(updated));
     setUser(updated);
     setSelectedProp(null);
+    fetchProps();
   };
 
   const openProps = props.filter((p) => p.status === "OPEN");
+  const closedProps = props.filter((p) => p.status === "CLOSED");
   const resolvedProps = props.filter((p) => p.status === "RESOLVED");
 
   return (
@@ -70,8 +72,8 @@ export default function Dashboard() {
           <div className="animate-fade-in">
             {/* Profile completion banner */}
             {profileIncomplete && !profileBannerDismissed && (
-              <div className="chip-gold rounded-xl px-4 py-3 mb-5 flex items-center justify-between">
-                <p className="text-sm text-gold-600">
+              <div className="chip-gold rounded-lg px-4 py-3 mb-5 flex items-center justify-between">
+                <p className="text-sm text-gold-400">
                   Complete your profile — add your favorite teams and alma mater.{' '}
                   <Link to="/profile" className="font-semibold underline underline-offset-2">
                     Go to Profile
@@ -93,7 +95,7 @@ export default function Dashboard() {
 
             {/* Open Props header */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-display text-lg font-700 text-slate-900">
+              <h2 className="font-cinzel text-lg font-700 text-slate-100">
                 Public Props
               </h2>
               {openProps.length > 0 && (
@@ -107,15 +109,9 @@ export default function Dashboard() {
             </div>
 
             {openProps.length === 0 ? (
-              <div className="glass-card p-10 text-center mb-10">
-                <div className="text-4xl mb-3 animate-float inline-block">
-                  🔮
-                </div>
+              <div className="glass-card p-8 text-center mb-10">
                 <p className="text-slate-500 text-sm">
                   No open props right now.
-                </p>
-                <p className="text-slate-400 text-xs mt-1">
-                  Be the first — create one above.
                 </p>
               </div>
             ) : (
@@ -130,11 +126,35 @@ export default function Dashboard() {
               </div>
             )}
 
+            {/* Closed Props */}
+            {closedProps.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="font-cinzel text-base font-700 text-slate-500">
+                    Closed
+                  </h2>
+                  <div className="flex-1 h-px bg-void-700" />
+                  <span className="text-slate-400 text-xs">
+                    {closedProps.length} awaiting results
+                  </span>
+                </div>
+                <div className="space-y-3 mb-10">
+                  {closedProps.map((prop) => (
+                    <PropCard
+                      key={prop.id}
+                      prop={prop}
+                      onVote={setSelectedProp}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
             {/* Resolved Props */}
             {resolvedProps.length > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-display text-base font-700 text-slate-500">
+                  <h2 className="font-cinzel text-base font-700 text-slate-500">
                     Resolved
                   </h2>
                   <div className="flex-1 h-px bg-void-700" />

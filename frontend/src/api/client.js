@@ -11,11 +11,12 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
-    console.log('interceptor hit', err.response?.status)
-    if (err.response?.status === 401) {
+    const url = err.config?.url || ''
+    const isAuthRoute = url.startsWith('/auth/')
+    if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('fs_token')
       window.location.href = '/login'
-    } else if (err.response?.status === 403 && !localStorage.getItem('fs_token')) {
+    } else if (err.response?.status === 403 && !localStorage.getItem('fs_token') && !isAuthRoute) {
       window.location.href = '/login'
     }
     return Promise.reject(err)
@@ -37,8 +38,10 @@ export const propsApi = {
 
 export const adminApi = {
     getPending: () => api.get('/admin/props/pending'),
+    getClosed:  () => api.get('/admin/props/closed'),
     approve:    (id) => api.post(`/admin/props/${id}/approve`),
     reject:     (id) => api.post(`/admin/props/${id}/reject`),
+    resolve:    (id, result) => api.post(`/admin/props/${id}/resolve?result=${result}`),
     createProp: (data) => api.post('/admin/props', data),
     getAllGroups: () => api.get('/admin/groups'),
 }
@@ -56,6 +59,11 @@ export const groupsApi = {
   renameGroup:   (id, data) => api.patch(`/groups/${id}`, data),
   kickMember:    (id, userId) => api.delete(`/groups/${id}/members/${userId}`),
   leaveGroup:    (id) => api.delete(`/groups/${id}/members/me`),
+}
+
+export const leaderboardApi = {
+  getGlobal: () => api.get('/leaderboard/global'),
+  getByGroup: (groupId) => api.get(`/leaderboard/group/${groupId}`),
 }
 
 export const userApi = {

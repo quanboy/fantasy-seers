@@ -5,12 +5,12 @@ import Sidebar from "./Sidebar";
 
 function getTierInfo(points) {
   if (points >= 50000)
-    return { label: "Legend", color: "text-gold-600", chipClass: "chip-gold-strong" };
+    return { label: "Legend", color: "text-gold-400", chipClass: "chip-gold-strong" };
   if (points >= 15000)
-    return { label: "Elite", color: "text-oracle-600", chipClass: "chip-oracle" };
+    return { label: "Elite", color: "text-oracle-400", chipClass: "chip-oracle" };
   if (points >= 5000)
     return { label: "Pro", color: "text-win-700", chipClass: "chip-win" };
-  return { label: "Rookie", color: "text-slate-500", chipClass: "bg-slate-100 border border-slate-200" };
+  return { label: "Rookie", color: "text-slate-500", chipClass: "bg-slate-500/10 border border-slate-500/20" };
 }
 
 export default function AppLayout() {
@@ -30,7 +30,7 @@ export default function AppLayout() {
             <div className="lg:hidden flex items-center gap-1">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="text-slate-500 hover:text-slate-700 p-0.5 rounded-lg hover:bg-void-800"
+                className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg hover:bg-void-800"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="6" x2="21" y2="6" />
@@ -46,22 +46,22 @@ export default function AppLayout() {
 
             {/* Right: username, points, sign out */}
             <div className="flex items-center gap-3 h-10">
-              <span className="text-slate-600 text-sm font-medium truncate max-w-[100px] sm:max-w-none">
+              <span className="text-slate-400 text-sm font-medium truncate max-w-[100px] sm:max-w-none">
                 {user?.username}
               </span>
 
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl chip-gold">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg chip-gold">
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-gold-500">
                   <circle cx="6" cy="6" r="5" fill="currentColor" opacity="0.9" />
                 </svg>
-                <span className="text-gold-600 font-bold text-sm tabular-nums">
+                <span className="text-gold-400 font-bold text-sm font-mono">
                   {user?.pointBank?.toLocaleString() ?? 0}
                 </span>
               </div>
 
               <button
                 onClick={logout}
-                className="text-slate-400 hover:text-slate-600 text-xs transition-colors px-2 py-1.5 rounded-lg hover:bg-void-800 whitespace-nowrap"
+                className="text-slate-500 hover:text-slate-300 text-xs transition-colors px-2 py-1.5 rounded-lg hover:bg-void-800 whitespace-nowrap"
               >
                 Sign out
               </button>

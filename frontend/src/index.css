@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-void-950 text-slate-800 font-body;
+    @apply bg-void-950 text-slate-300 font-body;
   }
 
   /* Custom scrollbar */
@@ -42,26 +42,21 @@
 @layer components {
   /* === Glass card base === */
   .glass-card {
-    @apply bg-void-900 border border-void-700 rounded-2xl;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+    @apply bg-void-900 border border-void-700 rounded-xl;
   }
 
   .glass-card-hover {
     @apply glass-card transition-all duration-300;
   }
   .glass-card-hover:hover {
-    border-color: theme('colors.oracle.300');
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 0 0 1px theme('colors.oracle.500 / 0.1');
-    transform: translateY(-1px);
+    border-color: theme('colors.void.600');
   }
 
   /* === Oracle button === */
   .btn-oracle {
-    @apply bg-oracle-500 hover:bg-oracle-400 text-white font-semibold px-6 py-3 rounded-xl transition-all duration-200 font-body;
-    box-shadow: 0 0 0 0 theme('colors.oracle.500 / 0');
+    @apply bg-oracle-500 hover:bg-oracle-400 text-white font-semibold px-6 py-3 rounded-lg transition-all duration-200 font-body;
   }
   .btn-oracle:hover {
-    box-shadow: 0 4px 16px theme('colors.oracle.500 / 0.25');
     transform: translateY(-1px);
   }
   .btn-oracle:active {
@@ -75,22 +70,20 @@
 
   /* === Gold button === */
   .btn-gold {
-    @apply bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-3 rounded-xl transition-all duration-200;
-    box-shadow: 0 0 0 0 theme('colors.gold.500 / 0');
+    @apply bg-gold-500 hover:bg-gold-400 text-white font-bold px-6 py-3 rounded-lg transition-all duration-200;
   }
   .btn-gold:hover {
-    box-shadow: 0 4px 16px theme('colors.gold.500 / 0.2');
     transform: translateY(-1px);
   }
 
   /* === Input base === */
   .input-base {
-    @apply w-full bg-void-950 border border-void-700 rounded-xl px-4 py-3 text-slate-800 placeholder-slate-400 transition-all duration-200 font-body;
+    @apply w-full bg-void-950 border border-void-700 rounded-lg px-4 py-3 text-slate-200 placeholder-slate-500 transition-all duration-200 font-body;
     outline: none;
   }
   .input-base:focus {
-    border-color: theme('colors.oracle.500');
-    box-shadow: 0 0 0 3px theme('colors.oracle.500 / 0.1');
+    border-color: theme('colors.void.600');
+    box-shadow: 0 0 0 2px rgba(58, 66, 89, 0.3);
   }
 
   /* === Sport badge === */
@@ -123,58 +116,113 @@
   }
   .sport-default {
     @apply sport-badge;
-    background: theme('colors.oracle.500 / 0.1');
-    color: theme('colors.oracle.700');
-    border: 1px solid theme('colors.oracle.500 / 0.2');
+    background: rgba(148, 163, 184, 0.1);
+    color: #94A3B8;
+    border: 1px solid rgba(148, 163, 184, 0.2);
   }
 
   /* === Glass nav === */
   .glass-nav {
-    @apply bg-white/90 backdrop-blur-[16px];
+    @apply bg-void-900/90 backdrop-blur-[16px];
   }
 
   /* === Chip variants (small bordered badges/buttons) === */
   .chip-oracle {
-    @apply bg-oracle-100 border border-oracle-500/20;
+    background: rgba(79, 70, 229, 0.1);
+    border: 1px solid rgba(79, 70, 229, 0.2);
   }
   .chip-oracle-active {
-    @apply bg-oracle-100 border border-oracle-500/40;
+    background: rgba(79, 70, 229, 0.15);
+    border: 1px solid rgba(79, 70, 229, 0.35);
   }
   .chip-gold {
-    @apply bg-gold-200/40 border border-gold-500/20;
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.2);
   }
   .chip-gold-strong {
-    @apply bg-gold-200/60 border border-gold-500/30;
+    background: rgba(249, 115, 22, 0.15);
+    border: 1px solid rgba(249, 115, 22, 0.25);
   }
   .chip-win {
-    @apply bg-win-300/20 border border-win-500/20;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
   }
   .chip-loss {
-    @apply bg-loss-400/10 border border-loss-500/20;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.15);
   }
 
   /* === Alert === */
   .alert-error {
-    @apply bg-loss-400/10 border border-loss-500/20;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.15);
   }
 
-  /* === Prop card borders for voted/resolved states === */
-  .card-win-border {
-    border: 1px solid theme('colors.win.500 / 0.3');
-    background: linear-gradient(145deg, theme('colors.win.300 / 0.1'), white);
+  /* === Prop card accent bars === */
+  .accent-bar-gold {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.gold.400');
+    border-radius: 12px 0 0 12px;
   }
-  .card-win-border-light {
-    border: 1px solid theme('colors.win.500 / 0.25');
-    background: linear-gradient(145deg, theme('colors.win.300 / 0.06'), white);
+  .accent-bar-muted {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.void.600');
+    border-radius: 12px 0 0 12px;
   }
-  .card-loss-border {
-    border: 1px solid theme('colors.loss.500 / 0.25');
-    background: linear-gradient(145deg, theme('colors.loss.400 / 0.06'), white);
+  .accent-bar-win {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.win.500');
+    border-radius: 12px 0 0 12px;
   }
-  .card-loss-border-light {
-    border: 1px solid theme('colors.loss.500 / 0.2');
-    background: linear-gradient(145deg, theme('colors.loss.400 / 0.04'), white);
+  .accent-bar-loss {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: theme('colors.loss.500');
+    border-radius: 12px 0 0 12px;
   }
+
+  /* === Prop card borders by state === */
+  .card-open {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(249, 115, 22, 0.3);
+  }
+  .card-closed {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(58, 66, 89, 0.6);
+  }
+  .card-win {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(34, 197, 94, 0.35);
+  }
+  .card-loss {
+    @apply bg-void-900 rounded-xl;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  /* === Status pills === */
+  .chip-open {
+    background: rgba(249, 115, 22, 0.1);
+    border: 1px solid rgba(249, 115, 22, 0.2);
+  }
+  .chip-closed {
+    background: rgba(58, 66, 89, 0.3);
+    border: 1px solid rgba(58, 66, 89, 0.5);
+  }
+
+  /* === Vote chip ghost (inactive side) === */
+  .chip-vote-ghost {
+    background: transparent;
+    border: 1px solid rgba(58, 66, 89, 0.5);
+    opacity: 0.4;
+  }
+
   .card-pending-border {
     border: 1px solid theme('colors.gold.500 / 0.3');
   }
@@ -184,7 +232,6 @@
     background: linear-gradient(135deg, theme('colors.win.700'), theme('colors.win.500'));
     border: 1px solid theme('colors.win.500 / 0.5');
     color: white;
-    box-shadow: 0 4px 16px theme('colors.win.500 / 0.2');
   }
   .vote-yes-idle {
     background: theme('colors.win.500 / 0.06');
@@ -195,7 +242,6 @@
     background: linear-gradient(135deg, theme('colors.loss.700'), theme('colors.loss.500'));
     border: 1px solid theme('colors.loss.500 / 0.5');
     color: white;
-    box-shadow: 0 4px 16px theme('colors.loss.500 / 0.2');
   }
   .vote-no-idle {
     background: theme('colors.loss.500 / 0.06');
@@ -213,7 +259,7 @@
 
   /* === Ghost button (secondary action) === */
   .btn-ghost {
-    @apply bg-void-800 border border-void-700 text-slate-600;
+    @apply bg-void-800 border border-void-700 text-slate-400;
   }
   .btn-ghost:hover {
     @apply bg-void-700;
@@ -221,11 +267,11 @@
 
   /* === Approve / Reject buttons === */
   .btn-approve {
-    @apply border border-win-500/25 text-win-700;
+    @apply border border-win-500/25 text-win-400;
     background: theme('colors.win.500 / 0.08');
   }
   .btn-reject {
-    @apply border border-loss-500/20 text-loss-700;
+    @apply border border-loss-500/20 text-loss-400;
     background: theme('colors.loss.500 / 0.08');
   }
 
@@ -236,9 +282,9 @@
 
   /* === Rake chip === */
   .rake-chip {
-    background: theme('colors.oracle.500 / 0.06');
-    border: 1px solid theme('colors.oracle.500 / 0.15');
-    @apply text-oracle-700 text-xs rounded-lg px-3 py-1.5 font-body;
+    background: rgba(37, 43, 63, 0.5);
+    border: 1px solid rgba(58, 66, 89, 0.4);
+    @apply text-slate-400 text-xs rounded-lg px-3 py-1.5 font-body;
   }
 
   /* === Auth mesh background === */
@@ -252,13 +298,13 @@
 
   /* === Shimmer skeleton === */
   .skeleton {
-    @apply bg-void-700/50 rounded-xl overflow-hidden relative;
+    @apply bg-void-800 rounded-lg overflow-hidden relative;
   }
   .skeleton::after {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, theme('colors.void.900 / 0.6'), transparent);
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
     background-size: 400px 100%;
     animation: shimmer 1.8s linear infinite;
   }

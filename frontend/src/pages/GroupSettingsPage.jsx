@@ -91,8 +91,8 @@ export default function GroupSettingsPage() {
 
       {error && (
         <div className="glass-card p-8 text-center">
-          <p className="text-loss-700 text-sm">{error}</p>
-          <Link to="/groups" className="text-oracle-600 text-xs mt-2 inline-block hover:underline">
+          <p className="text-loss-400 text-sm">{error}</p>
+          <Link to="/groups" className="text-oracle-400 text-xs mt-2 inline-block hover:underline">
             Back to Groups
           </Link>
         </div>
@@ -102,7 +102,7 @@ export default function GroupSettingsPage() {
         <div className="animate-fade-in space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-700 text-slate-900">Group Settings</h1>
+            <h1 className="font-display text-xl font-700 text-slate-100">Group Settings</h1>
             <Link to={`/groups/${id}`} className="btn-ghost text-sm px-3 py-1.5">
               Back to Feed
             </Link>
@@ -110,8 +110,8 @@ export default function GroupSettingsPage() {
 
           {/* Rename (owner only) */}
           {isOwner && (
-            <div className="glass-card rounded-2xl p-5">
-              <h2 className="text-sm font-semibold text-slate-700 mb-3">Group Name</h2>
+            <div className="glass-card rounded-xl p-5">
+              <h2 className="text-sm font-semibold text-slate-300 mb-3">Group Name</h2>
               <form onSubmit={handleRename} className="flex gap-2">
                 <input
                   type="text"
@@ -137,18 +137,18 @@ export default function GroupSettingsPage() {
           )}
 
           {/* Members */}
-          <div className="glass-card rounded-2xl p-5">
-            <h2 className="text-sm font-semibold text-slate-700 mb-3">
+          <div className="glass-card rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-slate-300 mb-3">
               Members
               <span className="ml-2 chip-gold text-xs px-2 py-0.5 rounded-full">{group.memberCount}</span>
             </h2>
             <div className="space-y-2">
               {group.members.map(member => (
-                <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-xl bg-void-950/30">
+                <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-void-950/30">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-800 font-medium">{member.username}</span>
+                    <span className="text-sm text-slate-200 font-medium">{member.username}</span>
                     {member.username === group.ownerUsername && (
-                      <span className="chip-oracle text-xs px-1.5 py-0.5 rounded">Owner</span>
+                      <span className="bg-void-700 border border-void-600 text-slate-400 text-xs px-1.5 py-0.5 rounded">Owner</span>
                     )}
                   </div>
                   {isOwner && member.username !== group.ownerUsername && (
@@ -185,8 +185,8 @@ export default function GroupSettingsPage() {
           </div>
 
           {/* Leave Group */}
-          <div className="glass-card rounded-2xl p-5">
-            <h2 className="text-sm font-semibold text-slate-700 mb-3">Leave Group</h2>
+          <div className="glass-card rounded-xl p-5">
+            <h2 className="text-sm font-semibold text-slate-300 mb-3">Leave Group</h2>
             <p className="text-slate-500 text-xs mb-3">
               {isOwner
                 ? "Ownership will transfer to the next member. If you're the last member, the group will be deleted."

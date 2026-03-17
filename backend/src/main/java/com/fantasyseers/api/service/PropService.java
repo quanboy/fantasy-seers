@@ -117,6 +117,13 @@ public class PropService {
                 .toList();
     }
 
+    public List<PropDto.PropResponse> getClosedProps() {
+        return propRepository.findByStatusOrderByCreatedAtAsc(Prop.Status.CLOSED)
+                .stream()
+                .map(p -> toResponse(p, null))
+                .toList();
+    }
+
     public List<PropDto.PropResponse> getPublicProps(String username) {
         if (username != null) {
             return propRepository.findVisibleToUser(
@@ -154,6 +161,8 @@ public class PropService {
     private PropDto.PropResponse toResponse(Prop prop, String username) {
         String userChoice = null;
         Boolean userWon = null;
+        Integer userWager = null;
+        Integer userPayout = null;
 
         if (username != null) {
             var userOpt = userRepository.findByUsername(username);
@@ -161,6 +170,8 @@ public class PropService {
                 var vote = voteRepository.findByPropIdAndUserId(prop.getId(), userOpt.get().getId());
                 if (vote.isPresent()) {
                     userChoice = vote.get().getChoice().name();
+                    userWager = vote.get().getWagerAmount();
+                    userPayout = vote.get().getPayout();
                     if (prop.getResult() != null) {
                         userWon = vote.get().getChoice().name().equals(prop.getResult().name());
                     }
@@ -180,7 +191,9 @@ public class PropService {
                 userChoice,
                 userWon,
                 prop.getMinWager(),
-                prop.getMaxWager()
+                prop.getMaxWager(),
+                userWager,
+                userPayout
         );
     }
 }

@@ -27,7 +27,11 @@ public class VoteService {
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() != Prop.Status.OPEN) {
-            throw new IllegalStateException("This prop is no longer open for voting");
+            throw new IllegalStateException("Voting is closed for this prop");
+        }
+
+        if (prop.getClosesAt() != null && prop.getClosesAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new IllegalStateException("Voting is closed for this prop");
         }
 
         if (voteRepository.existsByPropIdAndUserId(propId, user.getId())) {

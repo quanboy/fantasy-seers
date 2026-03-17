@@ -10,6 +10,7 @@ import GroupsPage from "./pages/GroupsPage";
 import GroupFeedPage from "./pages/GroupFeedPage";
 import GroupSettingsPage from "./pages/GroupSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
+import LeaderboardPage from "./pages/LeaderboardPage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
 
@@ -56,6 +57,7 @@ function App() {
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:id" element={<GroupFeedPage />} />
             <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
+            <Route path="leaderboard" element={<LeaderboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route
               path="admin"

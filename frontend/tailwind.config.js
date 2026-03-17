@@ -5,15 +5,17 @@ export default {
     extend: {
       fontFamily: {
         display: ['Syne', 'sans-serif'],
+        cinzel: ['Cinzel', 'serif'],
         body: ['Inter', 'sans-serif'],
+        mono: ['DM Mono', 'monospace'],
       },
       colors: {
         void: {
-          950: '#F8FAFC',
-          900: '#FFFFFF',
-          800: '#F1F5F9',
-          700: '#E2E8F0',
-          600: '#CBD5E1',
+          950: '#0C0F1A',
+          900: '#121626',
+          800: '#1A1F33',
+          700: '#252B3F',
+          600: '#3A4259',
         },
         oracle: {
           900: '#1E1B4B',
@@ -56,8 +58,6 @@ export default {
         'loss-gradient': 'linear-gradient(135deg, #FEF2F2, #FECACA)',
       },
       animation: {
-        'gradient-shift': 'gradientShift 8s ease infinite',
-        'pulse-glow': 'pulseGlow 2.5s ease-in-out infinite',
         'float': 'float 4s ease-in-out infinite',
         'slide-up': 'slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
         'shimmer': 'shimmer 1.8s linear infinite',
@@ -66,14 +66,6 @@ export default {
         'scale-in': 'scaleIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
       },
       keyframes: {
-        gradientShift: {
-          '0%, 100%': { backgroundPosition: '0% 50%' },
-          '50%': { backgroundPosition: '100% 50%' },
-        },
-        pulseGlow: {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(79, 70, 229, 0)' },
-          '50%': { boxShadow: '0 0 20px 4px rgba(79, 70, 229, 0.15)' },
-        },
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-6px)' },
@@ -100,13 +92,8 @@ export default {
         },
       },
       boxShadow: {
-        'oracle': '0 0 30px rgba(79, 70, 229, 0.1)',
-        'oracle-lg': '0 0 60px rgba(79, 70, 229, 0.15)',
-        'gold': '0 0 20px rgba(249, 115, 22, 0.12)',
-        'win': '0 0 20px rgba(34, 197, 94, 0.1)',
-        'loss': '0 0 20px rgba(239, 68, 68, 0.1)',
-        'card': '0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06)',
-        'modal': '0 24px 80px rgba(0,0,0,0.2)',
+        'card': '0 1px 2px rgba(0,0,0,0.2)',
+        'modal': '0 16px 48px rgba(0,0,0,0.4)',
       },
     },
   },

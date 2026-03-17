@@ -25,6 +25,9 @@ public class ResolutionService {
         if (prop.getStatus() == Prop.Status.RESOLVED) {
             throw new IllegalStateException("Prop is already resolved");
         }
+        if (prop.getStatus() != Prop.Status.CLOSED) {
+            throw new IllegalStateException("Only closed props can be resolved");
+        }
 
         // Mark prop as resolved
         prop.setResult(result);

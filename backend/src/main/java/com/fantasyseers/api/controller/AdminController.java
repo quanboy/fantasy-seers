@@ -47,6 +47,11 @@ public class AdminController {
         return ResponseEntity.ok(propService.getPendingProps());
     }
 
+    @GetMapping("/props/closed")
+    public ResponseEntity<List<PropDto.PropResponse>> getClosedProps() {
+        return ResponseEntity.ok(propService.getClosedProps());
+    }
+
     @PostMapping("/props/{id}/approve")
     public ResponseEntity<PropDto.PropResponse> approveProp(@PathVariable Long id) {
         return ResponseEntity.ok(propService.approveProp(id));

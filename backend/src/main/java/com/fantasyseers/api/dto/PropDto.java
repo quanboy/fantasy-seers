@@ -37,7 +37,9 @@ public class PropDto {
             String userChoice,
             Boolean userWon,
             Integer minWager,
-            Integer maxWager
+            Integer maxWager,
+            Integer userWager,
+            Integer userPayout
     ) {}
 
     public record VoteRequest(
