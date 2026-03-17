@@ -172,7 +172,7 @@ export default function GroupsPage() {
 
         {/* Group list */}
         <div className="flex items-center gap-3 mb-4">
-          <h2 className="font-display text-lg font-700 text-slate-100">Your Groups</h2>
+          <h1 className="font-cinzel text-xl font-bold text-slate-100">Your Groups</h1>
           {groups.length > 0 && (
             <span className="text-slate-400 text-xs">{groups.length} group{groups.length !== 1 ? "s" : ""}</span>
           )}

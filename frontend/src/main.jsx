@@ -11,6 +11,7 @@ import GroupFeedPage from "./pages/GroupFeedPage";
 import GroupSettingsPage from "./pages/GroupSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
+import MasterSheetPage from "./pages/MasterSheetPage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
 
@@ -54,6 +55,7 @@ function App() {
             }
           >
             <Route index element={<Dashboard />} />
+            <Route path="master-sheet" element={<MasterSheetPage />} />
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:id" element={<GroupFeedPage />} />
             <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
