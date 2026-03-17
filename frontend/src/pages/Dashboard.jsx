@@ -54,6 +54,7 @@ export default function Dashboard() {
   };
 
   const openProps = props.filter((p) => p.status === "OPEN");
+  const closedProps = props.filter((p) => p.status === "CLOSED");
   const resolvedProps = props.filter((p) => p.status === "RESOLVED");
 
   return (
@@ -123,6 +124,30 @@ export default function Dashboard() {
                   />
                 ))}
               </div>
+            )}
+
+            {/* Closed Props */}
+            {closedProps.length > 0 && (
+              <>
+                <div className="flex items-center gap-3 mb-4">
+                  <h2 className="font-cinzel text-base font-700 text-slate-500">
+                    Closed
+                  </h2>
+                  <div className="flex-1 h-px bg-void-700" />
+                  <span className="text-slate-400 text-xs">
+                    {closedProps.length} awaiting results
+                  </span>
+                </div>
+                <div className="space-y-3 mb-10">
+                  {closedProps.map((prop) => (
+                    <PropCard
+                      key={prop.id}
+                      prop={prop}
+                      onVote={setSelectedProp}
+                    />
+                  ))}
+                </div>
+              </>
             )}
 
             {/* Resolved Props */}

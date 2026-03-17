@@ -148,14 +148,14 @@ export default function PropCard({ prop, onVote }) {
   const cardBorder = (() => {
     if (isCorrect) return "card-win";
     if (isIncorrect) return "card-loss";
-    if (isClosed) return "card-closed";
+    if (isClosed || (isResolved && !isVoted)) return "card-closed";
     return "card-open";
   })();
 
   const accentBar = (() => {
     if (isCorrect) return "accent-bar-win";
     if (isIncorrect) return "accent-bar-loss";
-    if (isClosed) return "accent-bar-muted";
+    if (isClosed || (isResolved && !isVoted)) return "accent-bar-muted";
     return "accent-bar-gold";
   })();
 
@@ -187,8 +187,8 @@ export default function PropCard({ prop, onVote }) {
             <VoteChips userChoice={prop.userChoice} result={prop.result} />
           ) : isVoted ? (
             <VoteChips userChoice={prop.userChoice} result={null} />
-          ) : isClosed ? (
-            <span className="text-xs font-mono text-slate-500">Closed</span>
+          ) : isClosed || (isResolved && !isVoted) ? (
+            <span className="text-xs font-mono text-slate-500">{isResolved ? "Resolved" : "Closed"}</span>
           ) : isPending ? (
             <span className="text-xs font-mono text-gold-400">Pending</span>
           ) : (
@@ -279,6 +279,10 @@ export default function PropCard({ prop, onVote }) {
         ) : isClosed ? (
           <span className="text-xs font-medium px-2.5 py-1 rounded-full text-slate-400 chip-closed">
             Closed · resolving soon
+          </span>
+        ) : isResolved ? (
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full text-slate-400 chip-closed">
+            Resolved
           </span>
         ) : isPending ? (
           <span className="text-xs font-medium px-2.5 py-1 rounded-full text-gold-400 chip-open">

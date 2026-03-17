@@ -159,17 +159,18 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 
 ### Key UI Patterns
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Fetches user's groups on expand.
-- **PropCard** — unified card with 6 visual states sharing a consistent layout: left accent bar (3px, color by state), state-tinted border, sport badge top-left, vote chips or timer top-right, title in Cinzel, divider, and bottom row (status pill left, value right). States:
+- **PropCard** — unified card with 7 visual states sharing a consistent layout: left accent bar (3px, color by state), state-tinted border, sport badge top-left, vote chips or timer top-right, title in Cinzel, divider, and bottom row (status pill left, value right). States:
   - **Open unvoted:** gold accent bar, amber dot + "X days left" timer, inline Yes/No buttons + wager input, "Open" pill, wager range right
   - **Open voted:** gold accent bar, vote chips (active=filled, inactive=ghost at 40% opacity), split bar with yes%/no%, contrarian payout hint if majority, "Open · X days left" pill, "X pts wagered" right
   - **Closed voted:** muted accent bar, vote chips, split bar, contrarian hint with minority phrasing, "Closed · resolving soon" pill, "X pts wagered" right
+  - **Resolved unvoted:** muted accent bar, card-closed border, "Resolved" text top-right, muted title, "Resolved" pill bottom-left. No vote buttons or split bar shown.
   - **Resolved correct:** green accent bar, vote chips, split bar, "Correct" pill (chip-win), "+X pts" in gold right
   - **Resolved contrarian:** green accent bar, "Correct · contrarian" pill, "+X pts" in gold
   - **Resolved incorrect:** red accent bar, vote chips, split bar, "Incorrect" pill (chip-loss), "−X pts" strikethrough right
   - Clicking Yes/No opens VoteModal pre-filled via `_initialChoice`/`_initialWager` props. Split data fetched via `propsApi.getSplit()` for all voted states. Payout delta from `userWager`/`userPayout` fields in PropResponse DTO.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes. Accepts `_initialChoice` and `_initialWager` from PropCard to pre-fill the form.
 - **LeaderboardPage** — global and per-group leaderboard with tabs. Shows rank, username, picks, correct, accuracy %. Top 3 get medal colors. Current user's row is highlighted. Fetches groups for tab switcher.
-- **Dashboard** — shows Public Props and Resolved props in separate sections; refreshes pointBank every 30s and re-fetches props after voting. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null.
+- **Dashboard** — shows props in three sections: Public Props (open/live), Closed (awaiting results), and Resolved (settled). Refreshes pointBank every 30s and re-fetches props after voting. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null. Closed and Resolved sections only appear when they have props.
 - **ProfilePage** — view/edit profile. Read-only Account section (username, email, plus current team/alma mater values) and editable Identity section (NFL team dropdown, NBA team dropdown, alma mater text input). Uses `PUT /api/users/me`.
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard). Shows "Pending Invites" section with accept/reject buttons when the user has pending group invites.
 - **GroupFeedPage** — group header (with Settings link) + "Invite Member" form (username input) + group-scoped props (open/closed/resolved sections).
