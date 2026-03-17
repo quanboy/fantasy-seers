@@ -70,6 +70,7 @@ function SplitBar({ split }) {
   if (!split) return null;
   return (
     <div className="mt-3">
+      <p className="text-xs font-semibold text-slate-300 mb-2">Voting Splits</p>
       <div className="flex justify-between text-xs font-mono mb-1">
         <span className="text-slate-400">Yes</span>
         <span className="text-slate-400">No</span>
@@ -207,6 +208,13 @@ export default function PropCard({ prop, onVote }) {
         {prop.title}
       </p>
 
+      {/* Description / context */}
+      {prop.description && (
+        <p className={`text-xs leading-relaxed mt-1.5 ${isResolved ? "text-slate-500" : "text-slate-400"}`}>
+          {prop.description}
+        </p>
+      )}
+
       {/* Open — unvoted: inline vote + wager */}
       {canVote && (
         <div className="mt-4">
@@ -310,10 +318,6 @@ export default function PropCard({ prop, onVote }) {
         ) : isVoted && prop.userWager ? (
           <span className="text-xs font-mono text-slate-500">
             {prop.userWager.toLocaleString()} pts wagered
-          </span>
-        ) : !isResolved && !isClosed && !isPending && (prop.minWager || prop.maxWager) ? (
-          <span className="text-xs font-mono text-slate-500">
-            {prop.minWager ?? 1} – {prop.maxWager ? prop.maxWager.toLocaleString() : "∞"} pts
           </span>
         ) : null}
       </div>
