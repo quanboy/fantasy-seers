@@ -42,12 +42,12 @@ fantasy-seers/
 │   ├── Dockerfile
 │   └── src/main/java/com/fantasyseers/api/
 │       ├── config/              # Spring config (AppConfig, SecurityConfig, GlobalExceptionHandler, ReadOnlyDataSourceConfig)
-│       ├── dto/                 # Request/response records (incl. PagedResponse<T> generic wrapper)
+│       ├── dto/                 # Request/response records (incl. PagedResponse<T>, BoardDto, BoardSheetResponse, RankedPlayerResponse, RankedPlayerDto, CreateBoardRequest)
 │       ├── controller/          # REST controllers
 │       ├── entity/              # JPA entities
 │       ├── repository/          # Spring Data repositories
 │       ├── security/            # JWT filter + utils, RateLimitFilter, TokenBlacklistService
-│       └── service/             # Business logic (incl. AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService)
+│       └── service/             # Business logic (incl. AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService, BoardService)
 │   └── src/main/resources/
 │       ├── application.yml
 │       └── db/migration/        # Flyway SQL migrations (V1–V14)
@@ -153,8 +153,10 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V10__readonly_role_for_chatbot.sql** — `fs_readonly` Postgres role, `users_safe` view (excludes password/email), SELECT grants on all tables for AI research queries
 - **V11__add_performance_indexes.sql** — performance indexes on FK columns: `friend_group_members(user_id)`, `prop_groups(group_id)`, `group_invites(group_id, invitee_id, inviter_id)`, `friend_groups(owner_id)`, `props(created_by)`, `nfl_players(position)`
 - **V12__rate_limit_table.sql** — `rate_limit_log` table for DB-backed per-user rate limiting (replaces in-memory ConcurrentHashMap)
+- **V13__master_sheet_v2_board_snapshots.sql** — `board_snapshots` table (user_id FK, season, snapshot_type, UNIQUE(user_id, season)), `snapshot_entries` table (snapshot_id FK, player_id FK → nfl_players, user_rank, UNIQUE(snapshot_id, player_id)). Added `scoring_format`, `primary_format`, `superflex` columns to users. Added `max_members` column to friend_groups. Granted SELECT on new tables to `fs_readonly` role.
+- **V14__add_snapshot_entry_rank_unique_constraint.sql** — added UNIQUE constraint `(snapshot_id, user_rank)` on snapshot_entries to prevent duplicate ranks within a board.
 
-**Adding a new migration:** Create `V13__description.sql` in snake_case. Do not modify existing migration files. Never drop or alter a column without confirming it is unused. All new tables need `created_at TIMESTAMPTZ DEFAULT now()`.
+**Adding a new migration:** Create `V15__description.sql` in snake_case. Do not modify existing migration files. Never drop or alter a column without confirming it is unused. All new tables need `created_at TIMESTAMPTZ DEFAULT now()`.
 
 ---
 
@@ -171,7 +173,8 @@ All endpoints are prefixed `/api` and return JSON.
 | AdminController    | `/api/admin`     | `GET /props/pending`, `GET /props/closed`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve?result=YES\|NO`, `POST /props` (create with optional groupId), `GET /groups` (all groups) |
 | LeaderboardController | `/api/leaderboard` | `GET /global` (public, no auth), `GET /group/{groupId}` (auth + membership required) |
 | FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props` (all, legacy), `GET /{id}/props/paged?status=OPEN&page=0&size=20` (paginated by status), `PATCH /{id}` (rename, owner), `DELETE /{id}/members/{userId}` (kick, owner), `DELETE /{id}/members/me` (leave), `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
-| RankingsController | `/api/rankings` | `GET /my-sheet` (auth, returns user's master sheet or consensus fallback), `POST /my-sheet` (auth, save rankings) |
+| RankingsController | `/api/rankings` | `GET /my-sheet` (legacy, consensus fallback), `POST /my-sheet` (legacy, save rankings) |
+| BoardController    | `/api/v1/boards` | `POST /` (create board for season), `PUT /{id}/entries` (bulk upsert ranked entries), `GET /my-sheet?season=2025` (user's board, auto-creates if missing, defaults to current year), `GET /{id}` (get board by id) |
 | ResearchController | `/api/research`  | `POST /` (auth, natural language → SQL → plain English answer, rate limited 20/hr per user) |
 
 ### API rules
@@ -190,7 +193,8 @@ All endpoints are prefixed `/api` and return JSON.
 | Votes        | VoteController          | VoteService          | VoteRepository          |
 | Groups       | FriendGroupController   | FriendGroupService   | FriendGroupRepository   |
 | Leaderboard  | LeaderboardController   | LeaderboardService   | VoteRepository          |
-| Rankings     | RankingsController      | RankingsService      | UserRankingRepository, ConsensusRankingRepository |
+| Rankings (legacy) | RankingsController | RankingsService      | UserRankingRepository, ConsensusRankingRepository |
+| Board (v2)   | BoardController         | BoardService         | BoardSnapshotRepository, SnapshotEntryRepository, NflPlayerRepository |
 | Resolution   | AdminController         | ResolutionService    | PropRepository, VoteRepository |
 | Research     | ResearchController      | AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService | (read-only JdbcTemplate), RateLimitRepository |
 
@@ -259,7 +263,7 @@ Defined in `src/main.jsx` using React Router v6.
 - **AuthContext** — stores user + JWT in localStorage, provides `login`/`logout` (logout calls backend to blacklist token)
 
 ### Frontend API Client (`client.js`)
-Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `rankingsApi`, `researchApi`, `userApi`. Each wraps Axios calls to `/api/*`.
+Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `rankingsApi`, `researchApi`, `userApi`. Each wraps Axios calls to `/api/*`. `rankingsApi` now points to the Board v2 endpoints: `getMySheet(season)` → `GET /api/v1/boards/my-sheet`, `saveMySheet(boardId, rankings)` → `PUT /api/v1/boards/{id}/entries`.
 
 ### Layout Architecture
 - **AppLayout** — shared layout wrapper for all authenticated pages. Renders the `Sidebar` and a top navigation bar with username, point bank, and sign out. Uses React Router `<Outlet />` for nested routes. Individual pages no longer have their own navbars.
@@ -284,7 +288,7 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard). Shows "Pending Invites" section with accept/reject buttons when the user has pending group invites.
 - **GroupFeedPage** — group header (with Settings link) + "Invite Member" form (username input) + group-scoped props in three paginated sections (open/closed/resolved) via `/groups/{id}/props/paged?status=X` with "Load More" button.
 - **GroupSettingsPage** — group management page: rename group (owner only), member list with kick buttons (owner only), leave group (all members, auto-transfers ownership if owner leaves). Accessible via `/groups/:id/settings`.
-- **MasterSheetPage** — personalized NFL player ranking sheet. Pre-populated with consensus expert rankings (from Sleeper API search_rank). Users drag-and-drop to reorder via @dnd-kit. Columns: Rank, Player Name (Team), Position (positional rank chip), ADP. Position filter bar with multi-select pill toggles (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Save button persists to `user_rankings` table. Falls back to `consensus_rankings` if user has no saved sheet (`isDefault: true`).
+- **MasterSheetPage** — personalized NFL player ranking sheet. Uses the Board v2 API (`/api/v1/boards/my-sheet` and `PUT /api/v1/boards/{id}/entries`). Auto-creates a PRESEASON board for the current season if none exists. Users drag-and-drop to reorder via @dnd-kit. Columns: Rank, Player Name (Team), Position (positional rank chip), ADP. Position filter bar with multi-select pill toggles (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Save button persists entries to `snapshot_entries` table via `BoardService`. Shows `isDefault: true` banner when board has no entries yet. Frontend stores `boardId` from `getMySheet` response and passes it to `saveMySheet(boardId, rankings)`.
 - **ResearchPage** — AI-powered chat interface for querying app data in natural language. Chat thread with user/assistant message bubbles. Suggested starter questions on empty state. Loading dots animation. Expandable "Show SQL" section on each answer for debugging. Handles 429 rate limit and error states. Uses `researchApi.ask()`.
 - **AdminDashboard** — pending props queue (approve/reject) + "Create Prop" form with optional group assignment dropdown + "Resolve Props" section showing closed props with YES/NO resolve buttons.
 
@@ -333,12 +337,14 @@ For error text, use `text-loss-400` (not `text-red-400`). For backgrounds with o
 
 - **Prop** — a yes/no proposition with `minWager`/`maxWager` limits. Scopes: `PUBLIC`, `FRIENDS`, `GROUP`, `FRIENDS_AND_GROUP`. Statuses: `PENDING` → `OPEN` → `CLOSED` → `RESOLVED`. Has `isAdminProp` flag to distinguish admin-created vs user-submitted props.
 - **Vote** — a user's YES/NO choice on a prop with a wager amount. One vote per user per prop.
-- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`. Users can join via invite code or be invited by username. Owner can rename, kick members. Any member can leave; if the owner leaves, ownership auto-transfers to the alphabetically first remaining member. If the last member leaves, the group is deleted.
+- **FriendGroup** — a named group with an 8-char uppercase invite code. Owner is auto-member. Members accessed via lazy-loaded `Set<User>`. Optional `maxMembers` field (nullable). Users can join via invite code or be invited by username. Owner can rename, kick members. Any member can leave; if the owner leaves, ownership auto-transfers to the alphabetically first remaining member. If the last member leaves, the group is deleted.
 - **GroupInvite** — a pending/accepted/rejected invite for a user to join a group. Statuses: `PENDING` → `ACCEPTED` or `REJECTED`. UNIQUE constraint on `(group_id, invitee_id)` prevents duplicate invites. Only group members can send invites. Accepting adds the invitee to the group's member set.
-- **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Optional profile fields: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater`. Tier system: Rookie (0–4999), Pro (5000–14999), Elite (15000–49999), Legend (50000+).
+- **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Optional profile fields: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater`, `scoringFormat` (STANDARD/HALF_PPR/PPR), `primaryFormat` (REDRAFT/KEEPER/DYNASTY), `superflex` (boolean, default false). Tier system: Rookie (0–4999), Pro (5000–14999), Elite (15000–49999), Legend (50000+).
 - **NflPlayer** — NFL player sourced from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, adp (Average Draft Position from Sleeper search_rank). 300 players seeded via `scripts/seed-players.js`.
 - **ConsensusRanking** — expert consensus ranking for each NflPlayer. OneToOne with NflPlayer. Fields: overallRank, positionalRank. Seeded from Sleeper API search_rank ordering.
-- **UserRanking** — user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. Fields: overallRank, positionalRank, updatedAt. UNIQUE(user_id, player_id). If no UserRankings exist for a user, the API falls back to ConsensusRankings.
+- **UserRanking** — (legacy) user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. Fields: overallRank, positionalRank, updatedAt. UNIQUE(user_id, player_id). If no UserRankings exist for a user, the API falls back to ConsensusRankings.
+- **BoardSnapshot** — a user's ranked player board for a specific season. ManyToOne User. Fields: season, snapshotType (PRESEASON/IN_SEASON), createdAt. UNIQUE(user_id, season). OneToMany → SnapshotEntry (cascade ALL, orphanRemoval). This is the v2 replacement for UserRanking with season/snapshot support.
+- **SnapshotEntry** — a single player ranking within a BoardSnapshot. ManyToOne BoardSnapshot + ManyToOne NflPlayer. Fields: userRank, createdAt. UNIQUE(snapshot_id, player_id) and UNIQUE(snapshot_id, user_rank). Uses `@JsonIgnore` on the `snapshot` back-reference to prevent circular serialization.
 - **Prop lifecycle:**
   - **User-submitted:** `PENDING` → admin approval → `OPEN` → `CLOSED` → `RESOLVED`
   - **Admin-created:** `OPEN` → `CLOSED` → `RESOLVED` (skips PENDING)
@@ -424,6 +430,10 @@ Props are paginated by status via dedicated `/paged` endpoints. Default page siz
 - **Docker frontend duplicate React** — The Docker frontend container can produce "Invalid hook call" errors due to duplicate React instances when volume-mounting `src/`. For local development, prefer running the frontend directly (`cd frontend && npm run dev`) while keeping backend + DB in Docker (`docker-compose up postgres backend`).
 - **CORS allows any localhost port** — `SecurityConfig` uses `allowedOriginPatterns("http://localhost:*")` so the Vite dev server works on any port. If Vite picks a non-standard port (5174, 5175, etc.) due to port conflicts, CORS won't block it.
 - **ReadOnlyDataSourceConfig is `@Lazy`** — the read-only DataSource is lazily initialized because the `fs_readonly` Postgres role is created by a Flyway migration that must run first via the primary DataSource.
+- **BoardSnapshot ↔ SnapshotEntry circular reference** — `SnapshotEntry.snapshot` has `@JsonIgnore` to prevent infinite JSON recursion. All board endpoints return DTOs (`BoardDto.BoardResponse` or `BoardSheetResponse`), never raw entities, to avoid leaking `User.password`.
+- **Board auto-creation** — `GET /api/v1/boards/my-sheet` auto-creates a PRESEASON board if none exists for the user/season. This is intentional so the frontend doesn't need a separate "create board" step.
+- **Board locking intentionally excluded** — how and when a board becomes read-only is a product decision not yet made. Do not add locking fields, `locked_at` timestamps, or lock-related logic.
+- **Legacy rankings endpoints still exist** — `RankingsController` (`/api/rankings/my-sheet`) and `UserRanking`/`ConsensusRanking` entities remain. The frontend now uses Board v2 (`/api/v1/boards/my-sheet`) but the old endpoints are not yet removed.
 
 ---
 
