@@ -31,6 +31,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       JWT_SECRET: fantasy-seers-super-secret-jwt-key-change-in-production
       JWT_EXPIRATION_MS: 86400000
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     ports:
       - "8080:8080"
     depends_on:

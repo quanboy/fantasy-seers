@@ -208,8 +208,8 @@
 
   /* === Status pills === */
   .chip-open {
-    background: rgba(249, 115, 22, 0.1);
-    border: 1px solid rgba(249, 115, 22, 0.2);
+    background: rgba(56, 189, 248, 0.1);
+    border: 1px solid rgba(56, 189, 248, 0.2);
   }
   .chip-closed {
     background: rgba(58, 66, 89, 0.3);

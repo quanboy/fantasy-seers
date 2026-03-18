@@ -40,8 +40,6 @@ function useCountdown(closesAt) {
   return { timeLeft, isUrgent };
 }
 
-const PLATFORM_RAKE = 0.05;
-
 function VoteChips({ userChoice, result }) {
   const yesActive = userChoice === "YES";
   const noActive = userChoice === "NO";
@@ -98,8 +96,7 @@ function ContrarianHint({ userChoice, split, isClosed }) {
   const losePool = userIsYes ? split.noWagerTotal : split.yesWagerTotal;
   if (!losePool || !winPool) return null;
 
-  const distributable = Math.floor(losePool * (1 - PLATFORM_RAKE));
-  const estPayout = Math.floor(distributable + winPool);
+  const estPayout = Math.floor(losePool + winPool);
 
   if (isClosed && userIsMinority) {
     return (
@@ -297,7 +294,7 @@ export default function PropCard({ prop, onVote }) {
             Awaiting approval
           </span>
         ) : (
-          <span className="text-xs font-medium px-2.5 py-1 rounded-full text-gold-400 chip-open">
+          <span className="text-xs font-medium px-2.5 py-1 rounded-full text-sky-400 chip-open">
             {isVoted ? `Open · ${timeLeft}` : "Open"}
           </span>
         )}

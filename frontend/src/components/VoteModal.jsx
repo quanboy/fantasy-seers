@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { propsApi } from "../api/client";
 
-const PLATFORM_RAKE = 0.05; // 5% of net winnings go to Fantasy Seers
-
 const SPORT_CLASSES = {
   NFL: "sport-nfl",
   NBA: "sport-nba",
@@ -11,25 +9,6 @@ const SPORT_CLASSES = {
 };
 function getSportClass(sport) {
   return SPORT_CLASSES[sport] ?? "sport-default";
-}
-
-function RakeExplainer({ wager }) {
-  const amt = parseInt(wager) || 0;
-  const netWin = Math.floor(amt * (1 - PLATFORM_RAKE));
-  const fee = amt - netWin;
-
-  return (
-    <div className="rake-chip mt-3 text-xs leading-relaxed">
-      <span className="font-semibold text-slate-300">Platform fee: 5% of winnings.</span>
-      {amt > 0 && (
-        <span className="text-slate-500 ml-1">
-          If you win a {amt.toLocaleString()} pt bet → you keep{" "}
-          <span className="text-slate-200 font-semibold">{(amt * 2 - fee).toLocaleString()} pts</span>
-          {" "}({fee.toLocaleString()} pt platform fee).
-        </span>
-      )}
-    </div>
-  );
 }
 
 function QuickAmounts({ max, onSelect }) {
@@ -152,9 +131,6 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
               <QuickAmounts max={maxWager} onSelect={setWager} />
             </div>
 
-            {/* Rake explainer */}
-            <RakeExplainer wager={wager} />
-
             {/* Wager limits */}
             {(prop.minWager || prop.maxWager) && (
               <p className="text-xs text-slate-500 font-mono mt-2">
@@ -218,12 +194,6 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
                 <div className="text-slate-500 text-xs mt-1 font-mono">NO · {split.noCount} votes</div>
                 <div className="text-loss-400 text-xs mt-1 font-mono">{split.noWagerTotal?.toLocaleString()} pts</div>
               </div>
-            </div>
-
-            {/* Payout reminder */}
-            <div className="rake-chip mb-5 text-center">
-              Winners receive <span className="text-slate-200 font-bold">95%</span> of net winnings ·
-              <span className="text-slate-400"> 5% Fantasy Seers platform fee</span>
             </div>
 
             <button

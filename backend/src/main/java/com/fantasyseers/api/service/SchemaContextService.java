@@ -29,7 +29,7 @@ public class SchemaContextService {
                 --   username        VARCHAR(50) UNIQUE        -- display name
                 --   point_bank      INTEGER                   -- current point balance (starts at 1000)
                 --   role            VARCHAR(20)               -- 'USER' or 'ADMIN'
-                --   favorite_nfl_team VARCHAR(50)             -- nullable, e.g. 'Eagles'
+                --   favorite_nfl_team VARCHAR(50)             -- nullable, stores abbreviation e.g. 'PHI', 'DAL', 'MIA' (same format as nfl_players.nfl_team)
                 --   favorite_nba_team VARCHAR(50)             -- nullable, e.g. 'Lakers'
                 --   alma_mater      VARCHAR(100)              -- nullable, e.g. 'Penn State'
                 --   created_at      TIMESTAMP
@@ -98,12 +98,58 @@ public class SchemaContextService {
                 --   earned_at       TIMESTAMP
                 --   PRIMARY KEY(user_id, badge_id)
 
+                -- nfl_players (NFL player data from Sleeper API)
+                --   id              BIGINT PRIMARY KEY
+                --   sleeper_id      VARCHAR(50) UNIQUE        -- Sleeper API player ID
+                --   full_name       VARCHAR(150)              -- e.g. 'Ja''Marr Chase'
+                --   position        VARCHAR(10)               -- QB, RB, WR, TE, K, DEF
+                --   nfl_team        VARCHAR(10)               -- team abbreviation e.g. 'PHI', 'DAL', 'MIA'
+                --   status          VARCHAR(30)               -- e.g. 'Active'
+                --   adp             INTEGER                   -- Average Draft Position from Sleeper
+
+                -- consensus_rankings (expert consensus rankings for each player)
+                --   id              BIGINT PRIMARY KEY
+                --   player_id       BIGINT → nfl_players.id (UNIQUE — one ranking per player)
+                --   overall_rank    INT                       -- expert consensus overall rank (1 = best)
+                --   positional_rank INT                       -- rank within position group (e.g. RB3)
+
+                -- user_rankings (personalized player rankings per user — their "master sheet")
+                --   id              BIGINT PRIMARY KEY
+                --   user_id         BIGINT → users_safe.id
+                --   player_id       BIGINT → nfl_players.id
+                --   overall_rank    INT                       -- user's personal overall rank (1 = best)
+                --   positional_rank INT                       -- user's rank within position group
+                --   updated_at      TIMESTAMP
+                --   UNIQUE(user_id, player_id)
+
+                REFERENCE DATA:
+                - NFL team abbreviations used in nfl_players.nfl_team and users_safe.favorite_nfl_team:
+                  ARI=Cardinals, ATL=Falcons, BAL=Ravens, BUF=Bills, CAR=Panthers, CHI=Bears,
+                  CIN=Bengals, CLE=Browns, DAL=Cowboys, DEN=Broncos, DET=Lions, GB=Packers,
+                  HOU=Texans, IND=Colts, JAX=Jaguars, KC=Chiefs, LAC=Chargers, LAR=Rams,
+                  LV=Raiders, MIA=Dolphins, MIN=Vikings, NE=Patriots, NO=Saints, NYG=Giants,
+                  NYJ=Jets, PHI=Eagles, PIT=Steelers, SEA=Seahawks, SF=49ers, TB=Buccaneers,
+                  TEN=Titans, WAS=Commanders
+                - When users say a team name (e.g. "Eagles"), ALWAYS use the abbreviation (e.g. 'PHI') in SQL.
+                - Positions: QB, RB, WR, TE, K, DEF
+                - Prop statuses: PENDING, OPEN, CLOSED, RESOLVED
+                - Vote choices: YES, NO
+                - Prop results: YES, NO, or null
+                - User roles: USER, ADMIN
+                - Prop scopes: PUBLIC, GROUP
+
                 COMMON QUERY PATTERNS:
                 - Accuracy: COUNT correct picks / COUNT total resolved picks per user
                   A pick is correct when votes.choice = props.result AND props.status = 'RESOLVED'
                 - Leaderboard: rank users by accuracy (correct/total), tiebreak by total picks desc
                 - Contrarian: user voted with the minority side and won
                 - Point profit: SUM(payout) - SUM(wager_amount) for resolved votes
+                - Fan bias: compare AVG(user_rankings.overall_rank) for a team's players
+                  against consensus_rankings.overall_rank, grouped by users_safe.favorite_nfl_team.
+                  Positive difference (consensus - fan_avg) means fans overrate that player.
+                - Top picks by fanbase: AVG(ur.overall_rank) grouped by player,
+                  filtered by users_safe.favorite_nfl_team, ordered by avg rank ASC
+                - Homer index: aggregate bias across all of a fanbase's own-team players
                 """;
     }
 }

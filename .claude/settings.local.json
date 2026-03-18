@@ -1,7 +1,19 @@
 {
   "permissions": {
     "allow": [
-      "Bash(docker-compose logs:*)"
+      "Bash(docker-compose logs:*)",
+      "Bash(curl -sv -X POST \"http://localhost:8080/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"\"\"\"username\"\"\"\":\"\"\"\"testuser\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"testuser\"\"\"\"}')",
+      "Bash(docker exec:*)",
+      "Bash(curl -s \"http://localhost:8080/api/props/public\")",
+      "Bash(docker-compose up:*)",
+      "Bash(npm run:*)",
+      "WebSearch",
+      "WebFetch(domain:sleeper.com)",
+      "WebFetch(domain:www.bona-park.com)",
+      "WebFetch(domain:www.uinkits.com)",
+      "Bash(mvn compile:*)",
+      "Bash(find /c/Users/shuiw/Projects/fantasy-seers/backend/src/test -name *.java)",
+      "Bash(docker compose:*)"
     ]
   }
 }

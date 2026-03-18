@@ -28,5 +28,8 @@ GRANT SELECT ON
     prop_groups,
     point_transactions,
     badges,
-    user_badges
+    user_badges,
+    nfl_players,
+    user_rankings,
+    consensus_rankings
 TO fs_readonly;

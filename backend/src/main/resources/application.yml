@@ -21,9 +21,9 @@ server:
 
 readonly:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fantasyseers_db}
-    username: ${READONLY_DB_USERNAME:fs_readonly}
-    password: ${READONLY_DB_PASSWORD:readonly_local_dev}
+    url: ${READONLY_DATASOURCE_URL:${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fantasyseers_db}}
+    username: ${READONLY_DB_USERNAME:${SPRING_DATASOURCE_USERNAME:fantasyseers}}
+    password: ${READONLY_DB_PASSWORD:${SPRING_DATASOURCE_PASSWORD:fantasyseers_secret}}
 
 jwt:
   secret: ${JWT_SECRET:fantasy-seers-super-secret-jwt-key-change-in-production}

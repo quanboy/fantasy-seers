@@ -71,8 +71,8 @@ export const leaderboardApi = {
 }
 
 export const rankingsApi = {
-  getMySheet: () => api.get('/rankings/my-sheet'),
-  saveMySheet: (rankings) => api.post('/rankings/my-sheet', { rankings }),
+  getMySheet: (season) => api.get('/v1/boards/my-sheet', { params: { season } }),
+  saveMySheet: (boardId, rankings) => api.put(`/v1/boards/${boardId}/entries`, rankings),
 }
 
 export const researchApi = {

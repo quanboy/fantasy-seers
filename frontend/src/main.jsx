@@ -12,6 +12,7 @@ import GroupSettingsPage from "./pages/GroupSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import MasterSheetPage from "./pages/MasterSheetPage";
+import ResearchPage from "./pages/ResearchPage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
 
@@ -59,6 +60,7 @@ function App() {
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:id" element={<GroupFeedPage />} />
             <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
+            <Route path="research" element={<ResearchPage />} />
             <Route path="leaderboard" element={<LeaderboardPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route

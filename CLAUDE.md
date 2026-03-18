@@ -50,7 +50,7 @@ fantasy-seers/
 │       └── service/             # Business logic (incl. AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService)
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway SQL migrations (V1–V10)
+│       └── db/migration/        # Flyway SQL migrations (V1–V14)
 ├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
 │   ├── package.json
 │   ├── vite.config.js
