@@ -1,5 +1,6 @@
 package com.fantasyseers.api.config;
 
+import com.fantasyseers.api.service.UnsafeSqlException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -38,5 +39,11 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("message", message));
+    }
+
+    @ExceptionHandler(UnsafeSqlException.class)
+    public ResponseEntity<Map<String, String>> handleUnsafeSql(UnsafeSqlException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", ex.getMessage()));
     }
 }

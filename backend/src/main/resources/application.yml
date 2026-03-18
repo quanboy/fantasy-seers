@@ -19,9 +19,18 @@ spring:
 server:
   port: 8080
 
+readonly:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/fantasyseers_db}
+    username: ${READONLY_DB_USERNAME:fs_readonly}
+    password: ${READONLY_DB_PASSWORD:readonly_local_dev}
+
 jwt:
   secret: ${JWT_SECRET:fantasy-seers-super-secret-jwt-key-change-in-production}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+anthropic:
+  api-key: ${ANTHROPIC_API_KEY:}
 
 logging:
   level:
