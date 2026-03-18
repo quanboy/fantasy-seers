@@ -3,20 +3,29 @@ package com.fantasyseers.api.dto;
 import com.fantasyseers.api.entity.Prop;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class PropDto {
 
+    public record PaginatedResponse(
+            List<PropResponse> content,
+            int page,
+            int size,
+            long totalElements,
+            int totalPages
+    ) {}
+
     public record CreateRequest(
-            @NotBlank String title,
-            String description,
+            @NotBlank @Size(max = 200) String title,
+            @Size(max = 500) String description,
             @NotNull Prop.Sport sport,
             @NotNull LocalDateTime closesAt,
             Long groupId
     ) {}
 
     public record submitRequest(
-            @NotBlank String title,
-            String description,
+            @NotBlank @Size(max = 200) String title,
+            @Size(max = 500) String description,
             @NotNull Prop.Sport sport,
             @NotNull LocalDateTime closesAt,
             @Min(1) Integer minWager,

@@ -50,13 +50,16 @@ public class JwtUtils {
         }
     }
 
-    private boolean isTokenExpired(String token) {
+    public Date extractExpiration(String token) {
         return Jwts.parser()
             .verifyWith(getSigningKey())
             .build()
             .parseSignedClaims(token)
             .getPayload()
-            .getExpiration()
-            .before(new Date());
+            .getExpiration();
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
     }
 }

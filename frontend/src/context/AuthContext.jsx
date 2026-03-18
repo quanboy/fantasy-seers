@@ -30,7 +30,12 @@ export function AuthProvider({ children }) {
     return data
   }
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await authApi.logout()
+    } catch (_) {
+      // Best-effort — clear client state regardless
+    }
     localStorage.removeItem('fs_token')
     localStorage.removeItem('fs_user')
     setUser(null)

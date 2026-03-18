@@ -9,6 +9,8 @@ import com.fantasyseers.api.repository.PropRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import com.fantasyseers.api.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,21 +21,35 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PropService {
 
+    private static final java.util.regex.Pattern HTML_TAG = java.util.regex.Pattern.compile("<[^>]*>");
+
     private final PropRepository propRepository;
     private final UserRepository userRepository;
     private final VoteRepository voteRepository;
     private final FriendGroupRepository friendGroupRepository;
+
+    /**
+     * Strip HTML tags from user input to prevent stored XSS.
+     */
+    private String sanitize(String input) {
+        if (input == null) return null;
+        return HTML_TAG.matcher(input).replaceAll("").trim();
+    }
 
     @Transactional
     public PropDto.PropResponse createProp(PropDto.CreateRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
+        if (request.closesAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Closing time must be in the future");
+        }
+
         Prop.Scope scope = request.groupId() != null ? Prop.Scope.GROUP : Prop.Scope.PUBLIC;
 
         Prop prop = Prop.builder()
-                .title(request.title())
-                .description(request.description())
+                .title(sanitize(request.title()))
+                .description(sanitize(request.description()))
                 .sport(request.sport())
                 .closesAt(request.closesAt())
                 .createdBy(user)
@@ -61,9 +77,18 @@ public class PropService {
 
         Prop.Scope scope = request.scope() != null ? request.scope() : Prop.Scope.PUBLIC;
 
+        if (request.closesAt().isBefore(java.time.LocalDateTime.now())) {
+            throw new IllegalArgumentException("Closing time must be in the future");
+        }
+
+        if (request.minWager() != null && request.maxWager() != null
+                && request.minWager() > request.maxWager()) {
+            throw new IllegalArgumentException("Minimum wager cannot exceed maximum wager");
+        }
+
         Prop prop = Prop.builder()
-                .title(request.title())
-                .description(request.description())
+                .title(sanitize(request.title()))
+                .description(sanitize(request.description()))
                 .sport(request.sport())
                 .closesAt(request.closesAt())
                 .minWager(request.minWager())
@@ -87,8 +112,9 @@ public class PropService {
         return toResponse(saved, username);
     }
 
+    @Transactional
     public PropDto.PropResponse approveProp(Long id) {
-        Prop prop = propRepository.findById(id)
+        Prop prop = propRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() != Prop.Status.PENDING) {
@@ -99,8 +125,9 @@ public class PropService {
         return toResponse(propRepository.save(prop), null);
     }
 
+    @Transactional
     public void rejectProp(Long id) {
-        Prop prop = propRepository.findById(id)
+        Prop prop = propRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() != Prop.Status.PENDING) {
@@ -140,6 +167,27 @@ public class PropService {
                 .stream()
                 .map(p -> toResponse(p, null))
                 .toList();
+    }
+
+    public PropDto.PaginatedResponse getPublicPropsPaginated(String username, Pageable pageable) {
+        Page<Prop> page;
+        if (username != null) {
+            page = propRepository.findVisibleToUser(
+                    username,
+                    Prop.Scope.PUBLIC,
+                    List.of(Prop.Scope.FRIENDS, Prop.Scope.FRIENDS_AND_GROUP),
+                    pageable
+            );
+        } else {
+            page = propRepository.findByScopeOrdered(Prop.Scope.PUBLIC, pageable);
+        }
+        List<PropDto.PropResponse> content = page.getContent().stream()
+                .map(p -> toResponse(p, username))
+                .toList();
+        return new PropDto.PaginatedResponse(
+                content, page.getNumber(), page.getSize(),
+                page.getTotalElements(), page.getTotalPages()
+        );
     }
 
     public List<PropDto.PropResponse> getGroupProps(Long groupId, String username) {

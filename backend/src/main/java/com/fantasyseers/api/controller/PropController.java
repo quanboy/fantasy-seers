@@ -4,6 +4,7 @@ import com.fantasyseers.api.dto.PropDto;
 import com.fantasyseers.api.service.PropService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -35,11 +36,13 @@ public class PropController {
     }
 
     @GetMapping("/public")
-    public ResponseEntity<List<PropDto.PropResponse>> getPublicProps(
-            @AuthenticationPrincipal UserDetails userDetails
+    public ResponseEntity<PropDto.PaginatedResponse> getPublicProps(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
     ) {
         String username = userDetails != null ? userDetails.getUsername() : null;
-        return ResponseEntity.ok(propService.getPublicProps(username));
+        return ResponseEntity.ok(propService.getPublicPropsPaginated(username, PageRequest.of(page, Math.min(size, 100))));
     }
 
     @GetMapping("/{id}")

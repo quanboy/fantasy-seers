@@ -23,7 +23,9 @@ public class VoteService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        Prop prop = propRepository.findById(propId)
+        // Lock the prop row so the scheduler cannot flip status to CLOSED
+        // between our status check and the vote save
+        Prop prop = propRepository.findByIdForUpdate(propId)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() != Prop.Status.OPEN) {
@@ -45,13 +47,18 @@ public class VoteService {
             throw new IllegalArgumentException("Maximum wager is " + prop.getMaxWager() + " points");
         }
 
-        if (user.getPointBank() < request.wagerAmount()) {
+        // Acquire a pessimistic write lock on the user row to prevent concurrent
+        // votes from both passing the balance check (race condition → negative points)
+        User lockedUser = userRepository.findByIdForUpdate(user.getId())
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (lockedUser.getPointBank() < request.wagerAmount()) {
             throw new IllegalStateException("Insufficient points");
         }
 
-        // Deduct wager from point bank
-        user.setPointBank(user.getPointBank() - request.wagerAmount());
-        userRepository.save(user);
+        // Deduct wager from point bank (on the locked row)
+        lockedUser.setPointBank(lockedUser.getPointBank() - request.wagerAmount());
+        userRepository.save(lockedUser);
 
         // Cast the vote
         Vote vote = Vote.builder()

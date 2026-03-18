@@ -19,7 +19,7 @@ public class ResolutionService {
 
     @Transactional
     public void resolveProp(Long propId, Prop.Result result) {
-        Prop prop = propRepository.findById(propId)
+        Prop prop = propRepository.findByIdForUpdate(propId)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() == Prop.Status.RESOLVED) {
@@ -67,7 +67,8 @@ public class ResolutionService {
         if (winningPool == 0 || losingPool == 0) {
             for (Vote vote : allVotes) {
                 User user = vote.getUser();
-                user.setPointBank(user.getPointBank() + vote.getWagerAmount());
+                long newBalance = (long) user.getPointBank() + vote.getWagerAmount();
+                user.setPointBank((int) Math.min(newBalance, Integer.MAX_VALUE));
                 vote.setPayout(vote.getWagerAmount());
                 userRepository.save(user);
                 voteRepository.save(vote);
@@ -81,11 +82,13 @@ public class ResolutionService {
             long winnings = (long) (distributablePool * share);
             long payout = vote.getWagerAmount() + winnings;
 
-            vote.setPayout((int) payout);
+            int safePayout = (int) Math.min(payout, Integer.MAX_VALUE);
+            vote.setPayout(safePayout);
             voteRepository.save(vote);
 
             User user = vote.getUser();
-            user.setPointBank(user.getPointBank() + (int) payout);
+            long newBalance = (long) user.getPointBank() + safePayout;
+            user.setPointBank((int) Math.min(newBalance, Integer.MAX_VALUE));
             userRepository.save(user);
         }
 

@@ -21,7 +21,7 @@ export default function Dashboard() {
   const fetchProps = () => {
     propsApi
       .getPublic()
-      .then(({ data }) => setProps(data))
+      .then(({ data }) => setProps(data.content || data))
       .finally(() => setLoading(false));
   };
 
