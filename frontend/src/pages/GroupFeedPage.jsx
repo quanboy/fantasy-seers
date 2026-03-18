@@ -90,7 +90,7 @@ export default function GroupFeedPage() {
             <div className="rounded-xl p-5 mb-6 glass-card">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h1 className="font-display text-xl font-700 text-slate-100">{group.name}</h1>
+                  <h1 className="font-cinzel text-xl font-bold text-slate-100">{group.name}</h1>
                   <p className="text-slate-500 text-sm mt-1">
                     {group.memberCount} member{group.memberCount !== 1 ? "s" : ""}
                     {" · "}owner: {group.ownerUsername}
@@ -138,7 +138,7 @@ export default function GroupFeedPage() {
 
             {/* Open Props */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-display text-lg font-700 text-slate-100">Open Props</h2>
+              <h2 className="font-cinzel text-lg font-bold text-slate-100">Open Props</h2>
               {openProps.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot" />

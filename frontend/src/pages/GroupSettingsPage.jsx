@@ -102,7 +102,7 @@ export default function GroupSettingsPage() {
         <div className="animate-fade-in space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-700 text-slate-100">Group Settings</h1>
+            <h1 className="font-cinzel text-xl font-bold text-slate-100">Group Settings</h1>
             <Link to={`/groups/${id}`} className="btn-ghost text-sm px-3 py-1.5">
               Back to Feed
             </Link>

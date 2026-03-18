@@ -95,9 +95,9 @@ export default function Dashboard() {
 
             {/* Open Props header */}
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="font-cinzel text-lg font-700 text-slate-100">
+              <h1 className="font-cinzel text-xl font-bold text-slate-100">
                 Public Props
-              </h2>
+              </h1>
               {openProps.length > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot" />

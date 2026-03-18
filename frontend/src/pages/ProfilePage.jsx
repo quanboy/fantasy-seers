@@ -74,7 +74,7 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fade-in">
-      <h1 className="font-display text-2xl font-800 text-slate-100 mb-6">Profile</h1>
+      <h1 className="font-cinzel text-xl font-bold text-slate-100 mb-6">Profile</h1>
 
       {/* Account section — read-only */}
       <div className="glass-card p-6 mb-6">
