@@ -2,7 +2,32 @@
 
 Do not add Co-Authored-By or any Claude attribution to commit messages.
 
-Fantasy Seers is a social sports prediction platform where users wager points on yes/no propositions (props). Users are rewarded for going against the crowd. Built with React + Vite (frontend) and Spring Boot 3 + PostgreSQL (backend), containerized with Docker Compose.
+Fantasy Seers is a social sports prediction platform where users wager points on yes/no propositions (props). Users are rewarded for going against the crowd. Built with React + Vite (frontend) and Spring Boot 3 + PostgreSQL (backend), containerized with Docker Compose. Includes an AI-powered research assistant that converts natural language questions into SQL queries via the Anthropic API.
+
+---
+
+## Architecture Rules
+
+### Layering — strictly enforced
+- Controllers → Services → Repositories. No skipping layers.
+- Controllers handle HTTP only: parse request, call one service, return response.
+- Services own all business logic. No raw SQL. No HTTP concerns.
+- Repositories handle data access only. No business logic.
+- Never call a Repository directly from a Controller.
+- Never put an Anthropic API call anywhere except AnthropicService.
+
+### Single responsibility
+- One service per feature domain. Do not add new methods to an existing service if they belong to a different domain.
+- If a method exceeds 30 lines, flag it and suggest splitting before proceeding.
+- DTOs are for transport only. Never add business logic to a DTO.
+
+### Naming conventions
+- Controllers: `XController`
+- Services: `XService`
+- Repositories: `XRepository`
+- Request DTOs: `XRequest`
+- Response DTOs: `XResponse`
+- Exceptions: `XException`
 
 ---
 
@@ -11,30 +36,33 @@ Fantasy Seers is a social sports prediction platform where users wager points on
 ```
 fantasy-seers/
 ├── docker-compose.yml
+├── .env                         # ANTHROPIC_API_KEY (gitignored)
 ├── backend/                     # Spring Boot 3.2.3 / Java 21 / Maven
 │   ├── pom.xml
 │   ├── Dockerfile
 │   └── src/main/java/com/fantasyseers/api/
-│       ├── config/              # Spring config (AppConfig, SecurityConfig, GlobalExceptionHandler)
+│       ├── config/              # Spring config (AppConfig, SecurityConfig, GlobalExceptionHandler, ReadOnlyDataSourceConfig)
+│       ├── dto/                 # Request/response records (incl. PagedResponse<T> generic wrapper)
 │       ├── controller/          # REST controllers
-│       ├── dto/                 # Request/response records
 │       ├── entity/              # JPA entities
 │       ├── repository/          # Spring Data repositories
-│       ├── security/            # JWT filter + utils
-│       └── service/             # Business logic
+│       ├── security/            # JWT filter + utils, RateLimitFilter, TokenBlacklistService
+│       └── service/             # Business logic (incl. AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService)
 │   └── src/main/resources/
 │       ├── application.yml
-│       └── db/migration/        # Flyway SQL migrations (V1–V9)
-└── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
-    ├── package.json
-    ├── vite.config.js
-    └── src/
-        ├── main.jsx             # Router setup + AuthContext + PrivateRoute/AdminRoute
-        ├── api/client.js        # Axios instance + API methods (propsApi, groupsApi, adminApi)
-        ├── context/AuthContext.jsx
-        ├── components/          # AppLayout, Sidebar, PropCard, SubmitPropCard, VoteModal
-        └── pages/               # Login, Register, Dashboard, AdminDashboard,
-                                 # GroupsPage, GroupFeedPage, GroupSettingsPage, ProfilePage
+│       └── db/migration/        # Flyway SQL migrations (V1–V10)
+├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
+│   ├── package.json
+│   ├── vite.config.js
+│   └── src/
+│       ├── main.jsx             # Router setup + AuthContext + PrivateRoute/AdminRoute
+│       ├── api/client.js        # Axios instance + API methods (propsApi, groupsApi, adminApi, researchApi)
+│       ├── context/AuthContext.jsx
+│       ├── components/          # AppLayout, Sidebar, PropCard, SubmitPropCard, VoteModal
+│       └── pages/               # Login, Register, Dashboard, AdminDashboard, GroupsPage,
+│                                # GroupFeedPage, GroupSettingsPage, ProfilePage, MasterSheetPage,
+│                                # LeaderboardPage, ResearchPage
+└── scripts/                     # seed-players.js, seed-research-test-data.sql
 ```
 
 ---
@@ -73,6 +101,7 @@ cd frontend && npm install && npm run dev
 | Backend   | Spring Boot 3.2.3, Java 21, Spring Security 6, Spring Data JPA |
 | Auth      | JWT (JJWT 0.12.5), stateless, stored in localStorage         |
 | Database  | PostgreSQL 15, Flyway migrations, Hibernate ORM              |
+| AI        | Anthropic API (Claude Sonnet), read-only SQL generation       |
 | Frontend  | React 18, React Router v6, Axios, Tailwind CSS               |
 | Build     | Maven (backend), Vite (frontend), Docker Compose             |
 
@@ -85,6 +114,8 @@ cd frontend && npm install && npm run dev
 - `spring.flyway.locations: classpath:db/migration`
 - JWT secret read from `JWT_SECRET` env var (default dev value in yml)
 - JWT expiry: 24h (`JWT_EXPIRATION_MS: 86400000`)
+- `anthropic.api-key` read from `ANTHROPIC_API_KEY` env var
+- `readonly.datasource.*` — second DataSource for AI-generated SQL queries (falls back to primary credentials in dev)
 
 ### vite.config.js (frontend)
 - Dev server: port 5173
@@ -96,6 +127,12 @@ POSTGRES_DB=fantasyseers_db
 POSTGRES_USER=fantasyseers
 POSTGRES_PASSWORD=fantasyseers_secret
 JWT_SECRET=fantasy-seers-super-secret-jwt-key-change-in-production
+ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+```
+
+### .env file (gitignored)
+```
+ANTHROPIC_API_KEY=sk-ant-your-key-here
 ```
 
 ---
@@ -113,8 +150,11 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V7__consensus_rankings.sql** — `consensus_rankings` table (player_id, overall_rank, positional_rank) + 300 ranked inserts
 - **V8__add_adp_to_nfl_players.sql** — added `adp` (int, nullable) column to nfl_players
 - **V9__populate_adp.sql** — populated ADP values from Sleeper API search_rank
+- **V10__readonly_role_for_chatbot.sql** — `fs_readonly` Postgres role, `users_safe` view (excludes password/email), SELECT grants on all tables for AI research queries
+- **V11__add_performance_indexes.sql** — performance indexes on FK columns: `friend_group_members(user_id)`, `prop_groups(group_id)`, `group_invites(group_id, invitee_id, inviter_id)`, `friend_groups(owner_id)`, `props(created_by)`, `nfl_players(position)`
+- **V12__rate_limit_table.sql** — `rate_limit_log` table for DB-backed per-user rate limiting (replaces in-memory ConcurrentHashMap)
 
-**Adding a new migration:** Create `V10__description.sql`. Do not modify existing migration files.
+**Adding a new migration:** Create `V13__description.sql` in snake_case. Do not modify existing migration files. Never drop or alter a column without confirming it is unused. All new tables need `created_at TIMESTAMPTZ DEFAULT now()`.
 
 ---
 
@@ -124,14 +164,75 @@ All endpoints are prefixed `/api` and return JSON.
 
 | Controller         | Prefix           | Key Endpoints                                                                 |
 |--------------------|------------------|-------------------------------------------------------------------------------|
-| AuthController     | `/api/auth`      | `POST /register`, `POST /login`                                               |
+| AuthController     | `/api/auth`      | `POST /register`, `POST /login`, `POST /logout`                               |
 | UserController     | `/api/users`     | `GET /me`, `PUT /me` (update profile), `GET /me/authorities`                  |
-| PropController     | `/api/props`     | `POST /submit` (user), `GET /public`, `GET /{id}`                            |
+| PropController     | `/api/props`     | `POST /submit` (user), `GET /public` (all, legacy), `GET /public/paged?status=OPEN&page=0&size=20` (paginated by status), `GET /{id}` |
 | VoteController     | `/api/props`     | `POST /{id}/vote`, `GET /{id}/split`                                         |
 | AdminController    | `/api/admin`     | `GET /props/pending`, `GET /props/closed`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve?result=YES\|NO`, `POST /props` (create with optional groupId), `GET /groups` (all groups) |
 | LeaderboardController | `/api/leaderboard` | `GET /global` (public, no auth), `GET /group/{groupId}` (auth + membership required) |
-| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props`, `PATCH /{id}` (rename, owner), `DELETE /{id}/members/{userId}` (kick, owner), `DELETE /{id}/members/me` (leave), `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
+| FriendGroupController | `/api/groups` | `POST /` (create), `POST /join` (invite code), `GET /` (my groups), `GET /{id}`, `GET /{id}/props` (all, legacy), `GET /{id}/props/paged?status=OPEN&page=0&size=20` (paginated by status), `PATCH /{id}` (rename, owner), `DELETE /{id}/members/{userId}` (kick, owner), `DELETE /{id}/members/me` (leave), `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
 | RankingsController | `/api/rankings` | `GET /my-sheet` (auth, returns user's master sheet or consensus fallback), `POST /my-sheet` (auth, save rankings) |
+| ResearchController | `/api/research`  | `POST /` (auth, natural language → SQL → plain English answer, rate limited 20/hr per user) |
+
+### API rules
+- All endpoints except `/api/auth/**`, `/api/props/public`, and `/api/leaderboard/global` require a valid JWT
+- Return 400 for validation errors, 401 for auth failures, 403 for permission errors, 409 for business rule conflicts, 429 for rate limit breaches
+- Never expose stack traces or internal error messages to the client
+
+---
+
+## Current Feature Map
+
+| Feature      | Controller              | Service              | Repository              |
+|--------------|-------------------------|----------------------|-------------------------|
+| Auth         | AuthController          | AuthService          | UserRepository          |
+| Props        | PropController          | PropService          | PropRepository          |
+| Votes        | VoteController          | VoteService          | VoteRepository          |
+| Groups       | FriendGroupController   | FriendGroupService   | FriendGroupRepository   |
+| Leaderboard  | LeaderboardController   | LeaderboardService   | VoteRepository          |
+| Rankings     | RankingsController      | RankingsService      | UserRankingRepository, ConsensusRankingRepository |
+| Resolution   | AdminController         | ResolutionService    | PropRepository, VoteRepository |
+| Research     | ResearchController      | AnthropicService, SchemaContextService, SqlValidatorService, RateLimitService | (read-only JdbcTemplate), RateLimitRepository |
+
+---
+
+## Research Feature — specific rules
+
+### What ResearchController is allowed to do
+- Call SchemaContextService to get the system prompt
+- Call AnthropicService to generate SQL and format results
+- Call SqlValidatorService to validate generated SQL
+- Execute validated SQL via the read-only JdbcTemplate
+- Call RateLimitService to check and record per-user rate limits (20 requests/hour, DB-backed via `rate_limit_log` table)
+
+### What ResearchController is NOT allowed to do
+- Call any Repository bean
+- Write to the database
+- Construct HTTP requests directly
+- Know anything about the JWT or the authenticated user beyond the username
+
+### AnthropicService rules
+- The only class in the project that may call the Anthropic API
+- Two methods only: `generateSql()` and `formatResults()`
+- No business logic — it sends prompts and returns strings
+
+### SqlValidatorService rules
+- The only class that may inspect or approve a SQL string
+- Must reject anything that is not a pure SELECT statement
+- Must confirm a LIMIT clause is present
+- Throws `UnsafeSqlException` on any violation
+- No knowledge of HTTP, Anthropic, or the database
+
+### Read-only DataSource
+- The research feature executes queries via a separate read-only Postgres role (`fs_readonly`)
+- This DataSource is `@Lazy`-initialized (created after Flyway migrations run)
+- Must never be injected into any service outside of ResearchController
+- Falls back to primary DB credentials in dev when `READONLY_DB_USERNAME` is not set
+
+### SchemaContextService rules
+- Returns the system prompt string describing the full database schema
+- Includes reference data (team abbreviations, enum values) so Claude generates correct SQL
+- Must be updated when new tables are added to the schema
 
 ---
 
@@ -148,20 +249,21 @@ Defined in `src/main.jsx` using React Router v6.
 | `/groups/:id` | GroupFeedPage   | PrivateRoute |
 | `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
 | `/master-sheet`| MasterSheetPage | PrivateRoute |
+| `/research`   | ResearchPage    | PrivateRoute |
 | `/leaderboard`| LeaderboardPage | PrivateRoute |
 | `/profile`    | ProfilePage     | PrivateRoute |
 | `/admin`      | AdminDashboard  | AdminRoute   |
 
 - **PrivateRoute** — redirects unauthenticated users to `/login`
 - **AdminRoute** — redirects non-ADMIN users to `/`
-- **AuthContext** — stores user + JWT in localStorage, provides `login`/`logout`
+- **AuthContext** — stores user + JWT in localStorage, provides `login`/`logout` (logout calls backend to blacklist token)
 
 ### Frontend API Client (`client.js`)
-Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `rankingsApi`, `userApi`. Each wraps Axios calls to `/api/*`.
+Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `rankingsApi`, `researchApi`, `userApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
 - **AppLayout** — shared layout wrapper for all authenticated pages. Renders the `Sidebar` and a top navigation bar with username, point bank, and sign out. Uses React Router `<Outlet />` for nested routes. Individual pages no longer have their own navbars.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Master Sheet, Leagues, Leaderboard, Trends, Profile, Admin Uploads (admin-only). Shows logo, nav links with active state via `NavLink`, and user avatar footer pinned to bottom.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Master Sheet, Leagues, Leaderboard, Trends, Research, Profile, Admin Uploads (admin-only). Shows logo, nav links with active state via `NavLink`, and user avatar footer pinned to bottom.
 - Mobile top bar shows hamburger + logo on the left; username, points, and sign out on the right.
 
 ### Key UI Patterns
@@ -177,12 +279,13 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
   - Prop description (context) is shown below the title when present, in muted text. Split bar has a "Voting Splits" header. Clicking Yes/No opens VoteModal pre-filled via `_initialChoice`/`_initialWager` props. Split data fetched via `propsApi.getSplit()` for all voted states. Payout delta from `userWager`/`userPayout` fields in PropResponse DTO.
 - **VoteModal** — reused on Dashboard and GroupFeedPage for casting votes. Accepts `_initialChoice` and `_initialWager` from PropCard to pre-fill the form.
 - **LeaderboardPage** — global and per-group leaderboard with tabs. Shows rank, username, picks, correct, accuracy %. Top 3 get medal colors. Current user's row is highlighted. Fetches groups for tab switcher.
-- **Dashboard** — shows props in three sections: Public Props (open/live), Closed (awaiting results), and Resolved (settled). Refreshes pointBank every 30s and re-fetches props after voting. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null. Closed and Resolved sections only appear when they have props.
+- **Dashboard** — shows props in three sections: Public Props (open/live), Closed (awaiting results), and Resolved (settled). Each section fetches independently via paginated API (`/props/public/paged?status=X`) with "Load More" button. Refreshes pointBank every 30s and re-fetches all sections after voting. Shows a dismissible profile completion banner if all identity fields (NFL team, NBA team, alma mater) are null. Closed and Resolved sections only appear when they have props.
 - **ProfilePage** — view/edit profile. Read-only Account section (username, email, plus current team/alma mater values) and editable Identity section (NFL team dropdown, NBA team dropdown, alma mater text input). Uses `PUT /api/users/me`.
 - **GroupsPage** — create/join forms + group list with clickable invite codes (copy to clipboard). Shows "Pending Invites" section with accept/reject buttons when the user has pending group invites.
-- **GroupFeedPage** — group header (with Settings link) + "Invite Member" form (username input) + group-scoped props (open/closed/resolved sections).
+- **GroupFeedPage** — group header (with Settings link) + "Invite Member" form (username input) + group-scoped props in three paginated sections (open/closed/resolved) via `/groups/{id}/props/paged?status=X` with "Load More" button.
 - **GroupSettingsPage** — group management page: rename group (owner only), member list with kick buttons (owner only), leave group (all members, auto-transfers ownership if owner leaves). Accessible via `/groups/:id/settings`.
 - **MasterSheetPage** — personalized NFL player ranking sheet. Pre-populated with consensus expert rankings (from Sleeper API search_rank). Users drag-and-drop to reorder via @dnd-kit. Columns: Rank, Player Name (Team), Position (positional rank chip), ADP. Position filter bar with multi-select pill toggles (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Save button persists to `user_rankings` table. Falls back to `consensus_rankings` if user has no saved sheet (`isDefault: true`).
+- **ResearchPage** — AI-powered chat interface for querying app data in natural language. Chat thread with user/assistant message bubbles. Suggested starter questions on empty state. Loading dots animation. Expandable "Show SQL" section on each answer for debugging. Handles 429 rate limit and error states. Uses `researchApi.ask()`.
 - **AdminDashboard** — pending props queue (approve/reject) + "Create Prop" form with optional group assignment dropdown + "Resolve Props" section showing closed props with YES/NO resolve buttons.
 
 ### Theme & Design Tokens
@@ -256,21 +359,51 @@ For error text, use `text-loss-400` (not `text-red-400`). For backgrounds with o
 | `IllegalArgumentException` | 400 Bad Request | "Invalid invite code", "Prop not found"          |
 | `IllegalStateException`    | 409 Conflict   | "Already a member", "Already voted", "Insufficient points", "Invite already sent" |
 | `AccessDeniedException`    | 403 Forbidden  | "Not a member of this group", "Only the group owner can rename/kick" |
+| `UnsafeSqlException`       | 400 Bad Request | "Forbidden keyword: DROP", "Only SELECT queries are allowed" |
 
 Frontend components read error messages via `err.response?.data?.message` in catch blocks.
 
-**Axios interceptor** (`client.js`): Only redirects to `/login` on 401 or on 403 when no token exists in localStorage. Auth routes (`/auth/*`) are excluded from the interceptor redirect — login/register 403s propagate to component error handlers so they can display error messages. Authenticated 403s (permission errors) also propagate to component error handlers.
+**Axios interceptor** (`client.js`): Only redirects to `/login` on 401 or on 403 when no token exists in localStorage. Auth routes (`/auth/*`) are excluded from the interceptor redirect — login/register 403s propagate to component error handlers so they can display error messages. Authenticated 403s (permission errors) also propagate to component error handlers. Shows a "Session expired" toast before redirect on 401.
 
 ---
 
 ## Security Notes
 
 - JWT is validated in `JwtAuthFilter` (extends `OncePerRequestFilter`). Token extraction is wrapped in try/catch for `JwtException` to prevent malformed tokens from bubbling up.
+- **Token blacklisting:** `TokenBlacklistService` maintains an in-memory blacklist of revoked tokens. `POST /api/auth/logout` adds the token to the blacklist. `JwtAuthFilter` checks the blacklist before validating. Expired entries are purged every 10 minutes.
+- **Rate limiting:** `RateLimitFilter` limits auth endpoints (`/api/auth/*`) to 10 requests per minute per IP. `RateLimitService` (DB-backed via `rate_limit_log` table) limits research queries to 20 per hour per user — survives restarts and works across multiple instances.
 - `@PreAuthorize("hasRole('ADMIN')")` guards all admin endpoints.
 - `AccessDeniedException` from `org.springframework.security.access` returns 403 via `GlobalExceptionHandler`.
 - `@EnableJpaAuditing` is on `AppConfig`, not the main application class.
 - Group endpoints verify membership before returning data (e.g., `getGroupById`, `getGroupProps`). Owner-only actions (rename, kick) check `group.getOwner()` match.
 - **Wager limits** are enforced server-side in `VoteService.castVote()` — rejects wagers outside `minWager`/`maxWager` bounds. Frontend `VoteModal` also validates client-side.
+- **Pessimistic locking** — `VoteService.castVote()` acquires `PESSIMISTIC_WRITE` on the User row via `findByUsernameForUpdate()` to prevent concurrent point deduction races. `ResolutionService.resolveProp()` acquires `PESSIMISTIC_WRITE` on the Prop row via `findByIdForUpdate()` to prevent double resolution. Point updates use atomic SQL (`UPDATE ... SET point_bank = point_bank + :amount`) instead of read-modify-write.
+- **Input sanitization:** HTML tags stripped from prop title/description in `PropService`. Length limits enforced via `@Size` on DTOs.
+- **Integer overflow protection:** Payout calculations in `ResolutionService` use `long` arithmetic and cap at `Integer.MAX_VALUE`.
+- **Read-only DataSource:** AI-generated SQL runs against the `fs_readonly` Postgres role which has SELECT-only permissions. `users_safe` view excludes password and email columns.
+
+---
+
+## Scalability Patterns
+
+### Atomic point updates
+`UserRepository.adjustPointBank(id, amount)` uses a single `UPDATE ... SET point_bank = point_bank + :amount` statement. All point mutations (wager deductions in `VoteService`, payout credits in `ResolutionService`) go through this method. Never use read-modify-write on `pointBank`.
+
+### Batch saves
+`ResolutionService` collects all vote payout mutations and calls `voteRepository.saveAll(allVotes)` once per resolution instead of saving each vote individually.
+
+### Bulk scheduler updates
+`PropClosingScheduler` uses `propRepository.bulkCloseExpiredProps()` — a single `@Modifying @Query` UPDATE statement — instead of loading all expired props into memory.
+
+### Eager fetching via @EntityGraph
+- `FriendGroupRepository.findAllByMemberUsername()` — eagerly fetches `owner` and `members`
+- `GroupInviteRepository.findAllByInviteeUsernameAndStatus()` — eagerly fetches `group` and `inviter`
+
+### Paginated prop endpoints
+Props are paginated by status via dedicated `/paged` endpoints. Default page size: 20. Dashboard and GroupFeedPage each fetch OPEN/CLOSED/RESOLVED sections independently with "Load More". The old unpaginated endpoints (`/props/public`, `/groups/{id}/props`) remain for backward compatibility.
+
+### DB-backed rate limiting
+`RateLimitService` + `RateLimitRepository` + `rate_limit_log` table. Counts requests per user per endpoint within a time window. Used by `ResearchController` (20 req/hr). Reusable for any endpoint.
 
 ---
 
@@ -290,3 +423,28 @@ Frontend components read error messages via `err.response?.data?.message` in cat
 - **`@apply` does not support Tailwind opacity modifiers** — `@apply bg-oracle-500/10` fails at build time. Use `background: theme('colors.oracle.500 / 0.1')` in CSS instead. The `/` modifier works fine in JSX `className` strings.
 - **Docker frontend duplicate React** — The Docker frontend container can produce "Invalid hook call" errors due to duplicate React instances when volume-mounting `src/`. For local development, prefer running the frontend directly (`cd frontend && npm run dev`) while keeping backend + DB in Docker (`docker-compose up postgres backend`).
 - **CORS allows any localhost port** — `SecurityConfig` uses `allowedOriginPatterns("http://localhost:*")` so the Vite dev server works on any port. If Vite picks a non-standard port (5174, 5175, etc.) due to port conflicts, CORS won't block it.
+- **ReadOnlyDataSourceConfig is `@Lazy`** — the read-only DataSource is lazily initialized because the `fs_readonly` Postgres role is created by a Flyway migration that must run first via the primary DataSource.
+
+---
+
+## What to do before writing any new code
+1. Read the existing service or controller for the relevant feature
+2. Describe the pattern it follows
+3. Implement the new code using the same pattern
+4. If the task requires modifying more than one layer, confirm the plan first
+
+## What to do after writing any new code
+1. Check that no controller calls a repository directly
+2. Check that no service contains HTTP-specific logic
+3. Check that no Anthropic API call exists outside AnthropicService
+4. Flag any method over 30 lines for review
+
+---
+
+## Do not do these things
+- Do not create utility classes that mix unrelated responsibilities
+- Do not add static helper methods to entity classes
+- Do not generate code without reading the existing pattern first
+- Do not silently add dependencies to pom.xml — flag them and explain why
+- Do not generate a Flyway migration that drops or renames a column without asking
+- Do not add TODO comments — either implement it or leave it out

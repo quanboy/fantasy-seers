@@ -1,7 +1,9 @@
 package com.fantasyseers.api.controller;
 
 import com.fantasyseers.api.dto.FriendGroupDto;
+import com.fantasyseers.api.dto.PagedResponse;
 import com.fantasyseers.api.dto.PropDto;
+import com.fantasyseers.api.entity.Prop;
 import com.fantasyseers.api.service.FriendGroupService;
 import com.fantasyseers.api.service.PropService;
 import jakarta.validation.Valid;
@@ -119,5 +121,16 @@ public class FriendGroupController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         return ResponseEntity.ok(propService.getGroupProps(id, userDetails.getUsername()));
+    }
+
+    @GetMapping("/{id}/props/paged")
+    public ResponseEntity<PagedResponse<PropDto.PropResponse>> getGroupPropsPaged(
+            @PathVariable Long id,
+            @RequestParam Prop.Status status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        return ResponseEntity.ok(propService.getGroupPropsByStatus(id, userDetails.getUsername(), status, page, size));
     }
 }

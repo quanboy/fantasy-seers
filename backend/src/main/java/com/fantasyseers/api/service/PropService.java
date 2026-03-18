@@ -1,5 +1,6 @@
 package com.fantasyseers.api.service;
 
+import com.fantasyseers.api.dto.PagedResponse;
 import com.fantasyseers.api.dto.PropDto;
 import com.fantasyseers.api.entity.FriendGroup;
 import com.fantasyseers.api.entity.Prop;
@@ -9,6 +10,8 @@ import com.fantasyseers.api.repository.PropRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import com.fantasyseers.api.repository.VoteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -150,6 +153,48 @@ public class PropService {
                 .stream()
                 .map(p -> toResponse(p, username))
                 .toList();
+    }
+
+    public PagedResponse<PropDto.PropResponse> getPublicPropsByStatus(String username, Prop.Status status, int page, int size) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<Prop> propPage;
+
+        if (username != null) {
+            propPage = propRepository.findVisibleToUserByStatus(
+                    username,
+                    Prop.Scope.PUBLIC,
+                    List.of(Prop.Scope.FRIENDS, Prop.Scope.FRIENDS_AND_GROUP),
+                    status,
+                    pageable
+            );
+        } else {
+            propPage = propRepository.findByScopeAndStatus(Prop.Scope.PUBLIC, status, pageable);
+        }
+
+        return toPagedResponse(propPage, username);
+    }
+
+    public PagedResponse<PropDto.PropResponse> getGroupPropsByStatus(Long groupId, String username, Prop.Status status, int page, int size) {
+        if (!friendGroupRepository.existsByIdAndMembersUsername(groupId, username)) {
+            throw new AccessDeniedException("You are not a member of this group");
+        }
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<Prop> propPage = propRepository.findByGroupIdAndStatus(groupId, status, pageable);
+        return toPagedResponse(propPage, username);
+    }
+
+    private PagedResponse<PropDto.PropResponse> toPagedResponse(Page<Prop> propPage, String username) {
+        List<PropDto.PropResponse> content = propPage.getContent().stream()
+                .map(p -> toResponse(p, username))
+                .toList();
+        return new PagedResponse<>(
+                content,
+                propPage.getNumber(),
+                propPage.getSize(),
+                propPage.getTotalElements(),
+                propPage.getTotalPages(),
+                propPage.isLast()
+        );
     }
 
     public PropDto.PropResponse getPropById(Long id, String username) {

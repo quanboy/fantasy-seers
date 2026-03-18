@@ -30,6 +30,8 @@ export const authApi = {
 
 export const propsApi = {
   getPublic: ()           => api.get('/props/public'),
+  getPublicPaged: (status, page = 0, size = 20) =>
+    api.get('/props/public/paged', { params: { status, page, size } }),
   getById:   (id)         => api.get(`/props/${id}`),
   vote:      (id, data)   => api.post(`/props/${id}/vote`, data),
   getSplit:  (id)         => api.get(`/props/${id}/split`),
@@ -52,6 +54,8 @@ export const groupsApi = {
   joinGroup:    (data)   => api.post('/groups/join', data),
   getGroup:     (id)     => api.get(`/groups/${id}`),
   getGroupProps:(id)     => api.get(`/groups/${id}/props`),
+  getGroupPropsPaged: (id, status, page = 0, size = 20) =>
+    api.get(`/groups/${id}/props/paged`, { params: { status, page, size } }),
   inviteUser:    (id, data) => api.post(`/groups/${id}/invite`, data),
   getMyInvites:  ()         => api.get('/groups/invites'),
   acceptInvite:  (inviteId) => api.post(`/groups/invites/${inviteId}/accept`),
@@ -69,6 +73,10 @@ export const leaderboardApi = {
 export const rankingsApi = {
   getMySheet: () => api.get('/rankings/my-sheet'),
   saveMySheet: (rankings) => api.post('/rankings/my-sheet', { rankings }),
+}
+
+export const researchApi = {
+  ask: (question) => api.post('/research', { question }),
 }
 
 export const userApi = {

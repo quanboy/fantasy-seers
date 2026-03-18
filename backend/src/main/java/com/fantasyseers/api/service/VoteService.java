@@ -20,7 +20,7 @@ public class VoteService {
 
     @Transactional
     public VoteDto.VoteResponse castVote(Long propId, PropDto.VoteRequest request, String username) {
-        User user = userRepository.findByUsername(username)
+        User user = userRepository.findByUsernameForUpdate(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         Prop prop = propRepository.findById(propId)
@@ -49,9 +49,8 @@ public class VoteService {
             throw new IllegalStateException("Insufficient points");
         }
 
-        // Deduct wager from point bank
-        user.setPointBank(user.getPointBank() - request.wagerAmount());
-        userRepository.save(user);
+        // Atomically deduct wager from point bank
+        userRepository.adjustPointBank(user.getId(), -request.wagerAmount());
 
         // Cast the vote
         Vote vote = Vote.builder()

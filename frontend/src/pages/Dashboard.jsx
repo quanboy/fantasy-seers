@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { propsApi, userApi } from "../api/client";
@@ -6,33 +6,67 @@ import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
 import SubmitPropCard from "../components/SubmitPropCard";
 
+const PAGE_SIZE = 20;
+
 function SkeletonCard() {
   return <div className="skeleton h-28 mb-4" />;
 }
 
-export default function Dashboard() {
-  const { user, setUser } = useAuth();
+function usePagedProps(status) {
   const [props, setProps] = useState([]);
-  const [selectedProp, setSelectedProp] = useState(null);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
-  const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [total, setTotal] = useState(0);
 
-  const fetchProps = () => {
+  const fetch = useCallback((reset = false) => {
+    const nextPage = reset ? 0 : page;
+    setLoading(true);
     propsApi
-      .getPublic()
-      .then(({ data }) => setProps(data))
+      .getPublicPaged(status, nextPage, PAGE_SIZE)
+      .then(({ data }) => {
+        setProps((prev) => (reset ? data.content : [...prev, ...data.content]));
+        setHasMore(!data.last);
+        setTotal(data.totalElements);
+        setPage(reset ? 1 : nextPage + 1);
+      })
       .finally(() => setLoading(false));
-  };
+  }, [status, page]);
+
+  const reset = useCallback(() => fetch(true), [status]);
 
   useEffect(() => {
-    fetchProps();
+    fetch(true);
+  }, [status]);
+
+  return { props, loading, hasMore, total, loadMore: () => fetch(false), reset };
+}
+
+export default function Dashboard() {
+  const { user, setUser } = useAuth();
+  const [selectedProp, setSelectedProp] = useState(null);
+  const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
+  const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const open = usePagedProps("OPEN");
+  const closed = usePagedProps("CLOSED");
+  const resolved = usePagedProps("RESOLVED");
+
+  useEffect(() => {
     userApi.getMe().then(({ data }) => {
       if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
         setProfileIncomplete(true);
       }
     });
   }, []);
+
+  // Track initial load across all sections
+  useEffect(() => {
+    if (!open.loading && !closed.loading && !resolved.loading) {
+      setInitialLoading(false);
+    }
+  }, [open.loading, closed.loading, resolved.loading]);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -50,17 +84,19 @@ export default function Dashboard() {
     localStorage.setItem("fs_user", JSON.stringify(updated));
     setUser(updated);
     setSelectedProp(null);
-    fetchProps();
+    open.reset();
+    closed.reset();
+    resolved.reset();
   };
 
-  const openProps = props.filter((p) => p.status === "OPEN");
-  const closedProps = props.filter((p) => p.status === "CLOSED");
-  const resolvedProps = props.filter((p) => p.status === "RESOLVED");
+  const handleSubmitted = () => {
+    open.reset();
+  };
 
   return (
     <>
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {loading && (
+        {initialLoading && (
           <div className="space-y-4 mt-4">
             <SkeletonCard />
             <SkeletonCard />
@@ -68,7 +104,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && (
+        {!initialLoading && (
           <div className="animate-fade-in">
             {/* Profile completion banner */}
             {profileIncomplete && !profileBannerDismissed && (
@@ -91,24 +127,24 @@ export default function Dashboard() {
             )}
 
             {/* Composer */}
-            <SubmitPropCard onSubmitted={fetchProps} />
+            <SubmitPropCard onSubmitted={handleSubmitted} />
 
             {/* Open Props header */}
             <div className="flex items-center gap-3 mb-4">
               <h1 className="font-cinzel text-xl font-bold text-slate-100">
                 Public Props
               </h1>
-              {openProps.length > 0 && (
+              {open.total > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot" />
                   <span className="text-live text-xs font-bold uppercase tracking-wide">
-                    {openProps.length} Live
+                    {open.total} Live
                   </span>
                 </div>
               )}
             </div>
 
-            {openProps.length === 0 ? (
+            {open.props.length === 0 ? (
               <div className="glass-card p-8 text-center mb-10">
                 <p className="text-slate-500 text-sm">
                   No open props right now.
@@ -116,18 +152,27 @@ export default function Dashboard() {
               </div>
             ) : (
               <div className="space-y-3 mb-10">
-                {openProps.map((prop) => (
+                {open.props.map((prop) => (
                   <PropCard
                     key={prop.id}
                     prop={prop}
                     onVote={setSelectedProp}
                   />
                 ))}
+                {open.hasMore && (
+                  <button
+                    onClick={open.loadMore}
+                    disabled={open.loading}
+                    className="btn-ghost w-full text-sm py-2"
+                  >
+                    {open.loading ? "Loading…" : "Load More"}
+                  </button>
+                )}
               </div>
             )}
 
             {/* Closed Props */}
-            {closedProps.length > 0 && (
+            {closed.total > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="font-cinzel text-base font-700 text-slate-500">
@@ -135,23 +180,32 @@ export default function Dashboard() {
                   </h2>
                   <div className="flex-1 h-px bg-void-700" />
                   <span className="text-slate-400 text-xs">
-                    {closedProps.length} awaiting results
+                    {closed.total} awaiting results
                   </span>
                 </div>
                 <div className="space-y-3 mb-10">
-                  {closedProps.map((prop) => (
+                  {closed.props.map((prop) => (
                     <PropCard
                       key={prop.id}
                       prop={prop}
                       onVote={setSelectedProp}
                     />
                   ))}
+                  {closed.hasMore && (
+                    <button
+                      onClick={closed.loadMore}
+                      disabled={closed.loading}
+                      className="btn-ghost w-full text-sm py-2"
+                    >
+                      {closed.loading ? "Loading…" : "Load More"}
+                    </button>
+                  )}
                 </div>
               </>
             )}
 
             {/* Resolved Props */}
-            {resolvedProps.length > 0 && (
+            {resolved.total > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="font-cinzel text-base font-700 text-slate-500">
@@ -159,17 +213,26 @@ export default function Dashboard() {
                   </h2>
                   <div className="flex-1 h-px bg-void-700" />
                   <span className="text-slate-400 text-xs">
-                    {resolvedProps.length} settled
+                    {resolved.total} settled
                   </span>
                 </div>
                 <div className="space-y-3">
-                  {resolvedProps.map((prop) => (
+                  {resolved.props.map((prop) => (
                     <PropCard
                       key={prop.id}
                       prop={prop}
                       onVote={setSelectedProp}
                     />
                   ))}
+                  {resolved.hasMore && (
+                    <button
+                      onClick={resolved.loadMore}
+                      disabled={resolved.loading}
+                      className="btn-ghost w-full text-sm py-2"
+                    >
+                      {resolved.loading ? "Loading…" : "Load More"}
+                    </button>
+                  )}
                 </div>
               </>
             )}

@@ -19,7 +19,7 @@ public class ResolutionService {
 
     @Transactional
     public void resolveProp(Long propId, Prop.Result result) {
-        Prop prop = propRepository.findById(propId)
+        Prop prop = propRepository.findByIdForUpdate(propId)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() == Prop.Status.RESOLVED) {
@@ -66,12 +66,10 @@ public class ResolutionService {
         // Edge case: everyone voted the same side — return wagers
         if (winningPool == 0 || losingPool == 0) {
             for (Vote vote : allVotes) {
-                User user = vote.getUser();
-                user.setPointBank(user.getPointBank() + vote.getWagerAmount());
                 vote.setPayout(vote.getWagerAmount());
-                userRepository.save(user);
-                voteRepository.save(vote);
+                userRepository.adjustPointBank(vote.getUser().getId(), vote.getWagerAmount());
             }
+            voteRepository.saveAll(allVotes);
             return;
         }
 
@@ -79,14 +77,10 @@ public class ResolutionService {
         for (Vote vote : winningVotes) {
             double share = (double) vote.getWagerAmount() / winningPool;
             long winnings = (long) (distributablePool * share);
-            long payout = vote.getWagerAmount() + winnings;
+            long payout = Math.min(vote.getWagerAmount() + winnings, Integer.MAX_VALUE);
 
             vote.setPayout((int) payout);
-            voteRepository.save(vote);
-
-            User user = vote.getUser();
-            user.setPointBank(user.getPointBank() + (int) payout);
-            userRepository.save(user);
+            userRepository.adjustPointBank(vote.getUser().getId(), (int) payout);
         }
 
         // Mark losing votes as 0 payout
@@ -96,7 +90,8 @@ public class ResolutionService {
 
         for (Vote vote : losingVotes) {
             vote.setPayout(0);
-            voteRepository.save(vote);
         }
+
+        voteRepository.saveAll(allVotes);
     }
 }

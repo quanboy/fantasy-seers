@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -21,13 +20,9 @@ public class PropClosingScheduler {
     @Scheduled(fixedRate = 60_000)
     @Transactional
     public void closeExpiredProps() {
-        List<Prop> expired = propRepository.findOpenPropsClosedBefore(Prop.Status.OPEN, LocalDateTime.now());
-        if (expired.isEmpty()) return;
-
-        for (Prop prop : expired) {
-            prop.setStatus(Prop.Status.CLOSED);
+        int closed = propRepository.bulkCloseExpiredProps(Prop.Status.OPEN, Prop.Status.CLOSED, LocalDateTime.now());
+        if (closed > 0) {
+            log.info("Auto-closed {} expired prop(s)", closed);
         }
-        propRepository.saveAll(expired);
-        log.info("Auto-closed {} expired prop(s)", expired.size());
     }
 }

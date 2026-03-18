@@ -1,16 +1,48 @@
-import { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useCallback } from "react";
+import { Link, useParams } from "react-router-dom";
 import { groupsApi, userApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
+
+const PAGE_SIZE = 20;
+
+function useGroupPagedProps(groupId, status) {
+  const [props, setProps] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+
+  const fetch = useCallback((reset = false) => {
+    if (!groupId) return;
+    const nextPage = reset ? 0 : page;
+    setLoading(true);
+    groupsApi
+      .getGroupPropsPaged(groupId, status, nextPage, PAGE_SIZE)
+      .then(({ data }) => {
+        setProps((prev) => (reset ? data.content : [...prev, ...data.content]));
+        setHasMore(!data.last);
+        setTotal(data.totalElements);
+        setPage(reset ? 1 : nextPage + 1);
+      })
+      .finally(() => setLoading(false));
+  }, [groupId, status, page]);
+
+  const reset = useCallback(() => fetch(true), [groupId, status]);
+
+  useEffect(() => {
+    fetch(true);
+  }, [groupId, status]);
+
+  return { props, loading, hasMore, total, loadMore: () => fetch(false), reset };
+}
 
 export default function GroupFeedPage() {
   const { id } = useParams();
   const { user, setUser } = useAuth();
 
   const [group, setGroup] = useState(null);
-  const [props, setProps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProp, setSelectedProp] = useState(null);
@@ -18,13 +50,17 @@ export default function GroupFeedPage() {
   const [inviteMsg, setInviteMsg] = useState(null);
   const [inviting, setInviting] = useState(false);
 
+  const open = useGroupPagedProps(id, "OPEN");
+  const closed = useGroupPagedProps(id, "CLOSED");
+  const resolved = useGroupPagedProps(id, "RESOLVED");
+
   const handleInvite = async (e) => {
     e.preventDefault();
     if (!inviteUsername.trim()) return;
     setInviting(true);
     setInviteMsg(null);
     try {
-      const { data } = await groupsApi.inviteUser(id, { username: inviteUsername.trim() });
+      await groupsApi.inviteUser(id, { username: inviteUsername.trim() });
       setInviteMsg({ type: "success", text: `Invite sent to ${inviteUsername.trim()}!` });
       setInviteUsername("");
     } catch (err) {
@@ -34,22 +70,12 @@ export default function GroupFeedPage() {
     }
   };
 
-  const fetchAll = () => {
-    Promise.all([
-      groupsApi.getGroup(id),
-      groupsApi.getGroupProps(id),
-    ])
-      .then(([{ data: g }, { data: p }]) => {
-        setGroup(g);
-        setProps(p);
-      })
-      .catch(err => {
-        setError(err.response?.data?.message ?? "Failed to load group");
-      })
+  useEffect(() => {
+    groupsApi.getGroup(id)
+      .then(({ data }) => setGroup(data))
+      .catch(err => setError(err.response?.data?.message ?? "Failed to load group"))
       .finally(() => setLoading(false));
-  };
-
-  useEffect(() => { fetchAll(); }, [id]);
+  }, [id]);
 
   const handleVoted = async () => {
     const { data } = await userApi.getMe();
@@ -57,17 +83,17 @@ export default function GroupFeedPage() {
     localStorage.setItem("fs_user", JSON.stringify(updated));
     setUser(updated);
     setSelectedProp(null);
-    fetchAll();
+    open.reset();
+    closed.reset();
+    resolved.reset();
   };
 
-  const openProps = props.filter(p => p.status === "OPEN");
-  const closedProps = props.filter(p => p.status === "CLOSED");
-  const resolvedProps = props.filter(p => p.status === "RESOLVED");
+  const initialLoading = loading || (open.loading && open.props.length === 0);
 
   return (
     <>
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {loading && (
+        {initialLoading && (
           <div className="space-y-4 mt-4">
             <div className="skeleton h-16 mb-6" />
             <div className="skeleton h-28" />
@@ -84,7 +110,7 @@ export default function GroupFeedPage() {
           </div>
         )}
 
-        {!loading && !error && group && (
+        {!initialLoading && !error && group && (
           <div className="animate-fade-in">
             {/* Group header */}
             <div className="rounded-xl p-5 mb-6 glass-card">
@@ -139,56 +165,83 @@ export default function GroupFeedPage() {
             {/* Open Props */}
             <div className="flex items-center gap-3 mb-4">
               <h2 className="font-cinzel text-lg font-bold text-slate-100">Open Props</h2>
-              {openProps.length > 0 && (
+              {open.total > 0 && (
                 <div className="flex items-center gap-1.5">
                   <span className="live-dot" />
                   <span className="text-live text-xs font-bold uppercase tracking-wide">
-                    {openProps.length} Live
+                    {open.total} Live
                   </span>
                 </div>
               )}
             </div>
 
-            {openProps.length === 0 ? (
+            {open.props.length === 0 ? (
               <div className="glass-card p-8 text-center mb-10">
                 <p className="text-slate-500 text-sm">No open props in this group.</p>
               </div>
             ) : (
               <div className="space-y-3 mb-10">
-                {openProps.map(prop => (
+                {open.props.map(prop => (
                   <PropCard key={prop.id} prop={prop} onVote={setSelectedProp} />
                 ))}
+                {open.hasMore && (
+                  <button
+                    onClick={open.loadMore}
+                    disabled={open.loading}
+                    className="btn-ghost w-full text-sm py-2"
+                  >
+                    {open.loading ? "Loading…" : "Load More"}
+                  </button>
+                )}
               </div>
             )}
 
             {/* Closed */}
-            {closedProps.length > 0 && (
+            {closed.total > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="font-cinzel text-base font-700 text-slate-500">Closed</h2>
                   <div className="flex-1 h-px bg-void-700" />
-                  <span className="text-slate-400 text-xs">{closedProps.length} awaiting resolution</span>
+                  <span className="text-slate-400 text-xs">{closed.total} awaiting resolution</span>
                 </div>
                 <div className="space-y-3 mb-10">
-                  {closedProps.map(prop => (
+                  {closed.props.map(prop => (
                     <PropCard key={prop.id} prop={prop} onVote={setSelectedProp} />
                   ))}
+                  {closed.hasMore && (
+                    <button
+                      onClick={closed.loadMore}
+                      disabled={closed.loading}
+                      className="btn-ghost w-full text-sm py-2"
+                    >
+                      {closed.loading ? "Loading…" : "Load More"}
+                    </button>
+                  )}
                 </div>
               </>
             )}
 
             {/* Resolved */}
-            {resolvedProps.length > 0 && (
+            {resolved.total > 0 && (
               <>
                 <div className="flex items-center gap-3 mb-4">
                   <h2 className="font-cinzel text-base font-700 text-slate-500">Resolved</h2>
                   <div className="flex-1 h-px bg-void-700" />
-                  <span className="text-slate-400 text-xs">{resolvedProps.length} settled</span>
+                  <span className="text-slate-400 text-xs">{resolved.total} settled</span>
                 </div>
                 <div className="space-y-3">
-                  {resolvedProps.map(prop => (
+                  {resolved.props.map(prop => (
                     <PropCard key={prop.id} prop={prop} onVote={setSelectedProp} />
                   ))}
+                  {resolved.hasMore && (
+                    <button
+                      onClick={resolved.loadMore}
+                      disabled={resolved.loading}
+                      className="btn-ghost w-full text-sm py-2"
+                    >
+                      {resolved.loading ? "Loading…" : "Load More"}
+                    </button>
+                  )}
                 </div>
               </>
             )}

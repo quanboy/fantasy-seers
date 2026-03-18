@@ -1,11 +1,18 @@
 package com.fantasyseers.api.repository;
 
 import com.fantasyseers.api.entity.Prop;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.util.List;
+import java.util.Optional;
 
 public interface PropRepository extends JpaRepository<Prop, Long> {
 
@@ -36,4 +43,37 @@ public interface PropRepository extends JpaRepository<Prop, Long> {
 
     @Query("SELECT p FROM Prop p WHERE p.status = :status AND p.closesAt <= :before")
     List<Prop> findOpenPropsClosedBefore(@Param("status") Prop.Status status, @Param("before") java.time.LocalDateTime before);
+
+    @Query("""
+            SELECT p FROM Prop p
+            WHERE p.status = :status AND (
+                p.scope = :publicScope
+                OR (p.scope IN :friendsScopes AND EXISTS (
+                    SELECT g FROM FriendGroup g JOIN g.members m
+                    WHERE g MEMBER OF p.groups AND m.username = :username
+                ))
+            )
+            ORDER BY p.closesAt ASC
+            """)
+    Page<Prop> findVisibleToUserByStatus(
+            @Param("username") String username,
+            @Param("publicScope") Prop.Scope publicScope,
+            @Param("friendsScopes") List<Prop.Scope> friendsScopes,
+            @Param("status") Prop.Status status,
+            Pageable pageable
+    );
+
+    @Query("SELECT p FROM Prop p WHERE p.scope = :scope AND p.status = :status ORDER BY p.closesAt ASC")
+    Page<Prop> findByScopeAndStatus(@Param("scope") Prop.Scope scope, @Param("status") Prop.Status status, Pageable pageable);
+
+    @Query("SELECT p FROM Prop p JOIN p.groups g WHERE g.id = :groupId AND p.status = :status ORDER BY p.closesAt ASC")
+    Page<Prop> findByGroupIdAndStatus(@Param("groupId") Long groupId, @Param("status") Prop.Status status, Pageable pageable);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Prop p WHERE p.id = :id")
+    Optional<Prop> findByIdForUpdate(@Param("id") Long id);
+
+    @Modifying
+    @Query("UPDATE Prop p SET p.status = :newStatus WHERE p.status = :currentStatus AND p.closesAt <= :before")
+    int bulkCloseExpiredProps(@Param("currentStatus") Prop.Status currentStatus, @Param("newStatus") Prop.Status newStatus, @Param("before") java.time.LocalDateTime before);
 }

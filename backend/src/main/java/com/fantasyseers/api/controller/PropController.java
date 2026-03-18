@@ -1,6 +1,8 @@
 package com.fantasyseers.api.controller;
 
+import com.fantasyseers.api.dto.PagedResponse;
 import com.fantasyseers.api.dto.PropDto;
+import com.fantasyseers.api.entity.Prop;
 import com.fantasyseers.api.service.PropService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +42,17 @@ public class PropController {
     ) {
         String username = userDetails != null ? userDetails.getUsername() : null;
         return ResponseEntity.ok(propService.getPublicProps(username));
+    }
+
+    @GetMapping("/public/paged")
+    public ResponseEntity<PagedResponse<PropDto.PropResponse>> getPublicPropsPaged(
+            @RequestParam Prop.Status status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        String username = userDetails != null ? userDetails.getUsername() : null;
+        return ResponseEntity.ok(propService.getPublicPropsByStatus(username, status, page, size));
     }
 
     @GetMapping("/{id}")

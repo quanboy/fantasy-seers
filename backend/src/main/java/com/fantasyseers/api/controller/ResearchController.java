@@ -1,6 +1,7 @@
 package com.fantasyseers.api.controller;
 
 import com.fantasyseers.api.service.AnthropicService;
+import com.fantasyseers.api.service.RateLimitService;
 import com.fantasyseers.api.service.SchemaContextService;
 import com.fantasyseers.api.service.SqlValidatorService;
 import jakarta.validation.Valid;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,8 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 @RestController
 @RequestMapping("/api/research")
@@ -28,12 +28,12 @@ public class ResearchController {
     private final SchemaContextService schemaContextService;
     private final AnthropicService anthropicService;
     private final SqlValidatorService sqlValidatorService;
-    @Qualifier("readOnlyJdbcTemplate")
+    private final RateLimitService rateLimitService;
+    @Lazy @Qualifier("readOnlyJdbcTemplate")
     private final JdbcTemplate readOnlyJdbcTemplate;
 
-    // Per-user rate limiting: username → list of request timestamps
     private static final int MAX_REQUESTS_PER_HOUR = 20;
-    private final ConcurrentMap<String, List<Long>> userRequestLog = new ConcurrentHashMap<>();
+    private static final String ENDPOINT_KEY = "research";
 
     public record ResearchRequest(
             @NotBlank @Size(max = 500) String question
@@ -52,10 +52,11 @@ public class ResearchController {
         String username = userDetails.getUsername();
 
         // Rate limit: 20 requests per user per hour
-        if (isRateLimited(username)) {
+        if (rateLimitService.isRateLimited(username, ENDPOINT_KEY, MAX_REQUESTS_PER_HOUR, 1)) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .body(Map.of("message", "Rate limit exceeded. Maximum " + MAX_REQUESTS_PER_HOUR + " queries per hour."));
         }
+        rateLimitService.recordRequest(username, ENDPOINT_KEY);
 
         // 1. Build schema prompt
         String schemaPrompt = schemaContextService.buildSystemPrompt();
@@ -80,28 +81,6 @@ public class ResearchController {
         String answer = anthropicService.formatResults(sqlResults, request.question());
 
         return ResponseEntity.ok(new ResearchResponse(answer, validatedSql));
-    }
-
-    private boolean isRateLimited(String username) {
-        long now = System.currentTimeMillis();
-        long oneHourAgo = now - 3_600_000;
-
-        List<Long> timestamps = userRequestLog.compute(username, (key, existing) -> {
-            java.util.ArrayList<Long> list;
-            if (existing == null) {
-                list = new java.util.ArrayList<>();
-            } else {
-                // Prune entries older than 1 hour
-                list = new java.util.ArrayList<>();
-                for (Long ts : existing) {
-                    if (ts > oneHourAgo) list.add(ts);
-                }
-            }
-            list.add(now);
-            return list;
-        });
-
-        return timestamps.size() > MAX_REQUESTS_PER_HOUR;
     }
 
     private String formatRowsAsText(List<Map<String, Object>> rows) {
