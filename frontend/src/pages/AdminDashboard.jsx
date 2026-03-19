@@ -33,6 +33,10 @@ export default function AdminDashboard() {
   const [resolveErrors, setResolveErrors] = useState({});
   const [groupsError, setGroupsError] = useState(null);
 
+  // Confirm modal state: { type: 'approve'|'reject'|'resolve', propId, propTitle, result? }
+  const [pendingAction, setPendingAction] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+
   const fetchPending = () => {
     setFetchError(false);
     adminApi
@@ -81,50 +85,123 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApprove = async (id) => {
-    if (actioningId) return;
-    setActioningId(id);
-    setActionErrors((prev) => ({ ...prev, [id]: null }));
-    try {
-      await adminApi.approve(id);
-      setPending((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      setActionErrors((prev) => ({ ...prev, [id]: "Failed to approve. Try again." }));
-    } finally {
-      setActioningId(null);
+  const openConfirm = (type, prop, result = null) => {
+    setPendingAction({ type, propId: prop.id, propTitle: prop.title, result });
+    setRejectReason("");
+  };
+
+  const closeConfirm = () => {
+    setPendingAction(null);
+    setRejectReason("");
+  };
+
+  const executeAction = async () => {
+    if (!pendingAction) return;
+    const { type, propId, result } = pendingAction;
+    closeConfirm();
+
+    if (type === "approve") {
+      setActioningId(propId);
+      setActionErrors((prev) => ({ ...prev, [propId]: null }));
+      try {
+        await adminApi.approve(propId);
+        setPending((prev) => prev.filter((p) => p.id !== propId));
+      } catch {
+        setActionErrors((prev) => ({ ...prev, [propId]: "Failed to approve. Try again." }));
+      } finally {
+        setActioningId(null);
+      }
+    } else if (type === "reject") {
+      setActioningId(propId);
+      setActionErrors((prev) => ({ ...prev, [propId]: null }));
+      try {
+        await adminApi.reject(propId);
+        setPending((prev) => prev.filter((p) => p.id !== propId));
+      } catch {
+        setActionErrors((prev) => ({ ...prev, [propId]: "Failed to reject. Try again." }));
+      } finally {
+        setActioningId(null);
+      }
+    } else if (type === "resolve") {
+      setResolvingId(propId);
+      setResolveErrors((prev) => ({ ...prev, [propId]: null }));
+      try {
+        await adminApi.resolve(propId, result);
+        setClosed((prev) => prev.filter((p) => p.id !== propId));
+      } catch (err) {
+        setResolveErrors((prev) => ({ ...prev, [propId]: err.response?.data?.message ?? "Failed to resolve." }));
+      } finally {
+        setResolvingId(null);
+      }
     }
   };
 
-  const handleReject = async (id) => {
-    if (actioningId) return;
-    setActioningId(id);
-    setActionErrors((prev) => ({ ...prev, [id]: null }));
-    try {
-      await adminApi.reject(id);
-      setPending((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      setActionErrors((prev) => ({ ...prev, [id]: "Failed to reject. Try again." }));
-    } finally {
-      setActioningId(null);
-    }
-  };
-
-  const handleResolve = async (id, result) => {
-    if (resolvingId) return;
-    setResolvingId(id);
-    setResolveErrors((prev) => ({ ...prev, [id]: null }));
-    try {
-      await adminApi.resolve(id, result);
-      setClosed((prev) => prev.filter((p) => p.id !== id));
-    } catch (err) {
-      setResolveErrors((prev) => ({ ...prev, [id]: err.response?.data?.message ?? "Failed to resolve." }));
-    } finally {
-      setResolvingId(null);
-    }
-  };
+  const confirmMeta = pendingAction ? {
+    approve: {
+      heading: "Approve this prop?",
+      body: "It will go live immediately and users can start voting.",
+      confirmLabel: "Approve",
+      confirmClass: "btn-approve",
+    },
+    reject: {
+      heading: "Reject this prop?",
+      body: "This action cannot be undone. The submitter will need to resubmit.",
+      confirmLabel: "Reject",
+      confirmClass: "btn-reject",
+    },
+    resolve: {
+      heading: `Resolve as ${pendingAction.result}?`,
+      body: pendingAction.result === "YES"
+        ? "Users who voted YES will receive their payouts."
+        : "Users who voted NO will receive their payouts.",
+      confirmLabel: `Confirm ${pendingAction.result}`,
+      confirmClass: pendingAction.result === "YES" ? "btn-approve" : "btn-reject",
+    },
+  }[pendingAction.type] : null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+
+      {/* Confirm Modal */}
+      {pendingAction && confirmMeta && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.65)" }}
+          onClick={closeConfirm}
+        >
+          <div
+            className="glass-card rounded-xl p-6 w-full max-w-sm shadow-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-cinzel text-base font-bold text-slate-100 mb-1">
+              {confirmMeta.heading}
+            </h3>
+            <p className="text-slate-400 text-xs mb-1 leading-relaxed">{confirmMeta.body}</p>
+            <p className="text-slate-500 text-xs font-mono mb-4 truncate">
+              "{pendingAction.propTitle}"
+            </p>
+
+            {pendingAction.type === "reject" && (
+              <textarea
+                placeholder="Reason for rejection (optional)"
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={3}
+                className="input-base w-full text-sm resize-none mb-4"
+              />
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={closeConfirm} className="btn-ghost flex-1 py-2.5 text-sm">
+                Cancel
+              </button>
+              <button onClick={executeAction} className={`${confirmMeta.confirmClass} flex-1 py-2.5 text-sm font-semibold rounded-lg`}>
+                {confirmMeta.confirmLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
         {/* Create Prop */}
         <div className="glass-card rounded-xl p-6 mb-8">
@@ -249,7 +326,7 @@ export default function AdminDashboard() {
                 {/* Actions */}
                 <div className="flex gap-3">
                   <button
-                    onClick={() => handleApprove(prop.id)}
+                    onClick={() => openConfirm("approve", prop)}
                     disabled={actioningId === prop.id}
                     className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-approve"
                   >
@@ -261,7 +338,7 @@ export default function AdminDashboard() {
                     ) : "Approve"}
                   </button>
                   <button
-                    onClick={() => handleReject(prop.id)}
+                    onClick={() => openConfirm("reject", prop)}
                     disabled={actioningId === prop.id}
                     className="flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all disabled:opacity-50 disabled:cursor-not-allowed btn-reject"
                   >
@@ -322,14 +399,14 @@ export default function AdminDashboard() {
 
                   <div className="flex gap-1.5 shrink-0 pt-1">
                     <button
-                      onClick={() => handleResolve(prop.id, "YES")}
+                      onClick={() => openConfirm("resolve", prop, "YES")}
                       disabled={resolvingId === prop.id}
                       className="btn-approve text-xs px-3 py-1.5 font-medium disabled:opacity-50"
                     >
                       {resolvingId === prop.id ? "..." : "YES"}
                     </button>
                     <button
-                      onClick={() => handleResolve(prop.id, "NO")}
+                      onClick={() => openConfirm("resolve", prop, "NO")}
                       disabled={resolvingId === prop.id}
                       className="btn-reject text-xs px-3 py-1.5 font-medium disabled:opacity-50"
                     >
