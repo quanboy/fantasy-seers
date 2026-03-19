@@ -5,7 +5,9 @@ import { groupsApi } from "../api/client";
 export default function GroupsPage() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [groupsError, setGroupsError] = useState(null);
   const [invites, setInvites] = useState([]);
+  const [invitesError, setInvitesError] = useState(null);
   const [respondingId, setRespondingId] = useState(null);
 
   const [createName, setCreateName] = useState("");
@@ -15,17 +17,21 @@ export default function GroupsPage() {
   const [joinCode, setJoinCode] = useState("");
   const [joinLoading, setJoinLoading] = useState(false);
   const [joinError, setJoinError] = useState("");
+  const [joinSuccess, setJoinSuccess] = useState(null);
 
   const fetchGroups = () => {
+    setGroupsError(null);
     groupsApi.getMyGroups()
       .then(({ data }) => setGroups(data))
+      .catch((err) => setGroupsError(err.response?.data?.message || "Failed to load groups."))
       .finally(() => setLoading(false));
   };
 
   const fetchInvites = () => {
+    setInvitesError(null);
     groupsApi.getMyInvites()
       .then(({ data }) => setInvites(data))
-      .catch(() => {});
+      .catch((err) => setInvitesError(err.response?.data?.message || "Failed to load invites."));
   };
 
   const handleAccept = async (inviteId) => {
@@ -72,9 +78,12 @@ export default function GroupsPage() {
     if (!joinCode.trim()) return;
     setJoinLoading(true);
     setJoinError("");
+    setJoinSuccess(null);
     try {
-      await groupsApi.joinGroup({ inviteCode: joinCode.trim() });
+      const { data } = await groupsApi.joinGroup({ inviteCode: joinCode.trim() });
       setJoinCode("");
+      setJoinSuccess(data.name ? `Joined "${data.name}"!` : "Joined group!");
+      setTimeout(() => setJoinSuccess(null), 4000);
       fetchGroups();
     } catch (err) {
       setJoinError(err.response?.data?.message ?? "Invalid invite code");
@@ -121,6 +130,7 @@ export default function GroupsPage() {
                 maxLength={20}
               />
               {joinError && <p className="text-loss-400 text-xs">{joinError}</p>}
+              {joinSuccess && <p className="text-win-400 text-xs">{joinSuccess}</p>}
               <button
                 type="submit"
                 disabled={joinLoading || !joinCode.trim()}
@@ -132,8 +142,15 @@ export default function GroupsPage() {
           </div>
         </div>
 
+        {/* Invites error */}
+        {invitesError && (
+          <div className="alert-error mb-4 px-4 py-3 rounded-lg">
+            <p className="text-sm text-loss-400">{invitesError}</p>
+          </div>
+        )}
+
         {/* Pending Invites */}
-        {invites.length > 0 && (
+        {!invitesError && invites.length > 0 && (
           <div className="mb-8">
             <h2 className="font-display text-lg font-700 text-slate-100 mb-4">
               Pending Invites
@@ -184,13 +201,22 @@ export default function GroupsPage() {
           </div>
         )}
 
-        {!loading && groups.length === 0 && (
+        {!loading && groupsError && (
+          <div className="glass-card p-8 text-center">
+            <p className="text-slate-500 text-sm mb-4">{groupsError}</p>
+            <button onClick={fetchGroups} className="btn-oracle px-6 py-2.5 text-sm">
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!loading && !groupsError && groups.length === 0 && (
           <div className="glass-card p-8 text-center">
             <p className="text-slate-500 text-sm">No groups yet.</p>
           </div>
         )}
 
-        {!loading && groups.length > 0 && (
+        {!loading && !groupsError && groups.length > 0 && (
           <div className="space-y-3">
             {groups.map(group => (
               <Link

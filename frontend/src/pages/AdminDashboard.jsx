@@ -28,8 +28,10 @@ export default function AdminDashboard() {
   // Resolve state
   const [closed, setClosed] = useState([]);
   const [closedLoading, setClosedLoading] = useState(true);
+  const [closedError, setClosedError] = useState(null);
   const [resolvingId, setResolvingId] = useState(null);
   const [resolveErrors, setResolveErrors] = useState({});
+  const [groupsError, setGroupsError] = useState(null);
 
   const fetchPending = () => {
     setFetchError(false);
@@ -41,17 +43,20 @@ export default function AdminDashboard() {
   };
 
   const fetchClosed = () => {
+    setClosedError(null);
     adminApi
       .getClosed()
       .then(({ data }) => setClosed(data))
-      .catch(() => {})
+      .catch((err) => setClosedError(err.response?.data?.message || "Failed to load closed props."))
       .finally(() => setClosedLoading(false));
   };
 
   useEffect(() => {
     fetchPending();
     fetchClosed();
-    adminApi.getAllGroups().then(({ data }) => setGroups(data)).catch(() => {});
+    adminApi.getAllGroups()
+      .then(({ data }) => setGroups(data))
+      .catch((err) => setGroupsError(err.response?.data?.message || "Failed to load groups."));
   }, []);
 
   const handleCreateProp = async (e) => {
@@ -161,7 +166,7 @@ export default function AdminDashboard() {
               onChange={(e) => setCreateForm({ ...createForm, groupId: e.target.value })}
               className="input-base w-full text-sm"
             >
-              <option value="">Global (no group)</option>
+              <option value="">{groupsError ? "Global only (groups failed to load)" : "Global (no group)"}</option>
               {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
             </select>
             <button type="submit" disabled={creating} className="btn-oracle w-full py-2.5 text-sm">
@@ -281,13 +286,22 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {!closedLoading && closed.length === 0 && (
+        {!closedLoading && closedError && (
+          <div className="glass-card p-8 text-center">
+            <p className="text-slate-500 text-sm mb-4">{closedError}</p>
+            <button onClick={fetchClosed} className="btn-oracle px-6 py-2.5 text-sm">
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!closedLoading && !closedError && closed.length === 0 && (
           <div className="glass-card p-8 text-center">
             <p className="text-slate-500 text-sm">No closed props to resolve.</p>
           </div>
         )}
 
-        {!closedLoading && closed.length > 0 && (
+        {!closedLoading && !closedError && closed.length > 0 && (
           <div className="space-y-3 animate-fade-in">
             {closed.map((prop) => (
               <div key={prop.id} className="rounded-xl p-5 glass-card shadow-card">

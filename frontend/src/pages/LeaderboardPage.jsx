@@ -6,6 +6,7 @@ export default function LeaderboardPage() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [groups, setGroups] = useState([]);
   const [activeTab, setActiveTab] = useState("global");
 
@@ -15,20 +16,24 @@ export default function LeaderboardPage() {
 
   useEffect(() => {
     setLoading(true);
+    setError(null);
     const fetch = activeTab === "global"
       ? leaderboardApi.getGlobal()
       : leaderboardApi.getByGroup(activeTab);
 
     fetch
       .then(({ data }) => setEntries(data.entries))
-      .catch(() => setEntries([]))
+      .catch((err) => {
+        setEntries([]);
+        setError(err.response?.data?.message || "Failed to load leaderboard.");
+      })
       .finally(() => setLoading(false));
   }, [activeTab]);
 
   const medalColor = (rank) => {
-    if (rank === 1) return "text-yellow-400";
+    if (rank === 1) return "text-gold-400";
     if (rank === 2) return "text-slate-300";
-    if (rank === 3) return "text-amber-600";
+    if (rank === 3) return "text-gold-600";
     return "text-slate-500";
   };
 
@@ -81,15 +86,22 @@ export default function LeaderboardPage() {
           </div>
         )}
 
+        {/* Error */}
+        {!loading && error && (
+          <div className="p-8 text-center">
+            <p className="text-loss-400 text-sm">{error}</p>
+          </div>
+        )}
+
         {/* Empty */}
-        {!loading && entries.length === 0 && (
+        {!loading && !error && entries.length === 0 && (
           <div className="p-8 text-center">
             <p className="text-slate-500 text-sm">No resolved picks yet.</p>
           </div>
         )}
 
         {/* Rows */}
-        {!loading && entries.length > 0 && (
+        {!loading && !error && entries.length > 0 && (
           <div>
             {entries.map((entry) => {
               const isMe = entry.username === user?.username;

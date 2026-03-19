@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { propsApi, userApi } from "../api/client";
@@ -15,23 +15,29 @@ export default function Dashboard() {
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
+  const [sportFilter, setSportFilter] = useState("ALL");
 
   const fetchProps = () => {
+    setError(null);
     propsApi
       .getPublic()
       .then(({ data }) => setProps(data))
+      .catch((err) => setError(err.response?.data?.message || "Failed to load props."))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     fetchProps();
-    userApi.getMe().then(({ data }) => {
-      if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
-        setProfileIncomplete(true);
-      }
-    });
+    userApi.getMe()
+      .then(({ data }) => {
+        if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
+          setProfileIncomplete(true);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -53,9 +59,19 @@ export default function Dashboard() {
     fetchProps();
   };
 
-  const openProps = props.filter((p) => p.status === "OPEN");
-  const closedProps = props.filter((p) => p.status === "CLOSED");
-  const resolvedProps = props.filter((p) => p.status === "RESOLVED");
+  const filtered = useMemo(() => {
+    if (sportFilter === "ALL") return props;
+    return props.filter((p) => p.sport === sportFilter);
+  }, [props, sportFilter]);
+
+  const sports = useMemo(() => {
+    const set = new Set(props.map((p) => p.sport));
+    return ["ALL", ...["NFL", "NBA", "MLB", "NHL"].filter((s) => set.has(s))];
+  }, [props]);
+
+  const openProps = filtered.filter((p) => p.status === "OPEN");
+  const closedProps = filtered.filter((p) => p.status === "CLOSED");
+  const resolvedProps = filtered.filter((p) => p.status === "RESOLVED");
 
   return (
     <>
@@ -68,7 +84,16 @@ export default function Dashboard() {
           </div>
         )}
 
-        {!loading && (
+        {!loading && error && (
+          <div className="glass-card p-8 text-center">
+            <p className="text-slate-500 text-sm mb-4">{error}</p>
+            <button onClick={fetchProps} className="btn-oracle px-6 py-2.5 text-sm">
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && (
           <div className="animate-fade-in">
             {/* Profile completion banner */}
             {profileIncomplete && !profileBannerDismissed && (
@@ -92,6 +117,23 @@ export default function Dashboard() {
 
             {/* Composer */}
             <SubmitPropCard onSubmitted={fetchProps} />
+
+            {/* Sport filter pills */}
+            {sports.length > 2 && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {sports.map((sport) => (
+                  <button
+                    key={sport}
+                    onClick={() => setSportFilter(sport)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      sportFilter === sport ? "chip-oracle-active" : "chip-oracle"
+                    }`}
+                  >
+                    {sport}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Open Props header */}
             <div className="flex items-center gap-3 mb-4">
