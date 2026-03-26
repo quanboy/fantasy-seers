@@ -1,6 +1,7 @@
 package com.fantasyseers.api.dto;
 
 import com.fantasyseers.api.entity.Prop;
+import com.fantasyseers.api.entity.Vote;
 import jakarta.validation.constraints.*;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,15 +20,15 @@ public class PropDto {
             @NotBlank @Size(max = 200) String title,
             @Size(max = 500) String description,
             @NotNull Prop.Sport sport,
-            @NotNull LocalDateTime closesAt,
+            @NotNull @Future LocalDateTime closesAt,
             Long groupId
     ) {}
 
-    public record submitRequest(
+    public record SubmitRequest(
             @NotBlank @Size(max = 200) String title,
             @Size(max = 500) String description,
             @NotNull Prop.Sport sport,
-            @NotNull LocalDateTime closesAt,
+            @NotNull @Future LocalDateTime closesAt,
             @Min(1) Integer minWager,
             @Min(1) Integer maxWager,
             Prop.Scope scope,
@@ -52,7 +53,7 @@ public class PropDto {
     ) {}
 
     public record VoteRequest(
-            @NotNull Prop.Result choice,
+            @NotNull Vote.Choice choice,
             @NotNull @Min(1) Integer wagerAmount
     ) {}
 }

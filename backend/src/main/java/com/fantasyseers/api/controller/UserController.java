@@ -3,6 +3,7 @@ package com.fantasyseers.api.controller;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.UserRepository;
 import com.fantasyseers.api.service.UserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,7 +43,7 @@ public class UserController {
     @PutMapping("/me")
     public ResponseEntity<Map<String, Object>> updateProfile(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody UserService.UpdateProfileRequest request
+            @Valid @RequestBody UserService.UpdateProfileRequest request
     ) {
         User user = userService.updateProfile(userDetails.getUsername(), request);
 

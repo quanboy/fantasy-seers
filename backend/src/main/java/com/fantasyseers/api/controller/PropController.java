@@ -20,6 +20,7 @@ public class PropController {
     private final PropService propService;
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PropDto.PropResponse> createProp(
             @Valid @RequestBody PropDto.CreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails
@@ -29,7 +30,7 @@ public class PropController {
 
     @PostMapping("/submit")
     public ResponseEntity<PropDto.PropResponse> submitProp(
-            @Valid @RequestBody PropDto.submitRequest request,
+            @Valid @RequestBody PropDto.SubmitRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         return ResponseEntity.ok(propService.submitProp(request, userDetails.getUsername()));

@@ -34,16 +34,6 @@ export default function Dashboard() {
     });
   }, []);
 
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const { data } = await userApi.getMe();
-      const updated = { ...user, pointBank: data.pointBank };
-      localStorage.setItem("fs_user", JSON.stringify(updated));
-      setUser(updated);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
-
   const handleVoted = async () => {
     const { data } = await userApi.getMe();
     const updated = { ...user, pointBank: data.pointBank };

@@ -71,7 +71,7 @@ public class PropService {
     }
 
     @Transactional
-    public PropDto.PropResponse submitProp(PropDto.submitRequest request, String username) {
+    public PropDto.PropResponse submitProp(PropDto.SubmitRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
@@ -105,6 +105,9 @@ public class PropService {
                 (scope == Prop.Scope.GROUP || scope == Prop.Scope.FRIENDS_AND_GROUP)) {
             FriendGroup group = friendGroupRepository.findById(request.groupId())
                     .orElseThrow(() -> new IllegalArgumentException("Group not found"));
+            if (!group.getMembers().contains(user)) {
+                throw new AccessDeniedException("You are not a member of this group");
+            }
             saved.getGroups().add(group);
             saved = propRepository.save(saved);
         }
@@ -122,7 +125,7 @@ public class PropService {
         }
 
         prop.setStatus(Prop.Status.OPEN);
-        return toResponse(propRepository.save(prop), null);
+        return toResponse(propRepository.save(prop), (String) null);
     }
 
     @Transactional
@@ -137,21 +140,25 @@ public class PropService {
         propRepository.delete(prop);
     }
 
+    @Transactional(readOnly = true)
     public List<PropDto.PropResponse> getPendingProps() {
         return propRepository.findByStatusOrderByCreatedAtAsc(Prop.Status.PENDING)
                 .stream()
-                .map(p -> toResponse(p, null))
+                .map(p -> toResponse(p, (String) null))
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<PropDto.PropResponse> getClosedProps() {
         return propRepository.findByStatusOrderByCreatedAtAsc(Prop.Status.CLOSED)
                 .stream()
-                .map(p -> toResponse(p, null))
+                .map(p -> toResponse(p, (String) null))
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public List<PropDto.PropResponse> getPublicProps(String username) {
+        User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
         if (username != null) {
             return propRepository.findVisibleToUser(
                             username,
@@ -159,17 +166,18 @@ public class PropService {
                             List.of(Prop.Scope.FRIENDS, Prop.Scope.FRIENDS_AND_GROUP)
                     )
                     .stream()
-                    .map(p -> toResponse(p, username))
+                    .map(p -> toResponse(p, user))
                     .toList();
         }
         return propRepository
                 .findByScopeOrdered(Prop.Scope.PUBLIC)
                 .stream()
-                .map(p -> toResponse(p, null))
+                .map(p -> toResponse(p, (User) null))
                 .toList();
     }
 
     public PropDto.PaginatedResponse getPublicPropsPaginated(String username, Pageable pageable) {
+        User user = username != null ? userRepository.findByUsername(username).orElse(null) : null;
         Page<Prop> page;
         if (username != null) {
             page = propRepository.findVisibleToUser(
@@ -182,7 +190,7 @@ public class PropService {
             page = propRepository.findByScopeOrdered(Prop.Scope.PUBLIC, pageable);
         }
         List<PropDto.PropResponse> content = page.getContent().stream()
-                .map(p -> toResponse(p, username))
+                .map(p -> toResponse(p, user))
                 .toList();
         return new PropDto.PaginatedResponse(
                 content, page.getNumber(), page.getSize(),
@@ -190,39 +198,61 @@ public class PropService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<PropDto.PropResponse> getGroupProps(Long groupId, String username) {
         if (!friendGroupRepository.existsByIdAndMembersUsername(groupId, username)) {
             throw new AccessDeniedException("You are not a member of this group");
         }
+        User user = userRepository.findByUsername(username).orElse(null);
         return propRepository.findByGroupIdOrderByStatusAscClosesAtAsc(groupId)
                 .stream()
-                .map(p -> toResponse(p, username))
+                .map(p -> toResponse(p, user))
                 .toList();
     }
 
+    @Transactional(readOnly = true)
     public PropDto.PropResponse getPropById(Long id, String username) {
         Prop prop = propRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
+        checkPropAccess(prop, username);
         return toResponse(prop, username);
     }
 
+    /**
+     * Verifies the user has access to a prop based on its scope.
+     * GROUP-scoped props require group membership.
+     */
+    public void checkPropAccess(Prop prop, String username) {
+        if (prop.getScope() == Prop.Scope.GROUP || prop.getScope() == Prop.Scope.FRIENDS_AND_GROUP) {
+            boolean hasAccess = prop.getGroups().stream()
+                    .anyMatch(g -> friendGroupRepository.existsByIdAndMembersUsername(g.getId(), username));
+            if (!hasAccess) {
+                throw new AccessDeniedException("You do not have access to this prop");
+            }
+        }
+    }
+
     private PropDto.PropResponse toResponse(Prop prop, String username) {
+        User resolvedUser = username != null
+                ? userRepository.findByUsername(username).orElse(null)
+                : null;
+        return toResponse(prop, resolvedUser);
+    }
+
+    private PropDto.PropResponse toResponse(Prop prop, User resolvedUser) {
         String userChoice = null;
         Boolean userWon = null;
         Integer userWager = null;
         Integer userPayout = null;
 
-        if (username != null) {
-            var userOpt = userRepository.findByUsername(username);
-            if (userOpt.isPresent()) {
-                var vote = voteRepository.findByPropIdAndUserId(prop.getId(), userOpt.get().getId());
-                if (vote.isPresent()) {
-                    userChoice = vote.get().getChoice().name();
-                    userWager = vote.get().getWagerAmount();
-                    userPayout = vote.get().getPayout();
-                    if (prop.getResult() != null) {
-                        userWon = vote.get().getChoice().name().equals(prop.getResult().name());
-                    }
+        if (resolvedUser != null) {
+            var vote = voteRepository.findByPropIdAndUserId(prop.getId(), resolvedUser.getId());
+            if (vote.isPresent()) {
+                userChoice = vote.get().getChoice().name();
+                userWager = vote.get().getWagerAmount();
+                userPayout = vote.get().getPayout();
+                if (prop.getResult() != null) {
+                    userWon = vote.get().getChoice().name().equals(prop.getResult().name());
                 }
             }
         }

@@ -10,7 +10,20 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem('fs_token')
     const stored = localStorage.getItem('fs_user')
-    if (token && stored) setUser(JSON.parse(stored))
+    if (token && stored) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]))
+        if (payload.exp * 1000 < Date.now()) {
+          localStorage.removeItem('fs_token')
+          localStorage.removeItem('fs_user')
+        } else {
+          setUser(JSON.parse(stored))
+        }
+      } catch {
+        localStorage.removeItem('fs_token')
+        localStorage.removeItem('fs_user')
+      }
+    }
     setLoading(false)
   }, [])
 

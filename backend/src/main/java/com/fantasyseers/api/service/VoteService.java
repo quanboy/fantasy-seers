@@ -17,6 +17,7 @@ public class VoteService {
     private final VoteRepository voteRepository;
     private final PropRepository propRepository;
     private final UserRepository userRepository;
+    private final PointTransactionRepository pointTransactionRepository;
 
     @Transactional
     public VoteDto.VoteResponse castVote(Long propId, PropDto.VoteRequest request, String username) {
@@ -64,11 +65,20 @@ public class VoteService {
         Vote vote = Vote.builder()
                 .prop(prop)
                 .user(user)
-                .choice(Vote.Choice.valueOf(request.choice().name()))
+                .choice(request.choice())
                 .wagerAmount(request.wagerAmount())
                 .build();
 
         voteRepository.save(vote);
+
+        // Record wager transaction
+        pointTransactionRepository.save(PointTransaction.builder()
+                .user(lockedUser)
+                .amount(-request.wagerAmount())
+                .type(PointTransaction.TransactionType.WAGER)
+                .referenceId(propId)
+                .note("Wager on prop #" + propId)
+                .build());
 
         // Return split after voting
         return getSplit(propId);

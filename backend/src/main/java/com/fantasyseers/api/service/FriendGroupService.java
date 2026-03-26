@@ -59,7 +59,7 @@ public class FriendGroupService {
         boolean isInviterMember = group.getMembers().stream()
                 .anyMatch(m -> m.getUsername().equals(inviterUsername));
         if (!isInviterMember) {
-            throw new IllegalStateException("You are not a member of this group");
+            throw new org.springframework.security.access.AccessDeniedException("You are not a member of this group");
         }
 
         User invitee = userRepository.findByUsername(request.username())

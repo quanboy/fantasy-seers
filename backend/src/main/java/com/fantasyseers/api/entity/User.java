@@ -7,8 +7,6 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Entity
 @Table(name = "users")
@@ -38,10 +36,6 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private Boolean isPublic = true;
-
     @Column(name = "favorite_nfl_team", length = 50)
     private String favoriteNflTeam;
 
@@ -50,15 +44,6 @@ public class User {
 
     @Column(name = "alma_mater", length = 100)
     private String almaMater;
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "user_badges",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "badge_id")
-    )
-    @Builder.Default
-    private Set<Badge> badges = new HashSet<>();
 
     @CreatedDate
     @Column(nullable = false, updatable = false)

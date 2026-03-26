@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/react";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
@@ -13,6 +14,22 @@ import ProfilePage from "./pages/ProfilePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
+
+Sentry.init({
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  environment: import.meta.env.MODE,
+  enabled: import.meta.env.PROD,
+  integrations: [
+    Sentry.browserTracingIntegration(),
+    Sentry.replayIntegration({
+      maskAllText: false,
+      blockAllMedia: false,
+    }),
+  ],
+  tracesSampleRate: 0.2,
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+});
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -74,4 +91,8 @@ function App() {
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <Sentry.ErrorBoundary fallback={<p>Something went wrong. Please refresh.</p>}>
+    <App />
+  </Sentry.ErrorBoundary>
+);
