@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { groupsApi, userApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import PropCard from "../components/PropCard";

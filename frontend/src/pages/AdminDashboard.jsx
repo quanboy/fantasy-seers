@@ -1,16 +1,8 @@
 import { useState, useEffect } from "react";
 import { adminApi } from "../api/client";
+import { getSportClass } from "../utils/sportClasses";
 
-const SPORT_CLASSES = {
-  NFL: "sport-nfl",
-  NBA: "sport-nba",
-  MLB: "sport-mlb",
-  NHL: "sport-nhl",
-};
 const SPORTS = ["NFL", "NBA", "MLB", "NHL"];
-function getSportClass(sport) {
-  return SPORT_CLASSES[sport] ?? "sport-default";
-}
 
 export default function AdminDashboard() {
   const [pending, setPending] = useState([]);

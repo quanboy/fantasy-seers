@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -16,10 +17,11 @@ public class ResolutionService {
     private final PropRepository propRepository;
     private final VoteRepository voteRepository;
     private final UserRepository userRepository;
+    private final PointTransactionRepository pointTransactionRepository;
 
     @Transactional
     public void resolveProp(Long propId, Prop.Result result) {
-        Prop prop = propRepository.findById(propId)
+        Prop prop = propRepository.findByIdForUpdate(propId)
                 .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
 
         if (prop.getStatus() == Prop.Status.RESOLVED) {
@@ -65,28 +67,58 @@ public class ResolutionService {
 
         // Edge case: everyone voted the same side — return wagers
         if (winningPool == 0 || losingPool == 0) {
+            List<User> users = new ArrayList<>();
             for (Vote vote : allVotes) {
                 User user = vote.getUser();
-                user.setPointBank(user.getPointBank() + vote.getWagerAmount());
+                long newBalance = (long) user.getPointBank() + vote.getWagerAmount();
+                user.setPointBank((int) Math.min(newBalance, Integer.MAX_VALUE));
                 vote.setPayout(vote.getWagerAmount());
-                userRepository.save(user);
-                voteRepository.save(vote);
+                users.add(user);
             }
+            voteRepository.saveAll(allVotes);
+            userRepository.saveAll(users);
+            List<PointTransaction> txns = new ArrayList<>();
+            for (Vote vote : allVotes) {
+                txns.add(PointTransaction.builder()
+                        .user(vote.getUser())
+                        .amount(vote.getWagerAmount())
+                        .type(PointTransaction.TransactionType.PAYOUT)
+                        .referenceId(propId)
+                        .note("Wager returned — all votes on same side")
+                        .build());
+            }
+            pointTransactionRepository.saveAll(txns);
             return;
         }
 
         // Distribute losing pool to winners proportionally
+        List<User> winningUsers = new ArrayList<>();
         for (Vote vote : winningVotes) {
             double share = (double) vote.getWagerAmount() / winningPool;
             long winnings = (long) (distributablePool * share);
             long payout = vote.getWagerAmount() + winnings;
 
-            vote.setPayout((int) payout);
-            voteRepository.save(vote);
+            int safePayout = (int) Math.min(payout, Integer.MAX_VALUE);
+            vote.setPayout(safePayout);
 
             User user = vote.getUser();
-            user.setPointBank(user.getPointBank() + (int) payout);
-            userRepository.save(user);
+            long newBalance = (long) user.getPointBank() + safePayout;
+            user.setPointBank((int) Math.min(newBalance, Integer.MAX_VALUE));
+            winningUsers.add(user);
+        }
+        voteRepository.saveAll(winningVotes);
+        userRepository.saveAll(winningUsers);
+
+        // Record payout transactions for winners
+        List<PointTransaction> txns = new ArrayList<>();
+        for (Vote vote : winningVotes) {
+            txns.add(PointTransaction.builder()
+                    .user(vote.getUser())
+                    .amount(vote.getPayout())
+                    .type(PointTransaction.TransactionType.PAYOUT)
+                    .referenceId(propId)
+                    .note("Winning payout on prop #" + propId)
+                    .build());
         }
 
         // Mark losing votes as 0 payout
@@ -96,7 +128,8 @@ public class ResolutionService {
 
         for (Vote vote : losingVotes) {
             vote.setPayout(0);
-            voteRepository.save(vote);
         }
+        voteRepository.saveAll(losingVotes);
+        pointTransactionRepository.saveAll(txns);
     }
 }

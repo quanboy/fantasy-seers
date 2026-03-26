@@ -5,7 +5,6 @@ import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
@@ -29,13 +28,6 @@ public class Prop {
     @Column(nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private Sport sport;
-
-    private String gameId;
-    private String statKey;
-    private BigDecimal statThreshold;
-
-    @Enumerated(EnumType.STRING)
-    private StatDirection statDirection;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
@@ -83,7 +75,6 @@ public class Prop {
     private Set<FriendGroup> groups = new HashSet<>();
 
     public enum Sport        { NFL, NBA }
-    public enum StatDirection { OVER, UNDER }
     public enum Scope        { GROUP, PUBLIC, FRIENDS, FRIENDS_AND_GROUP }
     public enum Status       { OPEN, CLOSED, RESOLVED, PENDING }
     public enum Result       { YES, NO }

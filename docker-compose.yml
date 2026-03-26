@@ -8,9 +8,9 @@ services:
     environment:
       POSTGRES_DB: fantasyseers_db
       POSTGRES_USER: fantasyseers
-      POSTGRES_PASSWORD: fantasyseers_secret
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fantasyseers_secret}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -27,10 +27,12 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fantasyseers_db
       SPRING_DATASOURCE_USERNAME: fantasyseers
-      SPRING_DATASOURCE_PASSWORD: fantasyseers_secret
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-fantasyseers_secret}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      JWT_SECRET: fantasy-seers-super-secret-jwt-key-change-in-production
+      JWT_SECRET: ${JWT_SECRET:-fantasy-seers-super-secret-jwt-key-change-in-production}
       JWT_EXPIRATION_MS: 86400000
+      # Set in Railway — leave empty for local dev
+      SENTRY_DSN: ${SENTRY_DSN:-}
     ports:
       - "8080:8080"
     depends_on:
@@ -44,16 +46,10 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: fantasy-seers-frontend
-    environment:
-      VITE_API_TARGET: http://backend:8080
     ports:
-      - "5173:5173"
+      - "80:80"
     depends_on:
       - backend
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - /app/node_modules
 
 volumes:
   postgres_data:

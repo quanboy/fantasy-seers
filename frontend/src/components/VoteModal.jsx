@@ -1,17 +1,8 @@
 import { useState } from "react";
 import { propsApi } from "../api/client";
+import { getSportClass } from "../utils/sportClasses";
 
 const PLATFORM_RAKE = 0.05; // 5% of net winnings go to Fantasy Seers
-
-const SPORT_CLASSES = {
-  NFL: "sport-nfl",
-  NBA: "sport-nba",
-  MLB: "sport-mlb",
-  NHL: "sport-nhl",
-};
-function getSportClass(sport) {
-  return SPORT_CLASSES[sport] ?? "sport-default";
-}
 
 function RakeExplainer({ wager }) {
   const amt = parseInt(wager) || 0;
@@ -227,7 +218,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             </div>
 
             <button
-              onClick={async () => { await onVoted(); onClose(); }}
+              onClick={async () => { try { await onVoted(); } finally { onClose(); } }}
               className="w-full py-4 rounded-lg font-semibold transition-all btn-ghost"
             >
               Back to Feed

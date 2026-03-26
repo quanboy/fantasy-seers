@@ -2,6 +2,9 @@ package com.fantasyseers.api.controller;
 
 import com.fantasyseers.api.dto.PropDto;
 import com.fantasyseers.api.dto.VoteDto;
+import com.fantasyseers.api.entity.Prop;
+import com.fantasyseers.api.repository.PropRepository;
+import com.fantasyseers.api.service.PropService;
 import com.fantasyseers.api.service.VoteService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +19,8 @@ import org.springframework.web.bind.annotation.*;
 public class VoteController {
 
     private final VoteService voteService;
+    private final PropService propService;
+    private final PropRepository propRepository;
 
     @PostMapping("/{id}/vote")
     public ResponseEntity<VoteDto.VoteResponse> castVote(
@@ -27,7 +32,13 @@ public class VoteController {
     }
 
     @GetMapping("/{id}/split")
-    public ResponseEntity<VoteDto.VoteResponse> getSplit(@PathVariable Long id) {
+    public ResponseEntity<VoteDto.VoteResponse> getSplit(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails
+    ) {
+        Prop prop = propRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Prop not found"));
+        propService.checkPropAccess(prop, userDetails.getUsername());
         return ResponseEntity.ok(voteService.getSplit(id));
     }
 }

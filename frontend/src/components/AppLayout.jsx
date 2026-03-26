@@ -1,22 +1,29 @@
-import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
-
-function getTierInfo(points) {
-  if (points >= 50000)
-    return { label: "Legend", color: "text-gold-400", chipClass: "chip-gold-strong" };
-  if (points >= 15000)
-    return { label: "Elite", color: "text-oracle-400", chipClass: "chip-oracle" };
-  if (points >= 5000)
-    return { label: "Pro", color: "text-win-700", chipClass: "chip-win" };
-  return { label: "Rookie", color: "text-slate-500", chipClass: "bg-slate-500/10 border border-slate-500/20" };
-}
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
-  const tier = getTierInfo(user?.pointBank ?? 0);
+  const { user, setUser, logout } = useAuth();
+
+  const userRef = useRef(user);
+  useEffect(() => { userRef.current = user; }, [user]);
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const { data } = await userApi.getMe();
+        const current = userRef.current;
+        if (current && data.pointBank !== current.pointBank) {
+          const updated = { ...current, pointBank: data.pointBank };
+          localStorage.setItem("fs_user", JSON.stringify(updated));
+          setUser(updated);
+        }
+      } catch {}
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [setUser]);
 
   return (
     <div className="min-h-screen bg-void-950 flex">
@@ -24,8 +31,7 @@ export default function AppLayout() {
 
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <nav className="sticky top-0 z-30 border-b border-void-700 glass-nav">
-          <div className="px-4 sm:px-6 py-2 flex items-center h-14">
+        <nav className="sticky top-0 z-30 border-b border-void-700 glass-nav h-14 flex items-center px-4 sm:px-6">
             {/* Left: hamburger + logo (mobile only) */}
             <div className="lg:hidden flex items-center gap-1">
               <button
@@ -38,7 +44,7 @@ export default function AppLayout() {
                   <line x1="3" y1="18" x2="21" y2="18" />
                 </svg>
               </button>
-              <img src="/logo.png" alt="Fantasy Seers" className="w-[52px] h-[52px] object-contain" />
+              <Link to="/"><img src="/logo.png" alt="Fantasy Seers" className="w-[52px] h-[52px] object-contain" /></Link>
             </div>
 
             {/* Spacer */}
@@ -66,7 +72,6 @@ export default function AppLayout() {
                 Sign out
               </button>
             </div>
-          </div>
         </nav>
 
         {/* Page content */}

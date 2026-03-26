@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
 const navItems = [
@@ -37,15 +37,6 @@ const navItems = [
         <path d="M10 22V8a2 2 0 0 0-2-2H6" />
         <path d="M14 22V8a2 2 0 0 1 2-2h2" />
         <rect x="6" y="14" width="12" height="8" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    label: "Trends",
-    path: "/trends",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
       </svg>
     ),
   },
@@ -98,13 +89,13 @@ export default function Sidebar({ open, onClose }) {
         `}
       >
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-void-700 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Fantasy Seers" className="w-16 h-16 object-contain" />
+        <div className="px-5 border-b border-void-700 flex items-center justify-between h-14">
+          <Link to="/" className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+            <img src="/logo.png" alt="Fantasy Seers" className="w-10 h-10 object-contain" />
             <span className="font-cinzel text-base font-bold text-slate-100 tracking-tight">
               Fantasy Seers
             </span>
-          </div>
+          </Link>
           <button
             onClick={onClose}
             className="lg:hidden text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-void-800"

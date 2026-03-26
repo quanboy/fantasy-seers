@@ -8,6 +8,18 @@ api.interceptors.request.use(config => {
   return config
 })
 
+function showSessionExpiredToast() {
+  const toast = document.createElement('div')
+  toast.textContent = 'Your session expired. Please log in again.'
+  Object.assign(toast.style, {
+    position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+    background: '#1e293b', color: '#f1f5f9', padding: '12px 24px',
+    borderRadius: '8px', border: '1px solid #334155', zIndex: '9999',
+    fontFamily: 'Inter, sans-serif', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+  })
+  document.body.appendChild(toast)
+}
+
 api.interceptors.response.use(
   res => res,
   err => {
@@ -15,7 +27,8 @@ api.interceptors.response.use(
     const isAuthRoute = url.startsWith('/auth/')
     if (err.response?.status === 401 && !isAuthRoute) {
       localStorage.removeItem('fs_token')
-      window.location.href = '/login'
+      showSessionExpiredToast()
+      setTimeout(() => { window.location.href = '/login' }, 2000)
     } else if (err.response?.status === 403 && !localStorage.getItem('fs_token') && !isAuthRoute) {
       window.location.href = '/login'
     }
@@ -26,6 +39,7 @@ api.interceptors.response.use(
 export const authApi = {
   register: (data) => api.post('/auth/register', data),
   login:    (data) => api.post('/auth/login', data),
+  logout:   ()     => api.post('/auth/logout'),
 }
 
 export const propsApi = {

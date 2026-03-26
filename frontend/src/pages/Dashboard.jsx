@@ -24,7 +24,7 @@ export default function Dashboard() {
     setError(null);
     propsApi
       .getPublic()
-      .then(({ data }) => setProps(data))
+      .then(({ data }) => setProps(data.content || data))
       .catch((err) => setError(err.response?.data?.message || "Failed to load props."))
       .finally(() => setLoading(false));
   };
@@ -39,16 +39,6 @@ export default function Dashboard() {
       })
       .catch(() => {});
   }, []);
-
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      const { data } = await userApi.getMe();
-      const updated = { ...user, pointBank: data.pointBank };
-      localStorage.setItem("fs_user", JSON.stringify(updated));
-      setUser(updated);
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   const handleVoted = async () => {
     const { data } = await userApi.getMe();

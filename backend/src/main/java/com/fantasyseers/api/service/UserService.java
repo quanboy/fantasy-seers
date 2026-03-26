@@ -2,6 +2,7 @@ package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.UserRepository;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,9 +14,9 @@ public class UserService {
     private final UserRepository userRepository;
 
     public record UpdateProfileRequest(
-        String favoriteNflTeam,
-        String favoriteNbaTeam,
-        String almaMater
+        @Size(max = 50) String favoriteNflTeam,
+        @Size(max = 50) String favoriteNbaTeam,
+        @Size(max = 100) String almaMater
     ) {}
 
     @Transactional

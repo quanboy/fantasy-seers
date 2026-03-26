@@ -1,0 +1,18 @@
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 2
+      idle-timeout: 300000
+      connection-timeout: 20000
+
+logging:
+  level:
+    com.fantasyseers: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
