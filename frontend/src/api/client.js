@@ -85,4 +85,9 @@ export const userApi = {
   updateProfile: (data) => api.put('/users/me', data),
 }
 
+export const rankingsApi = {
+  getMySheet: () => api.get('/rankings/my-sheet'),
+  saveMySheet: (rankings) => api.post('/rankings/my-sheet', { rankings }),
+}
+
 export default api
