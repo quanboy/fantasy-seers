@@ -18,14 +18,6 @@ public class PropController {
 
     private final PropService propService;
 
-    @PostMapping
-    public ResponseEntity<PropDto.PropResponse> createProp(
-            @Valid @RequestBody PropDto.CreateRequest request,
-            @AuthenticationPrincipal UserDetails userDetails
-    ) {
-        return ResponseEntity.ok(propService.createProp(request, userDetails.getUsername()));
-    }
-
     @PostMapping("/submit")
     public ResponseEntity<PropDto.PropResponse> submitProp(
             @Valid @RequestBody PropDto.submitRequest request,
