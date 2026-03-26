@@ -14,6 +14,7 @@ export default function SubmitPropCard({ onSubmitted }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState(null);
   const [groups, setGroups] = useState([]);
 
   const [form, setForm] = useState({
@@ -43,6 +44,7 @@ export default function SubmitPropCard({ onSubmitted }) {
     if (!form.title || !form.closesAt) return;
     if (needsGroup && !form.groupId) return;
     setLoading(true);
+    setError(null);
     try {
       await propsApi.submit({
         title: form.title,
@@ -59,7 +61,7 @@ export default function SubmitPropCard({ onSubmitted }) {
       if (onSubmitted) onSubmitted();
       setTimeout(() => { setSuccess(false); setIsExpanded(false); }, 2500);
     } catch (err) {
-      console.error("Failed to submit prop", err);
+      setError(err.response?.data?.message || "Failed to submit prop. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -235,6 +237,13 @@ export default function SubmitPropCard({ onSubmitted }) {
           />
         </div>
       </div>
+
+      {/* Error */}
+      {error && (
+        <div className="alert-error mb-3 px-4 py-3 rounded-lg">
+          <p className="text-sm text-loss-400">{error}</p>
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex gap-3">

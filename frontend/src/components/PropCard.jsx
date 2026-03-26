@@ -130,10 +130,16 @@ export default function PropCard({ prop, onVote }) {
 
   const [wager, setWager] = useState(String(prop.minWager || 100));
   const [split, setSplit] = useState(null);
+  const [splitLoading, setSplitLoading] = useState(false);
+  const [splitError, setSplitError] = useState(null);
 
   useEffect(() => {
     if (isVoted) {
-      propsApi.getSplit(prop.id).then(({ data }) => setSplit(data)).catch(() => {});
+      setSplitLoading(true);
+      propsApi.getSplit(prop.id)
+        .then(({ data }) => setSplit(data))
+        .catch(() => setSplitError("Unable to load split data"))
+        .finally(() => setSplitLoading(false));
     }
   }, [isVoted, prop.id]);
 
@@ -256,9 +262,20 @@ export default function PropCard({ prop, onVote }) {
       {/* Voted / closed / resolved: split bar + contrarian hint */}
       {isVoted && (
         <>
-          <SplitBar split={split} />
-          {!isResolved && (
-            <ContrarianHint userChoice={prop.userChoice} split={split} isClosed={isClosed} />
+          {splitLoading ? (
+            <div className="flex items-center gap-2 mt-3">
+              <span className="w-3.5 h-3.5 border-2 border-void-600 border-t-slate-400 rounded-full animate-spin" />
+              <span className="text-xs text-slate-500">Loading splits...</span>
+            </div>
+          ) : splitError ? (
+            <p className="text-xs text-loss-400 mt-3">{splitError}</p>
+          ) : (
+            <>
+              <SplitBar split={split} />
+              {!isResolved && (
+                <ContrarianHint userChoice={prop.userChoice} split={split} isClosed={isClosed} />
+              )}
+            </>
           )}
         </>
       )}

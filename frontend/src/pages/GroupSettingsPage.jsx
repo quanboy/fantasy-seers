@@ -20,10 +20,12 @@ export default function GroupSettingsPage() {
   // Kick state
   const [kickingId, setKickingId] = useState(null);
   const [confirmKick, setConfirmKick] = useState(null);
+  const [kickError, setKickError] = useState(null);
 
   // Leave state
   const [confirmLeave, setConfirmLeave] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [leaveError, setLeaveError] = useState(null);
 
   const fetchGroup = () => {
     groupsApi.getGroup(id)
@@ -57,12 +59,13 @@ export default function GroupSettingsPage() {
 
   const handleKick = async (userId) => {
     setKickingId(userId);
+    setKickError(null);
     try {
       await groupsApi.kickMember(id, userId);
       setConfirmKick(null);
       fetchGroup();
     } catch (err) {
-      alert(err.response?.data?.message ?? "Failed to kick member");
+      setKickError(err.response?.data?.message ?? "Failed to kick member");
     } finally {
       setKickingId(null);
     }
@@ -70,11 +73,12 @@ export default function GroupSettingsPage() {
 
   const handleLeave = async () => {
     setLeaving(true);
+    setLeaveError(null);
     try {
       await groupsApi.leaveGroup(id);
       navigate("/groups");
     } catch (err) {
-      alert(err.response?.data?.message ?? "Failed to leave group");
+      setLeaveError(err.response?.data?.message ?? "Failed to leave group");
       setLeaving(false);
       setConfirmLeave(false);
     }
@@ -142,6 +146,9 @@ export default function GroupSettingsPage() {
               Members
               <span className="ml-2 chip-gold text-xs px-2 py-0.5 rounded-full">{group.memberCount}</span>
             </h2>
+            {kickError && (
+              <p className="text-loss-400 text-xs mb-3 px-3 py-2 rounded-lg alert-error">{kickError}</p>
+            )}
             <div className="space-y-2">
               {group.members.map(member => (
                 <div key={member.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-void-950/30">
@@ -192,6 +199,9 @@ export default function GroupSettingsPage() {
                 ? "Ownership will transfer to the next member. If you're the last member, the group will be deleted."
                 : "You will lose access to this group's props and chat."}
             </p>
+            {leaveError && (
+              <p className="text-loss-400 text-xs mb-3 px-3 py-2 rounded-lg alert-error">{leaveError}</p>
+            )}
               {confirmLeave ? (
                 <div className="flex gap-3">
                   <button
