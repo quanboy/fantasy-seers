@@ -104,12 +104,18 @@ Activated via `SPRING_PROFILES_ACTIVE=prod`. Overrides: SQL logging off, HikariC
 ### vite.config.js (frontend)
 - Dev server: port 5173 with `/api` proxy → `http://localhost:8080`
 - Production build: `sourcemap: true` for Sentry stack traces
-- Proxy is dev-only — production uses nginx reverse proxy
+- Proxy is dev-only — production frontend calls backend directly via `VITE_API_BASE_URL`
+
+### Frontend API client (`client.js`)
+- `baseURL` defaults to `/api` (local dev, proxied through Vite or nginx)
+- Override via `VITE_API_BASE_URL` env var for Railway (e.g. `https://fantasy-seers-backend-production.up.railway.app/api`)
+- `VITE_API_BASE_URL` is a build-time variable — baked into the JS bundle by Vite
 
 ### nginx.conf (frontend)
 - Serves static build from `/usr/share/nginx/html`
+- Listens on `${PORT}` (dynamic, Railway-compatible)
 - `try_files $uri $uri/ /index.html` for React Router client-side routes
-- Proxies `/api/` and `/actuator/` to `http://backend:8080`
+- Proxies `/api/` and `/actuator/` to `${BACKEND_URL}` (used for local Docker only; Railway uses direct browser→backend calls)
 - Gzip enabled
 
 ### docker-compose.yml environment variables
@@ -117,6 +123,7 @@ Activated via `SPRING_PROFILES_ACTIVE=prod`. Overrides: SQL logging off, HikariC
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-fantasyseers_secret}
 JWT_SECRET=${JWT_SECRET:-fantasy-seers-super-secret-jwt-key-change-in-production}
 SENTRY_DSN=${SENTRY_DSN:-}     # Set in Railway
+VITE_API_BASE_URL=             # Build-time, empty for local (uses /api proxy)
 VITE_SENTRY_DSN=               # Build-time, set in .env or Railway
 ```
 
@@ -285,18 +292,41 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 
 ## Deployment (Railway)
 
-**Required env vars for backend:**
+Three services: PostgreSQL (Railway plugin), Backend (Spring Boot), Frontend (nginx).
+
+**Backend env vars:**
 ```
-SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD
-JWT_SECRET          (openssl rand -base64 64)
-CORS_ALLOWED_ORIGINS (https://your-frontend.up.railway.app)
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres.railway.internal:5432/railway
+SPRING_DATASOURCE_USERNAME=postgres
+SPRING_DATASOURCE_PASSWORD=       (from Railway Postgres PGPASSWORD)
+JWT_SECRET=                       (openssl rand -base64 64, must be ≥48 bytes)
+JWT_EXPIRATION_MS=86400000
+CORS_ALLOWED_ORIGINS=https://frontend-production-XXXX.up.railway.app
 SPRING_PROFILES_ACTIVE=prod
-SENTRY_DSN          (from Sentry project)
+PORT=8080
+SENTRY_DSN=                       (optional, from sentry.io)
 ```
 
-**Frontend build-time:**
+**Frontend env vars (build-time — Vite bakes these into the JS bundle):**
 ```
-VITE_SENTRY_DSN     (from Sentry project)
+VITE_API_BASE_URL=https://fantasy-seers-backend-production.up.railway.app/api
+VITE_SENTRY_DSN=                  (optional, from sentry.io)
 ```
 
-Health check: `GET /actuator/health` returns `{"status":"UP"}`.
+**Frontend runtime env vars:**
+```
+BACKEND_URL=http://fantasy-seers-backend.railway.internal:8080  (nginx proxy fallback, not used when VITE_API_BASE_URL is set)
+```
+
+**Architecture on Railway:** The frontend calls the backend's public URL directly from the browser (not through nginx proxy). CORS on the backend allows the frontend origin. nginx only serves static files and handles React Router fallback.
+
+**Making a user admin:** Railway Postgres → Data tab → run:
+```sql
+UPDATE users SET role = 'ADMIN' WHERE username = 'your_username';
+```
+User must log out and back in to get a fresh JWT with the ADMIN role.
+
+**Live URLs:**
+- Frontend: https://frontend-production-0b29.up.railway.app
+- Backend: https://fantasy-seers-backend-production.up.railway.app
+- Health check: `GET /actuator/health` → `{"status":"UP"}`
