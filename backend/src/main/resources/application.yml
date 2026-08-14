@@ -41,6 +41,12 @@ sentry:
   environment: ${SPRING_PROFILES_ACTIVE:development}
   enable-tracing: true
 
+sleeper:
+  base-url: ${SLEEPER_API_BASE_URL:https://api.sleeper.app}
+  players:
+    sync-enabled: ${SLEEPER_PLAYER_SYNC_ENABLED:true}
+    sync-cron: ${SLEEPER_PLAYER_SYNC_CRON:0 15 4 * * *}
+
 logging:
   level:
     com.fantasyseers: INFO

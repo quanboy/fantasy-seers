@@ -15,6 +15,7 @@ import com.fantasyseers.api.repository.NflPlayerRepository;
 import com.fantasyseers.api.repository.SnapshotEntryRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,8 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class BoardService {
+
+    private static final int DEFAULT_RANKING_DEPTH = 300;
 
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final SnapshotEntryRepository snapshotEntryRepository;
@@ -116,9 +119,7 @@ public class BoardService {
         boolean isDefault = entries.isEmpty();
 
         List<RankedPlayerResponse> rankings = isDefault
-                ? consensusRankingRepository.findAllByOrderByOverallRankAsc().stream()
-                        .map(this::toRankedPlayerResponse)
-                        .toList()
+                ? getDefaultRankings()
                 : toRankedPlayerResponses(entries);
 
         return new BoardSheetResponse(board.getId(), season, isDefault, rankings);
@@ -135,6 +136,34 @@ public class BoardService {
                 ranking.getOverallRank(),
                 ranking.getPositionalRank()
         );
+    }
+
+    private List<RankedPlayerResponse> getDefaultRankings() {
+        List<NflPlayer> activePlayers = nflPlayerRepository.findAllByActiveTrueOrderByAdpAscFullNameAscSleeperIdAsc(
+                PageRequest.of(0, DEFAULT_RANKING_DEPTH)
+        );
+        if (activePlayers.isEmpty()) {
+            return consensusRankingRepository.findAllByOrderByOverallRankAsc().stream()
+                    .map(this::toRankedPlayerResponse)
+                    .toList();
+        }
+
+        Map<String, Integer> positionCounters = new HashMap<>();
+        List<RankedPlayerResponse> rankings = new ArrayList<>();
+        for (int index = 0; index < activePlayers.size(); index++) {
+            NflPlayer player = activePlayers.get(index);
+            int positionalRank = positionCounters.merge(player.getPosition(), 1, Integer::sum);
+            rankings.add(new RankedPlayerResponse(
+                    player.getId(),
+                    player.getFullName(),
+                    player.getPosition(),
+                    player.getNflTeam(),
+                    player.getAdp() != null ? player.getAdp().doubleValue() : null,
+                    index + 1,
+                    positionalRank
+            ));
+        }
+        return rankings;
     }
 
     private List<RankedPlayerResponse> toRankedPlayerResponses(List<SnapshotEntry> entries) {

@@ -93,6 +93,7 @@ cd frontend && npm install && npm run dev
 - `spring.flyway.locations: classpath:db/migration`
 - JWT secret read from `JWT_SECRET` env var (no default — app fails without it)
 - JWT expiry: 24h (`JWT_EXPIRATION_MS: 86400000`)
+- Sleeper player sync: daily at 04:15 UTC (`SLEEPER_PLAYER_SYNC_CRON`), disable with `SLEEPER_PLAYER_SYNC_ENABLED=false`
 - Server port: `${PORT:8080}` — configurable for PaaS
 - CORS: `${CORS_ALLOWED_ORIGINS:http://localhost:*}` — must be set to actual domain in production
 - Sentry: `${SENTRY_DSN:}` — empty = disabled (safe for local dev)
@@ -147,6 +148,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V12__consensus_rankings.sql** — `consensus_rankings` table (player_id, overall_rank, positional_rank) + 300 ranked inserts
 - **V13__add_adp_to_nfl_players.sql** — added `adp` (int, nullable) column to nfl_players
 - **V14__populate_adp.sql** — populated ADP values from Sleeper API search_rank
+- **V15__board_snapshots.sql** — Board v2 snapshots, entries, scoring preferences, and group capacity
+- **V16__snapshot_entry_rank_unique.sql** — unique rank per board snapshot
+- **V17__track_active_nfl_players.sql** — active-player tracking and initial Sleeper refresh trigger
 
 **Adding a new migration:** Create `V15__description.sql` in snake_case. Do not modify existing migration files.
 
@@ -242,7 +246,7 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **FriendGroup** — named group with 8-char invite code. `ON DELETE CASCADE` on group_invites FKs.
 - **GroupInvite** — PENDING/ACCEPTED/REJECTED. Non-member invite attempts throw `AccessDeniedException` (403).
 - **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Profile: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater` (validated with `@Size`).
-- **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, adp. 300 players seeded via V10 migration.
+- **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, active, adp. The daily sync retains the full active universe; the Master Sheet uses the top 300 by Sleeper rank.
 - **ConsensusRanking** — expert consensus ranking for each NflPlayer. OneToOne with NflPlayer. Fields: overallRank, positionalRank.
 - **UserRanking** — user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. UNIQUE(user_id, player_id). Bulk delete + save via `@Modifying` JPQL + `flush()`. Falls back to ConsensusRankings when empty.
 - **Prop lifecycle:** User-submitted: `PENDING` → approval → `OPEN` → `CLOSED` → `RESOLVED`. Admin-created: `OPEN` → `CLOSED` → `RESOLVED`. Auto-close via `PropClosingScheduler` (60s). Group membership validated on user-submitted group props.

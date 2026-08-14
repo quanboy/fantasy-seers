@@ -33,6 +33,10 @@ public class NflPlayer {
     @Column(length = 30)
     private String status;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean active = false;
+
     @Column
     private Integer adp;
 
