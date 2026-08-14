@@ -5,10 +5,12 @@ import com.fantasyseers.api.dto.BoardSheetResponse;
 import com.fantasyseers.api.dto.RankedPlayerDto;
 import com.fantasyseers.api.dto.RankedPlayerResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
+import com.fantasyseers.api.entity.ConsensusRanking;
 import com.fantasyseers.api.entity.NflPlayer;
 import com.fantasyseers.api.entity.SnapshotEntry;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
+import com.fantasyseers.api.repository.ConsensusRankingRepository;
 import com.fantasyseers.api.repository.NflPlayerRepository;
 import com.fantasyseers.api.repository.SnapshotEntryRepository;
 import com.fantasyseers.api.repository.UserRepository;
@@ -28,6 +30,7 @@ public class BoardService {
 
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final SnapshotEntryRepository snapshotEntryRepository;
+    private final ConsensusRankingRepository consensusRankingRepository;
     private final UserRepository userRepository;
     private final NflPlayerRepository nflPlayerRepository;
 
@@ -112,25 +115,46 @@ public class BoardService {
         List<SnapshotEntry> entries = snapshotEntryRepository.findAllBySnapshotIdOrderByUserRankAsc(board.getId());
         boolean isDefault = entries.isEmpty();
 
+        List<RankedPlayerResponse> rankings = isDefault
+                ? consensusRankingRepository.findAllByOrderByOverallRankAsc().stream()
+                        .map(this::toRankedPlayerResponse)
+                        .toList()
+                : toRankedPlayerResponses(entries);
+
+        return new BoardSheetResponse(board.getId(), season, isDefault, rankings);
+    }
+
+    private RankedPlayerResponse toRankedPlayerResponse(ConsensusRanking ranking) {
+        NflPlayer player = ranking.getPlayer();
+        return new RankedPlayerResponse(
+                player.getId(),
+                player.getFullName(),
+                player.getPosition(),
+                player.getNflTeam(),
+                player.getAdp() != null ? player.getAdp().doubleValue() : null,
+                ranking.getOverallRank(),
+                ranking.getPositionalRank()
+        );
+    }
+
+    private List<RankedPlayerResponse> toRankedPlayerResponses(List<SnapshotEntry> entries) {
         Map<String, Integer> posCounters = new HashMap<>();
-        List<RankedPlayerResponse> rankings = entries.stream()
-                .map(e -> {
-                    NflPlayer p = e.getPlayer();
-                    String pos = p.getPosition();
-                    int posRank = posCounters.merge(pos, 1, Integer::sum);
+        return entries.stream()
+                .map(entry -> {
+                    NflPlayer player = entry.getPlayer();
+                    String position = player.getPosition();
+                    int positionalRank = posCounters.merge(position, 1, Integer::sum);
                     return new RankedPlayerResponse(
-                            p.getId(),
-                            p.getFullName(),
-                            pos,
-                            p.getNflTeam(),
-                            p.getAdp() != null ? p.getAdp().doubleValue() : null,
-                            e.getUserRank(),
-                            posRank
+                            player.getId(),
+                            player.getFullName(),
+                            position,
+                            player.getNflTeam(),
+                            player.getAdp() != null ? player.getAdp().doubleValue() : null,
+                            entry.getUserRank(),
+                            positionalRank
                     );
                 })
                 .toList();
-
-        return new BoardSheetResponse(board.getId(), season, isDefault, rankings);
     }
 
     private BoardDto.BoardResponse toResponse(BoardSnapshot board) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { rankingsApi } from "../api/client";
+import { boardsApi } from "../api/client";
 import {
   DndContext,
   closestCenter,
@@ -132,6 +132,7 @@ function SkeletonRow() {
 }
 
 export default function MasterSheetPage() {
+  const [boardId, setBoardId] = useState(null);
   const [rankings, setRankings] = useState([]);
   const [isDefault, setIsDefault] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -143,9 +144,10 @@ export default function MasterSheetPage() {
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
 
   useEffect(() => {
-    rankingsApi
+    boardsApi
       .getMySheet()
       .then(({ data }) => {
+        setBoardId(data.boardId);
         setRankings(data.rankings);
         setIsDefault(data.isDefault);
       })
@@ -230,14 +232,19 @@ export default function MasterSheetPage() {
   );
 
   const handleSave = async () => {
+    if (!boardId) {
+      setError("Board is not ready. Refresh the page and try again.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     try {
-      await rankingsApi.saveMySheet(
+      await boardsApi.upsertEntries(
+        boardId,
         rankings.map((p) => ({
           playerId: p.playerId,
-          overallRank: p.overallRank,
-          positionalRank: p.positionalRank,
+          rank: p.overallRank,
         }))
       );
       setDirty(false);
