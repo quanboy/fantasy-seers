@@ -183,11 +183,12 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 |---------------|-----------------|--------------|
 | `/login`      | Login           | public       |
 | `/register`   | Register        | public       |
-| `/`           | Dashboard       | PrivateRoute |
+| `/`           | MasterSheetPage | PrivateRoute |
+| `/props`      | Dashboard       | PrivateRoute |
 | `/groups`     | GroupsPage      | PrivateRoute |
 | `/groups/:id` | GroupFeedPage   | PrivateRoute |
 | `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
-| `/master-sheet`| MasterSheetPage | PrivateRoute |
+| `/master-sheet`| Redirect to `/` | PrivateRoute |
 | `/leaderboard`| LeaderboardPage | PrivateRoute |
 | `/profile`    | ProfilePage     | PrivateRoute |
 | `/admin`      | AdminDashboard  | AdminRoute   |
@@ -200,8 +201,8 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `userApi`, `rankingsApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
-- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to Dashboard.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Master Sheet, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
+- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Master Sheet, Props Feed, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
 - Mobile top bar shows hamburger + logo (links to `/`) on left; username, points, sign out on right.
 
 ### Key UI Patterns

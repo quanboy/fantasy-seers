@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext";
 
 const navItems = [
   {
-    label: "Dashboard",
+    label: "Master Sheet",
     path: "/",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,8 +15,8 @@ const navItems = [
     ),
   },
   {
-    label: "Master Sheet",
-    path: "/master-sheet",
+    label: "Props Feed",
+    path: "/props",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
