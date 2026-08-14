@@ -6,5 +6,6 @@ record NflPlayerSyncCandidate(
         String position,
         String nflTeam,
         String status,
-        Integer adp
+        Integer adp,
+        Integer sourceAdp
 ) {}

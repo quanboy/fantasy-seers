@@ -5,9 +5,10 @@ public record NflPlayerSyncResult(
         int created,
         int updated,
         int deactivated,
+        int snapshotsCaptured,
         boolean skipped
 ) {
     public static NflPlayerSyncResult skippedResult() {
-        return new NflPlayerSyncResult(0, 0, 0, 0, true);
+        return new NflPlayerSyncResult(0, 0, 0, 0, 0, true);
     }
 }

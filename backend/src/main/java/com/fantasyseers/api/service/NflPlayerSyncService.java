@@ -1,10 +1,11 @@
 package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.dto.SleeperPlayerDto;
-import com.fantasyseers.api.repository.NflPlayerRepository;
+import com.fantasyseers.api.repository.AdpSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -21,16 +22,18 @@ public class NflPlayerSyncService {
     private static final int MIN_EXPECTED_PLAYERS = 500;
     private static final int SLEEPER_UNRANKED_SENTINEL = 1_000_000;
     private static final int DEFAULT_DEFENSE_ADP = 200;
+    private static final String SLEEPER_SOURCE = "SLEEPER";
 
     private final SleeperPlayerClient sleeperPlayerClient;
     private final NflPlayerSyncWriter syncWriter;
-    private final NflPlayerRepository nflPlayerRepository;
+    private final AdpSnapshotRepository adpSnapshotRepository;
 
     public synchronized NflPlayerSyncResult syncIfStale() {
-        LocalDateTime staleBefore = LocalDateTime.now(ZoneOffset.UTC).minusHours(24);
-        boolean fresh = nflPlayerRepository.findLatestActiveUpdate()
-                .filter(lastUpdate -> lastUpdate.isAfter(staleBefore))
-                .isPresent();
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        boolean fresh = adpSnapshotRepository.existsBySourceAndCapturedAt(
+                SLEEPER_SOURCE,
+                today.atStartOfDay()
+        );
         return fresh ? NflPlayerSyncResult.skippedResult() : syncNow();
     }
 
@@ -78,12 +81,13 @@ public class NflPlayerSyncService {
             return null;
         }
 
-        Integer adp = player.searchRank();
-        if (adp != null && (adp <= 0 || adp >= SLEEPER_UNRANKED_SENTINEL)) {
-            adp = null;
+        Integer sourceAdp = player.searchRank();
+        if (sourceAdp != null && (sourceAdp <= 0 || sourceAdp >= SLEEPER_UNRANKED_SENTINEL)) {
+            sourceAdp = null;
         }
-        if (adp == null && position.equals("DEF")) {
-            adp = DEFAULT_DEFENSE_ADP;
+        Integer boardAdp = sourceAdp;
+        if (boardAdp == null && position.equals("DEF")) {
+            boardAdp = DEFAULT_DEFENSE_ADP;
         }
 
         return new NflPlayerSyncCandidate(
@@ -92,7 +96,8 @@ public class NflPlayerSyncService {
                 position,
                 normalize(player.team(), 10),
                 normalize(firstNonBlank(player.status(), "Active"), 30),
-                adp
+                boardAdp,
+                sourceAdp
         );
     }
 

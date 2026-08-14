@@ -34,15 +34,16 @@ public class NflPlayerSyncScheduler {
         try {
             NflPlayerSyncResult result = syncService.syncIfStale();
             if (result.skipped()) {
-                log.info("Skipped Sleeper NFL player sync; current data is less than 24 hours old");
+                log.info("Skipped Sleeper NFL player sync; current data was already captured today");
                 return;
             }
             log.info(
-                    "Sleeper NFL player sync complete: fetched={}, created={}, updated={}, deactivated={}",
+                    "Sleeper NFL player sync complete: fetched={}, created={}, updated={}, deactivated={}, adpSnapshots={}",
                     result.fetched(),
                     result.created(),
                     result.updated(),
-                    result.deactivated()
+                    result.deactivated(),
+                    result.snapshotsCaptured()
             );
         } catch (RuntimeException exception) {
             log.error("Sleeper NFL player sync failed; existing player universe was preserved", exception);

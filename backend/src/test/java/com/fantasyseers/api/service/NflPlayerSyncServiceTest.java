@@ -1,19 +1,22 @@
 package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.dto.SleeperPlayerDto;
-import com.fantasyseers.api.repository.NflPlayerRepository;
+import com.fantasyseers.api.repository.AdpSnapshotRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,7 +28,7 @@ class NflPlayerSyncServiceTest {
 
     @Mock SleeperPlayerClient sleeperPlayerClient;
     @Mock NflPlayerSyncWriter syncWriter;
-    @Mock NflPlayerRepository nflPlayerRepository;
+    @Mock AdpSnapshotRepository adpSnapshotRepository;
     @InjectMocks NflPlayerSyncService syncService;
 
     @Test
@@ -43,7 +46,7 @@ class NflPlayerSyncServiceTest {
         when(syncWriter.replaceActivePlayers(any(), any())).thenAnswer(invocation -> {
             List<NflPlayerSyncCandidate> candidates = invocation.getArgument(0);
             savedCandidates.set(candidates);
-            return new NflPlayerSyncResult(candidates.size(), candidates.size(), 0, 0, false);
+            return new NflPlayerSyncResult(candidates.size(), candidates.size(), 0, 0, 0, false);
         });
 
         NflPlayerSyncResult result = syncService.syncNow();
@@ -57,6 +60,20 @@ class NflPlayerSyncServiceTest {
         assertEquals("DEF", defense.position());
         assertEquals("Active", defense.status());
         assertEquals(200, defense.adp());
+        assertNull(defense.sourceAdp());
+    }
+
+    @Test
+    void syncIfStaleSkipsWhenTodayWasAlreadyCaptured() {
+        when(adpSnapshotRepository.existsBySourceAndCapturedAt(
+                "SLEEPER",
+                LocalDate.now(ZoneOffset.UTC).atStartOfDay()
+        )).thenReturn(true);
+
+        NflPlayerSyncResult result = syncService.syncIfStale();
+
+        assertTrue(result.skipped());
+        verifyNoInteractions(sleeperPlayerClient, syncWriter);
     }
 
     @Test

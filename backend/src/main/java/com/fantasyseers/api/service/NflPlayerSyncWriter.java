@@ -1,6 +1,8 @@
 package com.fantasyseers.api.service;
 
+import com.fantasyseers.api.entity.AdpSnapshot;
 import com.fantasyseers.api.entity.NflPlayer;
+import com.fantasyseers.api.repository.AdpSnapshotRepository;
 import com.fantasyseers.api.repository.NflPlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,7 +20,10 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class NflPlayerSyncWriter {
 
+    private static final String SLEEPER_SOURCE = "SLEEPER";
+
     private final NflPlayerRepository nflPlayerRepository;
+    private final AdpSnapshotRepository adpSnapshotRepository;
 
     @Transactional
     public NflPlayerSyncResult replaceActivePlayers(
@@ -63,13 +68,63 @@ public class NflPlayerSyncWriter {
             playersToSave.add(player);
         }
 
-        nflPlayerRepository.saveAll(playersToSave);
+        List<NflPlayer> savedPlayers = nflPlayerRepository.saveAll(playersToSave);
+        nflPlayerRepository.flush();
+
+        Map<String, NflPlayer> savedBySleeperId = new HashMap<>();
+        for (NflPlayer player : savedPlayers) {
+            savedBySleeperId.put(player.getSleeperId(), player);
+        }
+        int snapshotsCaptured = captureDailyAdp(candidates, savedBySleeperId, syncTime);
+
         return new NflPlayerSyncResult(
                 candidates.size(),
                 created,
                 candidates.size() - created,
                 deactivated,
+                snapshotsCaptured,
                 false
         );
+    }
+
+    private int captureDailyAdp(
+            List<NflPlayerSyncCandidate> candidates,
+            Map<String, NflPlayer> savedBySleeperId,
+            LocalDateTime syncTime
+    ) {
+        LocalDateTime capturedAt = syncTime.toLocalDate().atStartOfDay();
+        List<NflPlayerSyncCandidate> rankedCandidates = candidates.stream()
+                .filter(candidate -> candidate.sourceAdp() != null)
+                .toList();
+        if (rankedCandidates.isEmpty()) {
+            return 0;
+        }
+
+        List<Long> playerIds = rankedCandidates.stream()
+                .map(candidate -> savedBySleeperId.get(candidate.sleeperId()).getId())
+                .toList();
+        Map<Long, AdpSnapshot> existingByPlayerId = new HashMap<>();
+        for (AdpSnapshot snapshot : adpSnapshotRepository
+                .findAllBySourceAndCapturedAtAndPlayerIdIn(SLEEPER_SOURCE, capturedAt, playerIds)) {
+            existingByPlayerId.put(snapshot.getPlayer().getId(), snapshot);
+        }
+
+        List<AdpSnapshot> snapshotsToSave = new ArrayList<>(rankedCandidates.size());
+        for (NflPlayerSyncCandidate candidate : rankedCandidates) {
+            NflPlayer player = savedBySleeperId.get(candidate.sleeperId());
+            AdpSnapshot snapshot = existingByPlayerId.get(player.getId());
+            if (snapshot == null) {
+                snapshot = AdpSnapshot.builder()
+                        .player(player)
+                        .source(SLEEPER_SOURCE)
+                        .capturedAt(capturedAt)
+                        .build();
+            }
+            snapshot.setValue(candidate.sourceAdp());
+            snapshotsToSave.add(snapshot);
+        }
+
+        adpSnapshotRepository.saveAll(snapshotsToSave);
+        return snapshotsToSave.size();
     }
 }

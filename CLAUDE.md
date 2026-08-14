@@ -151,6 +151,7 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V15__board_snapshots.sql** — Board v2 snapshots, entries, scoring preferences, and group capacity
 - **V16__snapshot_entry_rank_unique.sql** — unique rank per board snapshot
 - **V17__track_active_nfl_players.sql** — active-player tracking and initial Sleeper refresh trigger
+- **V18__daily_adp_snapshots.sql** — idempotent daily ADP history by player, source, and UTC day
 
 **Adding a new migration:** Create `V15__description.sql` in snake_case. Do not modify existing migration files.
 
@@ -247,6 +248,7 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **GroupInvite** — PENDING/ACCEPTED/REJECTED. Non-member invite attempts throw `AccessDeniedException` (403).
 - **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Profile: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater` (validated with `@Size`).
 - **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, active, adp. The daily sync retains the full active universe; the Master Sheet uses the top 300 by Sleeper rank.
+- **AdpSnapshot** — daily raw ranking observation. Fields: player, source, capturedAt (UTC-day bucket), value. Unique per player/source/day; written transactionally during the Sleeper player sync.
 - **ConsensusRanking** — expert consensus ranking for each NflPlayer. OneToOne with NflPlayer. Fields: overallRank, positionalRank.
 - **UserRanking** — user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. UNIQUE(user_id, player_id). Bulk delete + save via `@Modifying` JPQL + `flush()`. Falls back to ConsensusRankings when empty.
 - **Prop lifecycle:** User-submitted: `PENDING` → approval → `OPEN` → `CLOSED` → `RESOLVED`. Admin-created: `OPEN` → `CLOSED` → `RESOLVED`. Auto-close via `PropClosingScheduler` (60s). Group membership validated on user-submitted group props.
