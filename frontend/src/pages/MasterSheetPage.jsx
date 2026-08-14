@@ -37,9 +37,11 @@ function getPositionChipClass(position) {
   }
 }
 
-function DragHandle() {
+function DragHandle({ disabled }) {
   return (
-    <div className="flex flex-col gap-0.5 cursor-grab active:cursor-grabbing px-1">
+    <div className={`flex flex-col gap-0.5 px-1 ${
+      disabled ? "cursor-not-allowed opacity-40" : "cursor-grab active:cursor-grabbing"
+    }`}>
       <div className="flex gap-0.5">
         <span className="w-1 h-1 rounded-full bg-slate-500" />
         <span className="w-1 h-1 rounded-full bg-slate-500" />
@@ -68,7 +70,7 @@ function ColumnHeader() {
   );
 }
 
-function SortablePlayerRow({ player, overallIndex }) {
+function SortablePlayerRow({ player, overallIndex, locked }) {
   const {
     attributes,
     listeners,
@@ -76,7 +78,7 @@ function SortablePlayerRow({ player, overallIndex }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: player.playerId });
+  } = useSortable({ id: player.playerId, disabled: locked });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -99,7 +101,7 @@ function SortablePlayerRow({ player, overallIndex }) {
       }`}
     >
       <div {...attributes} {...listeners}>
-        <DragHandle />
+        <DragHandle disabled={locked} />
       </div>
 
       {/* Rank */}
@@ -135,6 +137,9 @@ export default function MasterSheetPage() {
   const [boardId, setBoardId] = useState(null);
   const [rankings, setRankings] = useState([]);
   const [isDefault, setIsDefault] = useState(true);
+  const [locked, setLocked] = useState(false);
+  const [scoringFormat, setScoringFormat] = useState(null);
+  const [superflex, setSuperflex] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -150,6 +155,9 @@ export default function MasterSheetPage() {
         setBoardId(data.boardId);
         setRankings(data.rankings);
         setIsDefault(data.isDefault);
+        setLocked(Boolean(data.locked));
+        setScoringFormat(data.scoringFormat);
+        setSuperflex(Boolean(data.superflex));
       })
       .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
       .finally(() => setLoading(false));
@@ -180,6 +188,7 @@ export default function MasterSheetPage() {
 
   const handleDragEnd = useCallback(
     (event) => {
+      if (locked) return;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
@@ -228,10 +237,14 @@ export default function MasterSheetPage() {
 
       setDirty(true);
     },
-    [isAllSelected, filteredRankings, selectedPositions, recalcRanks]
+    [locked, isAllSelected, filteredRankings, selectedPositions, recalcRanks]
   );
 
   const handleSave = async () => {
+    if (locked) {
+      setError("This board is locked and cannot be edited.");
+      return;
+    }
     if (!boardId) {
       setError("Board is not ready. Refresh the page and try again.");
       return;
@@ -283,22 +296,36 @@ export default function MasterSheetPage() {
             Master Sheet
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Drag players to set your personal rankings
+            {locked
+              ? "Your season-start rankings are final"
+              : "Drag players to set your personal rankings"}
           </p>
         </div>
         <button
           onClick={handleSave}
-          disabled={!dirty || saving}
+          disabled={locked || !dirty || saving}
           className={`btn-oracle px-4 py-2 text-sm font-semibold rounded-lg shrink-0 transition-all ${
-            !dirty && !saveMsg ? "opacity-50 cursor-not-allowed" : ""
+            (locked || (!dirty && !saveMsg)) ? "opacity-50 cursor-not-allowed" : ""
           }`}
         >
-          {saving ? "Saving..." : saveMsg || "Save Rankings"}
+          {locked ? "Locked" : saving ? "Saving..." : saveMsg || "Save Rankings"}
         </button>
       </div>
 
+      {/* Locked banner */}
+      {locked && !loading && (
+        <div className="glass-card px-4 py-3 mb-5 border border-gold-500/30">
+          <p className="text-sm font-semibold text-gold-400">
+            Season-start board locked
+          </p>
+          <p className="text-xs text-slate-400 mt-1">
+            {scoringFormat || "League format"} · {superflex ? "Superflex" : "Single-QB"}
+          </p>
+        </div>
+      )}
+
       {/* Consensus banner */}
-      {isDefault && !bannerDismissed && !loading && (
+      {isDefault && !locked && !bannerDismissed && !loading && (
         <div className="glass-card px-4 py-3 mb-5 flex items-center justify-between">
           <p className="text-sm text-slate-300">
             These are consensus expert rankings. Drag to personalize your sheet.
@@ -383,6 +410,7 @@ export default function MasterSheetPage() {
                     key={player.playerId}
                     player={player}
                     overallIndex={overallIndex}
+                    locked={locked}
                   />
                 );
               })}

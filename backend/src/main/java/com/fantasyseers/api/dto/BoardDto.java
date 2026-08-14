@@ -12,6 +12,8 @@ public class BoardDto {
             String snapshotType,
             String scoringFormat,
             Boolean superflex,
+            Boolean locked,
+            LocalDateTime lockedAt,
             List<EntryResponse> entries,
             LocalDateTime createdAt
     ) {}

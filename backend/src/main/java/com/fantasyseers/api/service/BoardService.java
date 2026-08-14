@@ -6,17 +6,14 @@ import com.fantasyseers.api.dto.BoardSheetResponse;
 import com.fantasyseers.api.dto.RankedPlayerDto;
 import com.fantasyseers.api.dto.RankedPlayerResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
-import com.fantasyseers.api.entity.ConsensusRanking;
 import com.fantasyseers.api.entity.NflPlayer;
 import com.fantasyseers.api.entity.SnapshotEntry;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
-import com.fantasyseers.api.repository.ConsensusRankingRepository;
 import com.fantasyseers.api.repository.NflPlayerRepository;
 import com.fantasyseers.api.repository.SnapshotEntryRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,29 +27,31 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BoardService {
 
-    private static final int DEFAULT_RANKING_DEPTH = 300;
+    private static final String PRESEASON = "PRESEASON";
+    private static final String SEASON_START = "SEASON_START";
 
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final SnapshotEntryRepository snapshotEntryRepository;
-    private final ConsensusRankingRepository consensusRankingRepository;
     private final UserRepository userRepository;
     private final NflPlayerRepository nflPlayerRepository;
+    private final LeagueFormat leagueFormat;
+    private final DefaultBoardRankingService defaultBoardRankingService;
 
     @Transactional
     public BoardDto.BoardResponse createBoard(Long userId, Integer season) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (boardSnapshotRepository.findByUserIdAndSeason(userId, season).isPresent()) {
+        if (boardSnapshotRepository.existsByUserIdAndSeason(userId, season)) {
             throw new IllegalStateException("Board already exists for season " + season);
         }
 
         BoardSnapshot board = BoardSnapshot.builder()
                 .user(user)
                 .season(season)
-                .snapshotType("PRESEASON")
-                .scoringFormat(LeagueFormat.SCORING_FORMAT)
-                .superflex(LeagueFormat.SUPERFLEX)
+                .snapshotType(PRESEASON)
+                .scoringFormat(leagueFormat.getScoringFormat())
+                .superflex(leagueFormat.isSuperflex())
                 .build();
 
         BoardSnapshot saved = boardSnapshotRepository.save(board);
@@ -61,11 +60,15 @@ public class BoardService {
 
     @Transactional
     public BoardDto.BoardResponse upsertEntries(Long boardId, Long userId, List<RankedPlayerDto> entries) {
-        BoardSnapshot board = boardSnapshotRepository.findById(boardId)
+        BoardSnapshot board = boardSnapshotRepository.findByIdForUpdate(boardId)
                 .orElseThrow(() -> new IllegalArgumentException("Board not found"));
 
         if (!board.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this board");
+        }
+
+        if (board.isLocked()) {
+            throw new IllegalStateException("This board is locked and cannot be edited");
         }
 
         stampCurrentLeagueFormat(board);
@@ -108,16 +111,19 @@ public class BoardService {
 
     @Transactional
     public BoardSheetResponse getMySheet(Long userId, Integer season) {
-        BoardSnapshot board = boardSnapshotRepository.findByUserIdAndSeason(userId, season)
+        BoardSnapshot board = boardSnapshotRepository
+                .findByUserIdAndSeasonAndSnapshotType(userId, season, PRESEASON)
+                .or(() -> boardSnapshotRepository
+                        .findByUserIdAndSeasonAndSnapshotType(userId, season, SEASON_START))
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new IllegalArgumentException("User not found"));
                     BoardSnapshot newBoard = BoardSnapshot.builder()
                             .user(user)
                             .season(season)
-                            .snapshotType("PRESEASON")
-                            .scoringFormat(LeagueFormat.SCORING_FORMAT)
-                            .superflex(LeagueFormat.SUPERFLEX)
+                            .snapshotType(PRESEASON)
+                            .scoringFormat(leagueFormat.getScoringFormat())
+                            .superflex(leagueFormat.isSuperflex())
                             .build();
                     return boardSnapshotRepository.save(newBoard);
                 });
@@ -126,7 +132,9 @@ public class BoardService {
         boolean isDefault = entries.isEmpty();
 
         List<RankedPlayerResponse> rankings = isDefault
-                ? getDefaultRankings()
+                ? defaultBoardRankingService.getRankings().stream()
+                        .map(this::toRankedPlayerResponse)
+                        .toList()
                 : toRankedPlayerResponses(entries);
 
         return new BoardSheetResponse(
@@ -134,50 +142,26 @@ public class BoardService {
                 season,
                 board.getScoringFormat(),
                 board.getSuperflex(),
+                board.isLocked(),
+                board.getLockedAt(),
                 isDefault,
                 rankings
         );
     }
 
-    private RankedPlayerResponse toRankedPlayerResponse(ConsensusRanking ranking) {
-        NflPlayer player = ranking.getPlayer();
+    private RankedPlayerResponse toRankedPlayerResponse(
+            DefaultBoardRankingService.DefaultRanking ranking
+    ) {
+        NflPlayer player = ranking.player();
         return new RankedPlayerResponse(
                 player.getId(),
                 player.getFullName(),
                 player.getPosition(),
                 player.getNflTeam(),
                 player.getAdp() != null ? player.getAdp().doubleValue() : null,
-                ranking.getOverallRank(),
-                ranking.getPositionalRank()
+                ranking.overallRank(),
+                ranking.positionalRank()
         );
-    }
-
-    private List<RankedPlayerResponse> getDefaultRankings() {
-        List<NflPlayer> activePlayers = nflPlayerRepository.findAllByActiveTrueOrderByAdpAscFullNameAscSleeperIdAsc(
-                PageRequest.of(0, DEFAULT_RANKING_DEPTH)
-        );
-        if (activePlayers.isEmpty()) {
-            return consensusRankingRepository.findAllByOrderByOverallRankAsc().stream()
-                    .map(this::toRankedPlayerResponse)
-                    .toList();
-        }
-
-        Map<String, Integer> positionCounters = new HashMap<>();
-        List<RankedPlayerResponse> rankings = new ArrayList<>();
-        for (int index = 0; index < activePlayers.size(); index++) {
-            NflPlayer player = activePlayers.get(index);
-            int positionalRank = positionCounters.merge(player.getPosition(), 1, Integer::sum);
-            rankings.add(new RankedPlayerResponse(
-                    player.getId(),
-                    player.getFullName(),
-                    player.getPosition(),
-                    player.getNflTeam(),
-                    player.getAdp() != null ? player.getAdp().doubleValue() : null,
-                    index + 1,
-                    positionalRank
-            ));
-        }
-        return rankings;
     }
 
     private List<RankedPlayerResponse> toRankedPlayerResponses(List<SnapshotEntry> entries) {
@@ -220,13 +204,15 @@ public class BoardService {
                 board.getSnapshotType(),
                 board.getScoringFormat(),
                 board.getSuperflex(),
+                board.isLocked(),
+                board.getLockedAt(),
                 entryResponses,
                 board.getCreatedAt()
         );
     }
 
     private void stampCurrentLeagueFormat(BoardSnapshot board) {
-        board.setScoringFormat(LeagueFormat.SCORING_FORMAT);
-        board.setSuperflex(LeagueFormat.SUPERFLEX);
+        board.setScoringFormat(leagueFormat.getScoringFormat());
+        board.setSuperflex(leagueFormat.isSuperflex());
     }
 }

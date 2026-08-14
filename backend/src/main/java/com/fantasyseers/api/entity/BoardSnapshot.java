@@ -35,11 +35,14 @@ public class BoardSnapshot {
 
     @Column(name = "scoring_format", nullable = false, length = 20)
     @Builder.Default
-    private String scoringFormat = LeagueFormat.SCORING_FORMAT;
+    private String scoringFormat = LeagueFormat.DEFAULT_SCORING_FORMAT;
 
     @Column(nullable = false)
     @Builder.Default
-    private Boolean superflex = LeagueFormat.SUPERFLEX;
+    private Boolean superflex = LeagueFormat.DEFAULT_SUPERFLEX;
+
+    @Column(name = "locked_at")
+    private LocalDateTime lockedAt;
 
     @OneToMany(mappedBy = "snapshot", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
@@ -48,4 +51,9 @@ public class BoardSnapshot {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Transient
+    public boolean isLocked() {
+        return lockedAt != null;
+    }
 }
