@@ -155,9 +155,9 @@ input shape; scoring consumes it as-is.
    checkpoint — consensus then flows through the exact same snapshot/scoring pipeline
    and appears on the leaderboard as a row ("did you beat consensus" becomes literally
    two rows). Same trick gives an ADP-order baseline board for free.
-4. **Format on the board.** `scoring_format`/`superflex` live on `users` and are
-   mutable; a snapshot doesn't record which format it was built under. Copy them onto
-   `board_snapshots` at snapshot time, or scoring can't pick the right truth column.
+4. **Format on the board.** Resolved for 2026 by V19: `scoring_format`/`superflex`
+   are copied from the centralized app format onto every `board_snapshot`. The
+   provisional `FULL_PPR`, single-QB format must be confirmed before locking.
 5. **Immutability enforcement.** "Immutable monthly snapshots" is stated intent, but
    the schema doesn't enforce it — entries are editable rows. Add `locked_at` and
    refuse writes after lock; scoring only ever reads locked snapshots.

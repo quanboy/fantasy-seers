@@ -1,5 +1,6 @@
 package com.fantasyseers.api.service;
 
+import com.fantasyseers.api.config.LeagueFormat;
 import com.fantasyseers.api.dto.BoardDto;
 import com.fantasyseers.api.dto.BoardSheetResponse;
 import com.fantasyseers.api.dto.RankedPlayerDto;
@@ -50,6 +51,8 @@ public class BoardService {
                 .user(user)
                 .season(season)
                 .snapshotType("PRESEASON")
+                .scoringFormat(LeagueFormat.SCORING_FORMAT)
+                .superflex(LeagueFormat.SUPERFLEX)
                 .build();
 
         BoardSnapshot saved = boardSnapshotRepository.save(board);
@@ -64,6 +67,8 @@ public class BoardService {
         if (!board.getUser().getId().equals(userId)) {
             throw new AccessDeniedException("You do not own this board");
         }
+
+        stampCurrentLeagueFormat(board);
 
         List<SnapshotEntry> newEntries = new ArrayList<>();
         for (RankedPlayerDto dto : entries) {
@@ -111,6 +116,8 @@ public class BoardService {
                             .user(user)
                             .season(season)
                             .snapshotType("PRESEASON")
+                            .scoringFormat(LeagueFormat.SCORING_FORMAT)
+                            .superflex(LeagueFormat.SUPERFLEX)
                             .build();
                     return boardSnapshotRepository.save(newBoard);
                 });
@@ -122,7 +129,14 @@ public class BoardService {
                 ? getDefaultRankings()
                 : toRankedPlayerResponses(entries);
 
-        return new BoardSheetResponse(board.getId(), season, isDefault, rankings);
+        return new BoardSheetResponse(
+                board.getId(),
+                season,
+                board.getScoringFormat(),
+                board.getSuperflex(),
+                isDefault,
+                rankings
+        );
     }
 
     private RankedPlayerResponse toRankedPlayerResponse(ConsensusRanking ranking) {
@@ -204,8 +218,15 @@ public class BoardService {
                 board.getUser().getUsername(),
                 board.getSeason(),
                 board.getSnapshotType(),
+                board.getScoringFormat(),
+                board.getSuperflex(),
                 entryResponses,
                 board.getCreatedAt()
         );
+    }
+
+    private void stampCurrentLeagueFormat(BoardSnapshot board) {
+        board.setScoringFormat(LeagueFormat.SCORING_FORMAT);
+        board.setSuperflex(LeagueFormat.SUPERFLEX);
     }
 }

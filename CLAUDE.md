@@ -25,7 +25,7 @@ fantasy-seers/
 │   └── src/main/resources/
 │       ├── application.yml
 │       ├── application-prod.yml # Production profile (activate via SPRING_PROFILES_ACTIVE=prod)
-│       └── db/migration/        # Flyway SQL migrations (V1–V14)
+│       └── db/migration/        # Flyway SQL migrations (V1–V19)
 ├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
 │   ├── package.json
 │   ├── Dockerfile               # Multi-stage: npm build → nginx
@@ -152,8 +152,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V16__snapshot_entry_rank_unique.sql** — unique rank per board snapshot
 - **V17__track_active_nfl_players.sql** — active-player tracking and initial Sleeper refresh trigger
 - **V18__daily_adp_snapshots.sql** — idempotent daily ADP history by player, source, and UTC day
+- **V19__stamp_board_scoring_format.sql** — app-wide scoring format copied onto every board snapshot
 
-**Adding a new migration:** Create `V15__description.sql` in snake_case. Do not modify existing migration files.
+**Adding a new migration:** Create the next sequential file (currently `V20__description.sql`) in snake_case. Do not modify existing migration files.
 
 ---
 
@@ -250,6 +251,7 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Profile: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater` (validated with `@Size`).
 - **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, active, adp. The daily sync retains the full active universe; the Master Sheet uses the top 300 by Sleeper rank.
 - **AdpSnapshot** — daily raw ranking observation. Fields: player, source, capturedAt (UTC-day bucket), value. Unique per player/source/day; written transactionally during the Sleeper player sync.
+- **BoardSnapshot** — season/type ranking board. Every snapshot carries the centralized 2026 league format: provisional FULL_PPR, single-QB. LeagueFormat.CONFIRMED stays false until real league settings are known.
 - **ConsensusRanking** — expert consensus ranking for each NflPlayer. OneToOne with NflPlayer. Fields: overallRank, positionalRank.
 - **UserRanking** — user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. UNIQUE(user_id, player_id). Bulk delete + save via `@Modifying` JPQL + `flush()`. Falls back to ConsensusRankings when empty.
 - **Prop lifecycle:** User-submitted: `PENDING` → approval → `OPEN` → `CLOSED` → `RESOLVED`. Admin-created: `OPEN` → `CLOSED` → `RESOLVED`. Auto-close via `PropClosingScheduler` (60s). Group membership validated on user-submitted group props.

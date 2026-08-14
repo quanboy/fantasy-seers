@@ -1,5 +1,6 @@
 package com.fantasyseers.api.entity;
 
+import com.fantasyseers.api.config.LeagueFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -31,6 +32,14 @@ public class BoardSnapshot {
     @Column(name = "snapshot_type", nullable = false, length = 20)
     @Builder.Default
     private String snapshotType = "PRESEASON";
+
+    @Column(name = "scoring_format", nullable = false, length = 20)
+    @Builder.Default
+    private String scoringFormat = LeagueFormat.SCORING_FORMAT;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean superflex = LeagueFormat.SUPERFLEX;
 
     @OneToMany(mappedBy = "snapshot", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
