@@ -15,7 +15,7 @@ Two hard clocks: the league drafts in ~2–4 weeks, and anything not captured be
 ### Race scope — before the league drafts (~3 weeks)
 
 1. ~~**Repo hygiene** — roadmap + Phase 3 spike docs onto `main`; discard the Java 25 diff (needs a Spring Boot 3.4/3.5 train to be real — offseason); abandon the `appmod` branch; all race work branches from `main` on Java 21.~~ Done 2026-08-13.
-2. **Phase 0 salvage** — cherry-pick Board v2 (`BoardSnapshot`, `SnapshotEntry`, `BoardController`, MasterSheetPage rework) from `feature/chatbot-idea`; renumber migrations to V15+; leave chatbot commits behind. Everything else stacks on this.
+2. ~~**Phase 0 salvage** — cherry-pick Board v2 (`BoardSnapshot`, `SnapshotEntry`, `BoardController`, MasterSheetPage rework) from `feature/chatbot-idea`; renumber migrations to V15+; leave chatbot commits behind. Everything else stacks on this.~~ Done 2026-08-13. Board v2 backend extracted manually (not cherry-picked — migration numbering diverged). `feature/chatbot-idea` archived as tag `archive/feature/chatbot-idea`. MasterSheetPage frontend rework to use Board v2 API is next.
 3. **Full-universe player ingest** — backend job pulling Sleeper's player dump; upsert all active QB/RB/WR/TE/K + team DEFs, replacing the stale 300-player seed. **Must land before invites go out** (the front door falls back to consensus rankings; a stale 2025 list with no rookies kills adoption on day one). Rankings depth does the relevance filtering, not ingest-time curation.
 4. **Daily ADP capture** — scheduled job writing Sleeper ADP into `adp_snapshots (player_id, source, captured_at, value)`, starting immediately. Single-source is fine for now: this series is the raw material for 2027's σ and the stock-chart pages. ADP not captured now is gone forever.
 5. **Front door** — Master Sheet becomes `/`; props feed demoted to a secondary nav item, otherwise untouched.
@@ -33,15 +33,18 @@ Admin-triggered global lock (analog of the props resolve flow): every user's cur
 ### In-season (Sept–Dec)
 
 - ADP capture keeps running (2027 σ + movers/stock-chart data).
+- **Oct–Nov:** **Public profile pages** — lightweight social foundation so the platform layer has roots before scores land. Each user gets a public profile showing their locked board (position coverage, bold calls vs. consensus), positional niche tags (auto-derived from where their board diverges most), and a follow button. No feed, no discovery page yet — just a shareable URL and a follower count. This is the minimum scaffold so that when January scores drop, profiles already exist to attach accuracy badges and history to, and the "build a following around your niche" loop can start immediately instead of waiting for a Phase 4 greenlight.
 - **Nov–Dec:** build the truth ingest — `player_season_results (player_id, season, scoring_format, fantasy_points, games_played, overall_finish, positional_finish)`, computed from Sleeper raw season stats under the league's format. Computing from raw stats (not scraping someone's finished ranks) is what makes multi-format real in 2027 and keeps ground truth first-party.
 
 ### January 2027 — scoring & the reveal
 
 Per the [Phase 3 spike](phase3-scoring-spike.md), with one 2026 amendment: **σ = 1** (methodology v1). Single-source ADP means no cross-site deviation, and a synthesized σ is false precision that can't be defended when a league-mate asks why. Publish plain absolute rank error (**Accuracy**) and consensus-relative (**Edge**), from the spike's per-entry component table unchanged — 2026 rows simply carry σ = 1; real σ arrives with multi-source ADP for 2027. End-of-season resolution job in the mold of the existing prop `ResolutionService`: ingest truth → score every locked snapshot → batch-persist components → aggregate → leaderboards. Awards per the spike, coverage minimums applied.
 
+**Accuracy badges on profiles:** once scores are computed, stamp each profile with accuracy badges (overall accuracy tier, positional niche awards, sleeper/bust badges). These attach to the public profiles built in-season — the shareable URL now carries proof. This is the bridge between long-term rankings credibility and the existing props system: a user's accuracy history becomes a visible trust signal that other users can weigh when deciding whether to follow someone's prop calls.
+
 ### Offseason 2027 list
 
-JDK 25 + Spring Boot 3.4/3.5 upgrade (bundled; Boot 3.2.3's Lombok train breaks on JDK 25) · props retire-or-keep decision · multi-source ADP → real σ · format setup UI · seasonal-checkpoint state machine, notes, choose-your-base · **Phase 4 go/no-go (Feb 2027)** based on whether the league actually used the tool.
+JDK 25 + Spring Boot 3.4/3.5 upgrade (bundled; Boot 3.2.3's Lombok train breaks on JDK 25) · props retire-or-keep decision · multi-source ADP → real σ · format setup UI · seasonal-checkpoint state machine, notes, choose-your-base · credibility-weighted props (accuracy history as a trust signal surfaced on prop feeds — the "long term sets up the short term" bridge) · discovery/explore page for finding rankers by niche · **Phase 4 go/no-go (Feb 2027)** based on whether the league actually used the tool.
 
 ---
 

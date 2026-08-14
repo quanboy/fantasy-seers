@@ -45,6 +45,16 @@ public class User {
     @Column(name = "alma_mater", length = 100)
     private String almaMater;
 
+    @Column(name = "scoring_format", length = 20)
+    private String scoringFormat;
+
+    @Column(name = "primary_format", length = 20)
+    private String primaryFormat;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean superflex = false;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

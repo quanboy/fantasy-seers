@@ -90,4 +90,11 @@ export const rankingsApi = {
   saveMySheet: (rankings) => api.post('/rankings/my-sheet', { rankings }),
 }
 
+export const boardsApi = {
+  getMySheet:    (season) => api.get('/v1/boards/my-sheet', { params: season ? { season } : {} }),
+  createBoard:   (season) => api.post('/v1/boards', { season }),
+  getBoard:      (id)     => api.get(`/v1/boards/${id}`),
+  upsertEntries: (id, entries) => api.put(`/v1/boards/${id}/entries`, entries),
+}
+
 export default api

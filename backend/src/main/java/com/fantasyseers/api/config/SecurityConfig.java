@@ -51,6 +51,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/props/public").permitAll()
                         .requestMatchers("/api/leaderboard/global").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/api/v1/boards/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )

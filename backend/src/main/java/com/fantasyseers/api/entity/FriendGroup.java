@@ -40,6 +40,9 @@ public class FriendGroup {
     @Builder.Default
     private Set<User> members = new HashSet<>();
 
+    @Column(name = "max_members")
+    private Integer maxMembers;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
