@@ -25,7 +25,7 @@ fantasy-seers/
 │   └── src/main/resources/
 │       ├── application.yml
 │       ├── application-prod.yml # Production profile (activate via SPRING_PROFILES_ACTIVE=prod)
-│       └── db/migration/        # Flyway SQL migrations (V1–V14)
+│       └── db/migration/        # Flyway SQL migrations (V1–V20)
 ├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
 │   ├── package.json
 │   ├── Dockerfile               # Multi-stage: npm build → nginx
@@ -93,6 +93,8 @@ cd frontend && npm install && npm run dev
 - `spring.flyway.locations: classpath:db/migration`
 - JWT secret read from `JWT_SECRET` env var (no default — app fails without it)
 - JWT expiry: 24h (`JWT_EXPIRATION_MS: 86400000`)
+- Sleeper player sync: daily at 04:15 UTC (`SLEEPER_PLAYER_SYNC_CRON`), disable with `SLEEPER_PLAYER_SYNC_ENABLED=false`
+- 2026 league format: provisional `FULL_PPR`, single-QB. Set `LEAGUE_FORMAT_CONFIRMED=true` only after verifying the real league; the global lock refuses provisional formats.
 - Server port: `${PORT:8080}` — configurable for PaaS
 - CORS: `${CORS_ALLOWED_ORIGINS:http://localhost:*}` — must be set to actual domain in production
 - Sentry: `${SENTRY_DSN:}` — empty = disabled (safe for local dev)
@@ -147,8 +149,14 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V12__consensus_rankings.sql** — `consensus_rankings` table (player_id, overall_rank, positional_rank) + 300 ranked inserts
 - **V13__add_adp_to_nfl_players.sql** — added `adp` (int, nullable) column to nfl_players
 - **V14__populate_adp.sql** — populated ADP values from Sleeper API search_rank
+- **V15__board_snapshots.sql** — Board v2 snapshots, entries, scoring preferences, and group capacity
+- **V16__snapshot_entry_rank_unique.sql** — unique rank per board snapshot
+- **V17__track_active_nfl_players.sql** — active-player tracking and initial Sleeper refresh trigger
+- **V18__daily_adp_snapshots.sql** — idempotent daily ADP history by player, source, and UTC day
+- **V19__stamp_board_scoring_format.sql** — app-wide scoring format copied onto every board snapshot
+- **V20__lock_board_snapshots.sql** — immutable snapshot lock timestamp and locked-board index
 
-**Adding a new migration:** Create `V15__description.sql` in snake_case. Do not modify existing migration files.
+**Adding a new migration:** Create the next sequential file (currently `V21__description.sql`) in snake_case. Do not modify existing migration files.
 
 ---
 
@@ -162,7 +170,7 @@ All endpoints are prefixed `/api` and return JSON.
 | UserController     | `/api/users`     | `GET /me`, `PUT /me` (`@Valid`, `@Size`-enforced), `GET /me/authorities`      |
 | PropController     | `/api/props`     | `POST /` (admin only, `@PreAuthorize`), `POST /submit` (user), `GET /public` (paginated), `GET /{id}` (scope-checked) |
 | VoteController     | `/api/props`     | `POST /{id}/vote`, `GET /{id}/split` (scope-checked, requires auth)          |
-| AdminController    | `/api/admin`     | `GET /props/pending`, `GET /props/closed`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve?result=YES\|NO`, `POST /props`, `GET /groups` |
+| AdminController    | `/api/admin`     | `GET /props/pending`, `GET /props/closed`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve?result=YES\|NO`, `POST /props`, `GET /groups`, `POST /boards/lock?season=YYYY` |
 | LeaderboardController | `/api/leaderboard` | `GET /global` (public), `GET /group/{groupId}` (auth + membership)       |
 | FriendGroupController | `/api/groups` | `POST /`, `POST /join`, `GET /`, `GET /{id}`, `GET /{id}/props`, `PATCH /{id}`, `DELETE /{id}/members/{userId}`, `DELETE /{id}/members/me`, `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
 | RankingsController | `/api/rankings` | `GET /my-sheet` (user's rankings, consensus fallback), `POST /my-sheet` (save rankings, `{rankings: [{playerId, overallRank, positionalRank}]}`) |
@@ -178,11 +186,12 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 |---------------|-----------------|--------------|
 | `/login`      | Login           | public       |
 | `/register`   | Register        | public       |
-| `/`           | Dashboard       | PrivateRoute |
+| `/`           | MasterSheetPage | PrivateRoute |
+| `/props`      | Dashboard       | PrivateRoute |
 | `/groups`     | GroupsPage      | PrivateRoute |
 | `/groups/:id` | GroupFeedPage   | PrivateRoute |
 | `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
-| `/master-sheet`| MasterSheetPage | PrivateRoute |
+| `/master-sheet`| Redirect to `/` | PrivateRoute |
 | `/leaderboard`| LeaderboardPage | PrivateRoute |
 | `/profile`    | ProfilePage     | PrivateRoute |
 | `/admin`      | AdminDashboard  | AdminRoute   |
@@ -195,8 +204,8 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `userApi`, `rankingsApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
-- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to Dashboard.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Dashboard, Master Sheet, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
+- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Master Sheet, Props Feed, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
 - Mobile top bar shows hamburger + logo (links to `/`) on left; username, points, sign out on right.
 
 ### Key UI Patterns
@@ -209,7 +218,7 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **GroupSettingsPage** — kick/leave errors display inline (no `alert()` calls).
 - **AdminDashboard** — all three fetches have error states with retry or graceful fallback.
 - **LeaderboardPage** — medal colors use `text-gold-400`/`text-slate-300`/`text-gold-600`. Error state replaces table content.
-- **MasterSheetPage** — personalized NFL player ranking sheet. Drag-and-drop via @dnd-kit. Columns: Rank, Player (Team), Position (positional rank chip), ADP. Position filter pills (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Falls back to consensus rankings when user has no saved rankings (`isDefault: true` banner). Save sends `{rankings: [{playerId, overallRank, positionalRank}]}` to `POST /api/rankings/my-sheet`.
+- **MasterSheetPage** — personalized NFL player ranking sheet. Drag-and-drop via @dnd-kit. Columns: Rank, Player (Team), Position (positional rank chip), ADP. Position filter pills (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Falls back to consensus rankings when user has no saved rankings (`isDefault: true` banner). Locked boards show their stamped format and disable dragging/saving.
 
 ### Shared Utils
 - `src/utils/sportClasses.js` — `getSportClass()` function (used by PropCard, VoteModal, AdminDashboard)
@@ -242,7 +251,9 @@ Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, 
 - **FriendGroup** — named group with 8-char invite code. `ON DELETE CASCADE` on group_invites FKs.
 - **GroupInvite** — PENDING/ACCEPTED/REJECTED. Non-member invite attempts throw `AccessDeniedException` (403).
 - **User** — roles: `USER` or `ADMIN`. Starts with 1000 `pointBank`. Profile: `favoriteNflTeam`, `favoriteNbaTeam`, `almaMater` (validated with `@Size`).
-- **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, adp. 300 players seeded via V10 migration.
+- **NflPlayer** — NFL player from Sleeper API. Fields: sleeperId (unique), fullName, position (QB/RB/WR/TE/K/DEF), nflTeam, status, active, adp. The daily sync retains the full active universe; the Master Sheet uses the top 300 by Sleeper rank.
+- **AdpSnapshot** — daily raw ranking observation. Fields: player, source, capturedAt (UTC-day bucket), value. Unique per player/source/day; written transactionally during the Sleeper player sync.
+- **BoardSnapshot** — season/type ranking board. Every snapshot carries the centralized 2026 league format plus `lockedAt`. The admin global lock materializes untouched boards, stamps the confirmed format, changes them to `SEASON_START`, and makes ranking writes return 409.
 - **ConsensusRanking** — expert consensus ranking for each NflPlayer. OneToOne with NflPlayer. Fields: overallRank, positionalRank.
 - **UserRanking** — user's personalized ranking for an NflPlayer. ManyToOne User + ManyToOne NflPlayer. UNIQUE(user_id, player_id). Bulk delete + save via `@Modifying` JPQL + `flush()`. Falls back to ConsensusRankings when empty.
 - **Prop lifecycle:** User-submitted: `PENDING` → approval → `OPEN` → `CLOSED` → `RESOLVED`. Admin-created: `OPEN` → `CLOSED` → `RESOLVED`. Auto-close via `PropClosingScheduler` (60s). Group membership validated on user-submitted group props.
@@ -312,6 +323,14 @@ SENTRY_DSN=                       (optional, from sentry.io)
 VITE_API_BASE_URL=https://fantasy-seers-backend-production.up.railway.app/api
 VITE_SENTRY_DSN=                  (optional, from sentry.io)
 ```
+
+**League format env vars (backend):**
+```
+LEAGUE_SCORING_FORMAT=FULL_PPR
+LEAGUE_SUPERFLEX=false
+LEAGUE_FORMAT_CONFIRMED=false
+```
+Keep confirmation false until the real league settings are known.
 
 **Frontend runtime env vars:**
 ```

@@ -1,5 +1,6 @@
 package com.fantasyseers.api.entity;
 
+import com.fantasyseers.api.config.LeagueFormat;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -32,6 +33,17 @@ public class BoardSnapshot {
     @Builder.Default
     private String snapshotType = "PRESEASON";
 
+    @Column(name = "scoring_format", nullable = false, length = 20)
+    @Builder.Default
+    private String scoringFormat = LeagueFormat.DEFAULT_SCORING_FORMAT;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean superflex = LeagueFormat.DEFAULT_SUPERFLEX;
+
+    @Column(name = "locked_at")
+    private LocalDateTime lockedAt;
+
     @OneToMany(mappedBy = "snapshot", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SnapshotEntry> entries = new ArrayList<>();
@@ -39,4 +51,9 @@ public class BoardSnapshot {
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Transient
+    public boolean isLocked() {
+        return lockedAt != null;
+    }
 }

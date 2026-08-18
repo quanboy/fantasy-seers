@@ -41,6 +41,17 @@ sentry:
   environment: ${SPRING_PROFILES_ACTIVE:development}
   enable-tracing: true
 
+sleeper:
+  base-url: ${SLEEPER_API_BASE_URL:https://api.sleeper.app}
+  players:
+    sync-enabled: ${SLEEPER_PLAYER_SYNC_ENABLED:true}
+    sync-cron: ${SLEEPER_PLAYER_SYNC_CRON:0 15 4 * * *}
+
+league-format:
+  scoring-format: ${LEAGUE_SCORING_FORMAT:FULL_PPR}
+  superflex: ${LEAGUE_SUPERFLEX:false}
+  confirmed: ${LEAGUE_FORMAT_CONFIRMED:false}
+
 logging:
   level:
     com.fantasyseers: INFO

@@ -71,12 +71,13 @@ function App() {
               </PrivateRoute>
             }
           >
-            <Route index element={<Dashboard />} />
+            <Route index element={<MasterSheetPage />} />
+            <Route path="props" element={<Dashboard />} />
             <Route path="groups" element={<GroupsPage />} />
             <Route path="groups/:id" element={<GroupFeedPage />} />
             <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
             <Route path="leaderboard" element={<LeaderboardPage />} />
-            <Route path="master-sheet" element={<MasterSheetPage />} />
+            <Route path="master-sheet" element={<Navigate to="/" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route
               path="admin"

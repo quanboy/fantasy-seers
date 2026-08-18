@@ -10,6 +10,10 @@ public class BoardDto {
             String username,
             Integer season,
             String snapshotType,
+            String scoringFormat,
+            Boolean superflex,
+            Boolean locked,
+            LocalDateTime lockedAt,
             List<EntryResponse> entries,
             LocalDateTime createdAt
     ) {}

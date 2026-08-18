@@ -58,6 +58,7 @@ export const adminApi = {
     resolve:    (id, result) => api.post(`/admin/props/${id}/resolve?result=${result}`),
     createProp: (data) => api.post('/admin/props', data),
     getAllGroups: () => api.get('/admin/groups'),
+    lockBoards: (season) => api.post('/admin/boards/lock', null, { params: { season } }),
 }
 
 export const groupsApi = {

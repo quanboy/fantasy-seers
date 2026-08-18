@@ -1,8 +1,10 @@
 package com.fantasyseers.api.controller;
 
 import com.fantasyseers.api.dto.FriendGroupDto;
+import com.fantasyseers.api.dto.BoardLockResponse;
 import com.fantasyseers.api.entity.Prop;
 import com.fantasyseers.api.service.FriendGroupService;
+import com.fantasyseers.api.service.BoardLockService;
 import com.fantasyseers.api.service.PropService;
 import com.fantasyseers.api.service.ResolutionService;
 import com.fantasyseers.api.dto.PropDto;
@@ -23,6 +25,7 @@ public class AdminController {
     private final PropService propService;
     private final ResolutionService resolutionService;
     private final FriendGroupService friendGroupService;
+    private final BoardLockService boardLockService;
 
     @PostMapping("/props")
     public ResponseEntity<PropDto.PropResponse> createProp(
@@ -66,5 +69,10 @@ public class AdminController {
     @GetMapping("/groups")
     public ResponseEntity<List<FriendGroupDto.GroupResponse>> getAllGroups() {
         return ResponseEntity.ok(friendGroupService.getAllGroups());
+    }
+
+    @PostMapping("/boards/lock")
+    public ResponseEntity<BoardLockResponse> lockBoards(@RequestParam Integer season) {
+        return ResponseEntity.ok(boardLockService.lockSeason(season));
     }
 }
