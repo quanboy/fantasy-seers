@@ -11,6 +11,7 @@ import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,6 +20,7 @@ import java.util.Set;
 public class NflPlayerSyncService {
 
     private static final Set<String> ELIGIBLE_POSITIONS = Set.of("QB", "RB", "WR", "TE", "K", "DEF");
+    private static final Set<String> INELIGIBLE_STATUSES = Set.of("INACTIVE", "RETIRED");
     private static final int MIN_EXPECTED_PLAYERS = 500;
     private static final int SLEEPER_UNRANKED_SENTINEL = 1_000_000;
     private static final int DEFAULT_DEFENSE_ADP = 200;
@@ -72,6 +74,13 @@ public class NflPlayerSyncService {
             return null;
         }
 
+        String team = normalize(player.team(), 10);
+        String status = normalize(firstNonBlank(player.status(), "Active"), 30);
+        // Sleeper's active flag alone includes retired players and stale roster records.
+        if (team == null || INELIGIBLE_STATUSES.contains(status.toUpperCase(Locale.ROOT))) {
+            return null;
+        }
+
         String sleeperId = normalize(firstNonBlank(player.playerId(), responseKey), 50);
         String fullName = normalize(firstNonBlank(
                 player.fullName(),
@@ -94,8 +103,8 @@ public class NflPlayerSyncService {
                 sleeperId,
                 fullName,
                 position,
-                normalize(player.team(), 10),
-                normalize(firstNonBlank(player.status(), "Active"), 30),
+                team,
+                status,
                 boardAdp,
                 sourceAdp
         );
