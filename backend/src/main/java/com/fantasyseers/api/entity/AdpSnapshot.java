@@ -29,6 +29,8 @@ import java.time.LocalDateTime;
 @Builder
 public class AdpSnapshot {
 
+    public static final String SLEEPER_SOURCE = "SLEEPER";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

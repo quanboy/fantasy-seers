@@ -5,6 +5,7 @@ import com.fantasyseers.api.dto.BoardDto;
 import com.fantasyseers.api.dto.BoardSheetResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.NflPlayer;
+import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
 import com.fantasyseers.api.repository.NflPlayerRepository;
@@ -60,9 +61,9 @@ class BoardServiceTest {
                 .id(21L).fullName("Player One").position("WR")
                 .nflTeam("TEST").adp(17).build();
 
-        when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, "PRESEASON"))
+        when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, SnapshotType.PRESEASON))
                 .thenReturn(Optional.empty());
-        when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, "SEASON_START"))
+        when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, SnapshotType.SEASON_START))
                 .thenReturn(Optional.empty());
         when(userRepository.findById(7L)).thenReturn(Optional.of(user));
         when(boardSnapshotRepository.save(any(BoardSnapshot.class))).thenReturn(board);

@@ -8,6 +8,7 @@ import com.fantasyseers.api.dto.RankedPlayerResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.NflPlayer;
 import com.fantasyseers.api.entity.SnapshotEntry;
+import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
 import com.fantasyseers.api.repository.NflPlayerRepository;
@@ -26,9 +27,6 @@ import java.util.Map;
 @Service
 @RequiredArgsConstructor
 public class BoardService {
-
-    private static final String PRESEASON = "PRESEASON";
-    private static final String SEASON_START = "SEASON_START";
 
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final SnapshotEntryRepository snapshotEntryRepository;
@@ -49,7 +47,7 @@ public class BoardService {
         BoardSnapshot board = BoardSnapshot.builder()
                 .user(user)
                 .season(season)
-                .snapshotType(PRESEASON)
+                .snapshotType(SnapshotType.PRESEASON)
                 .scoringFormat(leagueFormat.getScoringFormat())
                 .superflex(leagueFormat.isSuperflex())
                 .build();
@@ -112,16 +110,16 @@ public class BoardService {
     @Transactional
     public BoardSheetResponse getMySheet(Long userId, Integer season) {
         BoardSnapshot board = boardSnapshotRepository
-                .findByUserIdAndSeasonAndSnapshotType(userId, season, PRESEASON)
+                .findByUserIdAndSeasonAndSnapshotType(userId, season, SnapshotType.PRESEASON)
                 .or(() -> boardSnapshotRepository
-                        .findByUserIdAndSeasonAndSnapshotType(userId, season, SEASON_START))
+                        .findByUserIdAndSeasonAndSnapshotType(userId, season, SnapshotType.SEASON_START))
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
                             .orElseThrow(() -> new IllegalArgumentException("User not found"));
                     BoardSnapshot newBoard = BoardSnapshot.builder()
                             .user(user)
                             .season(season)
-                            .snapshotType(PRESEASON)
+                            .snapshotType(SnapshotType.PRESEASON)
                             .scoringFormat(leagueFormat.getScoringFormat())
                             .superflex(leagueFormat.isSuperflex())
                             .build();
@@ -201,7 +199,7 @@ public class BoardService {
                 board.getId(),
                 board.getUser().getUsername(),
                 board.getSeason(),
-                board.getSnapshotType(),
+                board.getSnapshotType().name(),
                 board.getScoringFormat(),
                 board.getSuperflex(),
                 board.isLocked(),

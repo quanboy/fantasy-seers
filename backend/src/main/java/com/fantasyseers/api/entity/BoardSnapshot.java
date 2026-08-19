@@ -29,9 +29,10 @@ public class BoardSnapshot {
     @Column(nullable = false)
     private Integer season;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "snapshot_type", nullable = false, length = 20)
     @Builder.Default
-    private String snapshotType = "PRESEASON";
+    private SnapshotType snapshotType = SnapshotType.PRESEASON;
 
     @Column(name = "scoring_format", nullable = false, length = 20)
     @Builder.Default

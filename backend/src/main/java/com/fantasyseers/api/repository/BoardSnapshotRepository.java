@@ -1,6 +1,7 @@
 package com.fantasyseers.api.repository;
 
 import com.fantasyseers.api.entity.BoardSnapshot;
+import com.fantasyseers.api.entity.SnapshotType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -17,7 +18,7 @@ public interface BoardSnapshotRepository extends JpaRepository<BoardSnapshot, Lo
     Optional<BoardSnapshot> findByUserIdAndSeasonAndSnapshotType(
             Long userId,
             Integer season,
-            String snapshotType
+            SnapshotType snapshotType
     );
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -25,7 +26,7 @@ public interface BoardSnapshotRepository extends JpaRepository<BoardSnapshot, Lo
     Optional<BoardSnapshot> findByIdForUpdate(@Param("id") Long id);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    List<BoardSnapshot> findAllBySeasonAndSnapshotType(Integer season, String snapshotType);
+    List<BoardSnapshot> findAllBySeasonAndSnapshotType(Integer season, SnapshotType snapshotType);
 
     List<BoardSnapshot> findAllByUserId(Long userId);
 }
