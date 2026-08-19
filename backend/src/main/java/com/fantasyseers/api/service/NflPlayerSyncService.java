@@ -1,6 +1,7 @@
 package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.dto.SleeperPlayerDto;
+import com.fantasyseers.api.entity.AdpSnapshot;
 import com.fantasyseers.api.repository.AdpSnapshotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,8 +25,6 @@ public class NflPlayerSyncService {
     private static final int MIN_EXPECTED_PLAYERS = 500;
     private static final int SLEEPER_UNRANKED_SENTINEL = 1_000_000;
     private static final int DEFAULT_DEFENSE_ADP = 200;
-    private static final String SLEEPER_SOURCE = "SLEEPER";
-
     private final SleeperPlayerClient sleeperPlayerClient;
     private final NflPlayerSyncWriter syncWriter;
     private final AdpSnapshotRepository adpSnapshotRepository;
@@ -33,7 +32,7 @@ public class NflPlayerSyncService {
     public synchronized NflPlayerSyncResult syncIfStale() {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         boolean fresh = adpSnapshotRepository.existsBySourceAndCapturedAt(
-                SLEEPER_SOURCE,
+                AdpSnapshot.SLEEPER_SOURCE,
                 today.atStartOfDay()
         );
         return fresh ? NflPlayerSyncResult.skippedResult() : syncNow();

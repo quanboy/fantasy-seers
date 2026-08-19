@@ -25,6 +25,12 @@ export default function AdminDashboard() {
   const [resolveErrors, setResolveErrors] = useState({});
   const [groupsError, setGroupsError] = useState(null);
 
+  // Lock boards state
+  const [lockSeason, setLockSeason] = useState(new Date().getFullYear().toString());
+  const [locking, setLocking] = useState(false);
+  const [lockMsg, setLockMsg] = useState(null);
+  const [lockConfirmOpen, setLockConfirmOpen] = useState(false);
+
   // Confirm modal state: { type: 'approve'|'reject'|'resolve', propId, propTitle, result? }
   const [pendingAction, setPendingAction] = useState(null);
   const [rejectReason, setRejectReason] = useState("");
@@ -125,6 +131,23 @@ export default function AdminDashboard() {
       } finally {
         setResolvingId(null);
       }
+    }
+  };
+
+  const handleLockBoards = async () => {
+    setLockConfirmOpen(false);
+    setLocking(true);
+    setLockMsg(null);
+    try {
+      const { data } = await adminApi.lockBoards(Number(lockSeason));
+      setLockMsg({
+        type: "success",
+        text: `Locked ${data.lockedBoards} board(s) for ${data.season} (${data.alreadyLockedBoards} already locked). Format: ${data.scoringFormat}${data.superflex ? ", Superflex" : ""}.`,
+      });
+    } catch (err) {
+      setLockMsg({ type: "error", text: err.response?.data?.message ?? "Failed to lock boards" });
+    } finally {
+      setLocking(false);
     }
   };
 
@@ -414,6 +437,70 @@ export default function AdminDashboard() {
                 )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Lock Season Boards */}
+        <div className="flex items-center gap-3 mt-10 mb-4">
+          <h2 className="font-display text-lg font-700 text-slate-100">Lock Season Boards</h2>
+        </div>
+        <div className="glass-card rounded-xl p-6">
+          <p className="text-sm text-slate-400 mb-4">
+            Lock all boards for a season. This stamps the confirmed league format, materializes default boards for users without one, and makes rankings immutable.
+          </p>
+          <div className="flex gap-3 items-end">
+            <div className="flex-1">
+              <label className="text-xs text-slate-500 font-mono mb-1 block">Season</label>
+              <input
+                type="number"
+                min="2000"
+                max="2100"
+                value={lockSeason}
+                onChange={(e) => setLockSeason(e.target.value)}
+                className="input-base w-full text-sm"
+              />
+            </div>
+            <button
+              onClick={() => setLockConfirmOpen(true)}
+              disabled={locking || !lockSeason}
+              className="btn-oracle px-6 py-2.5 text-sm font-semibold rounded-lg shrink-0"
+            >
+              {locking ? "Locking..." : "Lock Boards"}
+            </button>
+          </div>
+          {lockMsg && (
+            <p className={`text-xs mt-3 ${lockMsg.type === "success" ? "text-win-400" : "text-loss-400"}`}>
+              {lockMsg.text}
+            </p>
+          )}
+        </div>
+
+        {/* Lock confirm modal */}
+        {lockConfirmOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            style={{ background: "rgba(0,0,0,0.65)" }}
+            onClick={() => setLockConfirmOpen(false)}
+          >
+            <div
+              className="glass-card rounded-xl p-6 w-full max-w-sm shadow-modal"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h3 className="font-cinzel text-base font-bold text-slate-100 mb-1">
+                Lock all boards for {lockSeason}?
+              </h3>
+              <p className="text-slate-400 text-xs mb-4 leading-relaxed">
+                This action is irreversible. All user rankings will be frozen and stamped with the confirmed league format.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={() => setLockConfirmOpen(false)} className="btn-ghost flex-1 py-2.5 text-sm">
+                  Cancel
+                </button>
+                <button onClick={handleLockBoards} className="btn-oracle flex-1 py-2.5 text-sm font-semibold rounded-lg">
+                  Confirm Lock
+                </button>
+              </div>
+            </div>
           </div>
         )}
     </div>

@@ -20,8 +20,6 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class NflPlayerSyncWriter {
 
-    private static final String SLEEPER_SOURCE = "SLEEPER";
-
     private final NflPlayerRepository nflPlayerRepository;
     private final AdpSnapshotRepository adpSnapshotRepository;
 
@@ -105,7 +103,7 @@ public class NflPlayerSyncWriter {
                 .toList();
         Map<Long, AdpSnapshot> existingByPlayerId = new HashMap<>();
         for (AdpSnapshot snapshot : adpSnapshotRepository
-                .findAllBySourceAndCapturedAtAndPlayerIdIn(SLEEPER_SOURCE, capturedAt, playerIds)) {
+                .findAllBySourceAndCapturedAtAndPlayerIdIn(AdpSnapshot.SLEEPER_SOURCE, capturedAt, playerIds)) {
             existingByPlayerId.put(snapshot.getPlayer().getId(), snapshot);
         }
 
@@ -116,7 +114,7 @@ public class NflPlayerSyncWriter {
             if (snapshot == null) {
                 snapshot = AdpSnapshot.builder()
                         .player(player)
-                        .source(SLEEPER_SOURCE)
+                        .source(AdpSnapshot.SLEEPER_SOURCE)
                         .capturedAt(capturedAt)
                         .build();
             }

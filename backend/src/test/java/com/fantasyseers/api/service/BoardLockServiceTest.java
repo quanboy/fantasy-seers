@@ -5,6 +5,7 @@ import com.fantasyseers.api.dto.BoardLockResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.NflPlayer;
 import com.fantasyseers.api.entity.SnapshotEntry;
+import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
 import com.fantasyseers.api.repository.UserRepository;
@@ -71,9 +72,9 @@ class BoardLockServiceTest {
         when(leagueFormat.isConfirmed()).thenReturn(true);
         when(leagueFormat.getScoringFormat()).thenReturn("FULL_PPR");
         when(leagueFormat.isSuperflex()).thenReturn(false);
-        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, "SEASON_START"))
+        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, SnapshotType.SEASON_START))
                 .thenReturn(List.of());
-        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, "PRESEASON"))
+        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, SnapshotType.PRESEASON))
                 .thenReturn(List.of(rankedBoard));
         when(userRepository.findAll()).thenReturn(List.of(rankedUser, untouchedUser));
         when(defaultBoardRankingService.getRankings()).thenReturn(List.of(
@@ -100,7 +101,7 @@ class BoardLockServiceTest {
                 () -> assertEquals(2, lockedBoards.size()),
                 () -> assertTrue(lockedBoards.stream().allMatch(BoardSnapshot::isLocked)),
                 () -> assertTrue(lockedBoards.stream()
-                        .allMatch(board -> "SEASON_START".equals(board.getSnapshotType()))),
+                        .allMatch(board -> SnapshotType.SEASON_START.equals(board.getSnapshotType()))),
                 () -> assertEquals(2, untouchedBoard.getEntries().size()),
                 () -> assertEquals(untouchedBoard, untouchedBoard.getEntries().getFirst().getSnapshot()),
                 () -> assertNotNull(response.completedAt())
@@ -114,15 +115,15 @@ class BoardLockServiceTest {
                 .id(20L)
                 .user(user)
                 .season(2026)
-                .snapshotType("SEASON_START")
+                .snapshotType(SnapshotType.SEASON_START)
                 .lockedAt(java.time.LocalDateTime.now())
                 .build();
         when(leagueFormat.isConfirmed()).thenReturn(true);
         when(leagueFormat.getScoringFormat()).thenReturn("FULL_PPR");
         when(leagueFormat.isSuperflex()).thenReturn(false);
-        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, "SEASON_START"))
+        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, SnapshotType.SEASON_START))
                 .thenReturn(List.of(lockedBoard));
-        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, "PRESEASON"))
+        when(boardSnapshotRepository.findAllBySeasonAndSnapshotType(2026, SnapshotType.PRESEASON))
                 .thenReturn(List.of());
         when(userRepository.findAll()).thenReturn(List.of(user));
 

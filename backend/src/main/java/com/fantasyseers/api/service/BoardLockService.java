@@ -4,6 +4,7 @@ import com.fantasyseers.api.config.LeagueFormat;
 import com.fantasyseers.api.dto.BoardLockResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.SnapshotEntry;
+import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
 import com.fantasyseers.api.repository.UserRepository;
@@ -22,9 +23,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BoardLockService {
 
-    private static final String PRESEASON = "PRESEASON";
-    private static final String SEASON_START = "SEASON_START";
-
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final UserRepository userRepository;
     private final DefaultBoardRankingService defaultBoardRankingService;
@@ -40,10 +38,10 @@ public class BoardLockService {
         }
 
         Map<Long, BoardSnapshot> lockedByUser = indexByUser(
-                boardSnapshotRepository.findAllBySeasonAndSnapshotType(season, SEASON_START)
+                boardSnapshotRepository.findAllBySeasonAndSnapshotType(season, SnapshotType.SEASON_START)
         );
         Map<Long, BoardSnapshot> preseasonByUser = indexByUser(
-                boardSnapshotRepository.findAllBySeasonAndSnapshotType(season, PRESEASON)
+                boardSnapshotRepository.findAllBySeasonAndSnapshotType(season, SnapshotType.PRESEASON)
         );
         List<User> users = userRepository.findAll();
         List<BoardSnapshot> boardsToLock = new ArrayList<>();
@@ -62,7 +60,7 @@ public class BoardLockService {
                 board = BoardSnapshot.builder()
                         .user(user)
                         .season(season)
-                        .snapshotType(PRESEASON)
+                        .snapshotType(SnapshotType.PRESEASON)
                         .build();
             }
 
@@ -84,7 +82,7 @@ public class BoardLockService {
                 }
             }
 
-            board.setSnapshotType(SEASON_START);
+            board.setSnapshotType(SnapshotType.SEASON_START);
             board.setScoringFormat(leagueFormat.getScoringFormat());
             board.setSuperflex(leagueFormat.isSuperflex());
             board.setLockedAt(completedAt);

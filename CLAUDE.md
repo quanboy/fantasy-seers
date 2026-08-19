@@ -25,7 +25,7 @@ fantasy-seers/
 │   └── src/main/resources/
 │       ├── application.yml
 │       ├── application-prod.yml # Production profile (activate via SPRING_PROFILES_ACTIVE=prod)
-│       └── db/migration/        # Flyway SQL migrations (V1–V20)
+│       └── db/migration/        # Flyway SQL migrations (V1–V21)
 ├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
 │   ├── package.json
 │   ├── Dockerfile               # Multi-stage: npm build → nginx
@@ -155,8 +155,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V18__daily_adp_snapshots.sql** — idempotent daily ADP history by player, source, and UTC day
 - **V19__stamp_board_scoring_format.sql** — app-wide scoring format copied onto every board snapshot
 - **V20__lock_board_snapshots.sql** — immutable snapshot lock timestamp and locked-board index
+- **V21__fix_adp_snapshot_timestamp.sql** — align `captured_at` column to TIMESTAMPTZ (matches `locked_at`)
 
-**Adding a new migration:** Create the next sequential file (currently `V21__description.sql`) in snake_case. Do not modify existing migration files.
+**Adding a new migration:** Create the next sequential file (currently `V22__description.sql`) in snake_case. Do not modify existing migration files.
 
 ---
 
