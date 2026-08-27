@@ -5,6 +5,7 @@ import {
   closestCenter,
   KeyboardSensor,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -100,7 +101,7 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
           : "hover:bg-void-800/50"
       }`}
     >
-      <div {...attributes} {...listeners}>
+      <div {...attributes} {...listeners} style={{ touchAction: 'none' }}>
         <DragHandle disabled={locked} />
       </div>
 
@@ -164,7 +165,12 @@ export default function MasterSheetPage() {
   }, []);
 
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -176,6 +182,12 @@ export default function MasterSheetPage() {
     if (isAllSelected) return rankings;
     return rankings.filter((p) => selectedPositions.includes(p.position));
   }, [rankings, selectedPositions, isAllSelected]);
+
+  const overallIndexMap = useMemo(() => {
+    const map = new Map();
+    rankings.forEach((p, i) => map.set(p.playerId, i));
+    return map;
+  }, [rankings]);
 
   const recalcRanks = useCallback((list) => {
     const posCounters = {};
@@ -401,19 +413,14 @@ export default function MasterSheetPage() {
               items={filteredRankings.map((p) => p.playerId)}
               strategy={verticalListSortingStrategy}
             >
-              {filteredRankings.map((player) => {
-                const overallIndex = rankings.findIndex(
-                  (p) => p.playerId === player.playerId
-                );
-                return (
+              {filteredRankings.map((player) => (
                   <SortablePlayerRow
                     key={player.playerId}
                     player={player}
-                    overallIndex={overallIndex}
+                    overallIndex={overallIndexMap.get(player.playerId)}
                     locked={locked}
                   />
-                );
-              })}
+              ))}
             </SortableContext>
           </DndContext>
         </div>

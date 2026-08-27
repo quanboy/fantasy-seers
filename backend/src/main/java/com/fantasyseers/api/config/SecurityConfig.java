@@ -2,6 +2,7 @@ package com.fantasyseers.api.config;
 
 import com.fantasyseers.api.security.JwtAuthFilter;
 import com.fantasyseers.api.security.RateLimitFilter;
+import com.fantasyseers.api.security.RequestSizeLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +36,7 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitFilter rateLimitFilter;
+    private final RequestSizeLimitFilter requestSizeLimitFilter;
     private final UserDetailsService userDetailsService;
 
     @Value("${cors.allowed-origins:http://localhost:*}")
@@ -49,13 +51,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/props/public").permitAll()
-                        .requestMatchers("/api/leaderboard/global").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/v1/boards/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(requestSizeLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();

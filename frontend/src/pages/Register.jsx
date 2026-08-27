@@ -7,7 +7,7 @@ export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [form, setForm] = useState({
-    username: '', email: '', password: '',
+    username: '', email: '', password: '', inviteCode: '',
     favoriteNflTeam: '', favoriteNbaTeam: '', almaMater: '',
   })
   const [error, setError] = useState('')
@@ -21,6 +21,7 @@ export default function Register() {
     try {
       await register({
         ...form,
+        inviteCode: form.inviteCode.trim(),
         favoriteNflTeam: form.favoriteNflTeam || null,
         favoriteNbaTeam: form.favoriteNbaTeam || null,
         almaMater: form.almaMater.trim() || null,
@@ -118,6 +119,18 @@ export default function Register() {
                   )}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Invite Code</label>
+              <input
+                type="text"
+                value={form.inviteCode}
+                onChange={e => setForm({ ...form, inviteCode: e.target.value })}
+                className="input-base"
+                placeholder="Enter your league invite code"
+                required
+              />
             </div>
 
             {/* Your Identity section */}

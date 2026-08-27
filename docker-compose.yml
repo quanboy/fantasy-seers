@@ -8,7 +8,7 @@ services:
     environment:
       POSTGRES_DB: fantasyseers_db
       POSTGRES_USER: fantasyseers
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fantasyseers_secret}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example)}
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
@@ -27,9 +27,9 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fantasyseers_db
       SPRING_DATASOURCE_USERNAME: fantasyseers
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-fantasyseers_secret}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example)}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
-      JWT_SECRET: ${JWT_SECRET:-fantasy-seers-super-secret-jwt-key-change-in-production}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a random string of at least 48 bytes (see .env.example)}
       JWT_EXPIRATION_MS: 86400000
       # Set in Railway — leave empty for local dev
       SENTRY_DSN: ${SENTRY_DSN:-}

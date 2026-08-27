@@ -86,11 +86,6 @@ export const userApi = {
   updateProfile: (data) => api.put('/users/me', data),
 }
 
-export const rankingsApi = {
-  getMySheet: () => api.get('/rankings/my-sheet'),
-  saveMySheet: (rankings) => api.post('/rankings/my-sheet', { rankings }),
-}
-
 export const boardsApi = {
   getMySheet:    (season) => api.get('/v1/boards/my-sheet', { params: season ? { season } : {} }),
   createBoard:   (season) => api.post('/v1/boards', { season }),
