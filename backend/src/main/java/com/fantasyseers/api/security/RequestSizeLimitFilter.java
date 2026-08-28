@@ -78,6 +78,7 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
 
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
+            if (len == 0) return 0;
             int maxRead = (int) Math.min(len, limit - bytesRead + 1);
             if (maxRead <= 0) maxRead = 1;
             int n = delegate.read(b, off, maxRead);
