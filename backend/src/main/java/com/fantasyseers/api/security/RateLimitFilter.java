@@ -93,10 +93,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private String getClientIp(HttpServletRequest request) {
         if (trustForwardedFor) {
+            // Railway sets X-Real-IP to the actual client address.
+            String realIp = request.getHeader("X-Real-IP");
+            if (realIp != null && !realIp.isBlank()) {
+                return realIp.trim();
+            }
+
             String xForwardedFor = request.getHeader("X-Forwarded-For");
             if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-                // Take the right-most entry: the address observed and appended by the
-                // trusted proxy. Left-most entries are client-supplied and spoofable.
                 String[] parts = xForwardedFor.split(",");
                 String candidate = parts[parts.length - 1].trim();
                 if (!candidate.isEmpty()) {

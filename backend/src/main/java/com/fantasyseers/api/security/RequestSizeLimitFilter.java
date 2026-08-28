@@ -69,22 +69,24 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
 
         @Override
         public int read() throws IOException {
-            if (bytesRead >= limit) {
+            int b = delegate.read();
+            if (b != -1 && ++bytesRead > limit) {
                 throw new RequestBodyTooLargeException();
             }
-            int b = delegate.read();
-            if (b != -1) bytesRead++;
             return b;
         }
 
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
-            if (bytesRead >= limit) {
-                throw new RequestBodyTooLargeException();
-            }
-            int maxRead = (int) Math.min(len, limit - bytesRead);
+            int maxRead = (int) Math.min(len, limit - bytesRead + 1);
+            if (maxRead <= 0) maxRead = 1;
             int n = delegate.read(b, off, maxRead);
-            if (n > 0) bytesRead += n;
+            if (n > 0) {
+                bytesRead += n;
+                if (bytesRead > limit) {
+                    throw new RequestBodyTooLargeException();
+                }
+            }
             return n;
         }
 
