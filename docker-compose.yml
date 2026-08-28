@@ -31,6 +31,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a random string of at least 48 bytes (see .env.example)}
       JWT_EXPIRATION_MS: 86400000
+      REGISTRATION_INVITE_CODE: ${REGISTRATION_INVITE_CODE:-}
       # Set in Railway — leave empty for local dev
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports:

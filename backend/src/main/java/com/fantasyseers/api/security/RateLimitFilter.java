@@ -61,6 +61,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
         if (requestCounts.size() >= MAX_TRACKED_IPS) {
             purgeExpired(now);
+            if (requestCounts.size() >= MAX_TRACKED_IPS && !requestCounts.containsKey(clientIp)) {
+                response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+                response.setContentType("application/json");
+                response.getWriter().write("{\"message\":\"Too many requests. Please try again later.\"}");
+                return;
+            }
         }
 
         RateWindow window = requestCounts.compute(clientIp, (key, existing) -> {

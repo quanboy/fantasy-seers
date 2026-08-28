@@ -129,7 +129,6 @@ export default function Register() {
                 onChange={e => setForm({ ...form, inviteCode: e.target.value })}
                 className="input-base"
                 placeholder="Enter your league invite code"
-                required
               />
             </div>
 

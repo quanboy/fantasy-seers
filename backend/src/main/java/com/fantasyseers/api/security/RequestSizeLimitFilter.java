@@ -1,8 +1,11 @@
 package com.fantasyseers.api.security;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
@@ -10,13 +13,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Rejects oversized request bodies to /api/** before Spring deserializes them.
- * Without this, an attacker could POST a huge JSON payload that Jackson expands
- * into memory (and bean validation only fires after deserialization), OOMing the
- * process. Board saves and profile updates are all well under a few KB, so a small
- * cap is safe.
- */
 @Component
 public class RequestSizeLimitFilter extends OncePerRequestFilter {
 
@@ -27,16 +23,84 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        if (request.getRequestURI().startsWith("/api/")) {
-            long declared = request.getContentLengthLong();
-            if (declared > MAX_BODY_BYTES) {
-                response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
-                response.setContentType("application/json");
-                response.getWriter().write("{\"message\":\"Request body too large.\"}");
-                return;
-            }
+        if (!request.getRequestURI().startsWith("/api/")) {
+            filterChain.doFilter(request, response);
+            return;
         }
 
-        filterChain.doFilter(request, response);
+        long declared = request.getContentLengthLong();
+        if (declared > MAX_BODY_BYTES) {
+            reject(response);
+            return;
+        }
+
+        filterChain.doFilter(new LimitedRequestWrapper(request, MAX_BODY_BYTES), response);
+    }
+
+    private static void reject(HttpServletResponse response) throws IOException {
+        response.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
+        response.setContentType("application/json");
+        response.getWriter().write("{\"message\":\"Request body too large.\"}");
+    }
+
+    private static class LimitedRequestWrapper extends HttpServletRequestWrapper {
+        private final long limit;
+
+        LimitedRequestWrapper(HttpServletRequest request, long limit) {
+            super(request);
+            this.limit = limit;
+        }
+
+        @Override
+        public ServletInputStream getInputStream() throws IOException {
+            return new LimitedInputStream(super.getInputStream(), limit);
+        }
+    }
+
+    private static class LimitedInputStream extends ServletInputStream {
+        private final ServletInputStream delegate;
+        private final long limit;
+        private long bytesRead;
+
+        LimitedInputStream(ServletInputStream delegate, long limit) {
+            this.delegate = delegate;
+            this.limit = limit;
+        }
+
+        @Override
+        public int read() throws IOException {
+            if (bytesRead >= limit) {
+                throw new RequestBodyTooLargeException();
+            }
+            int b = delegate.read();
+            if (b != -1) bytesRead++;
+            return b;
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if (bytesRead >= limit) {
+                throw new RequestBodyTooLargeException();
+            }
+            int maxRead = (int) Math.min(len, limit - bytesRead);
+            int n = delegate.read(b, off, maxRead);
+            if (n > 0) bytesRead += n;
+            return n;
+        }
+
+        @Override
+        public boolean isFinished() { return delegate.isFinished(); }
+
+        @Override
+        public boolean isReady() { return delegate.isReady(); }
+
+        @Override
+        public void setReadListener(ReadListener listener) { delegate.setReadListener(listener); }
+    }
+
+    public static class RequestBodyTooLargeException extends IOException {
+        RequestBodyTooLargeException() {
+            super("Request body exceeded the maximum allowed size");
+        }
     }
 }
