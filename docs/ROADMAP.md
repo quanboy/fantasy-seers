@@ -24,6 +24,8 @@ Two hard clocks: the league drafts in ~2–4 weeks, and anything not captured be
 8. **Expert boards (droppable)** — hand-transcribe 2–3 well-known public preseason top-150s into expert-flagged accounts before the lock; source URL + publish date in the board notes (formal provenance columns are Phase 3). Baselines are mandatory; experts are a bonus — first thing cut if the race runs hot.
 9. **Sleeper stats viability check (30 min)** — confirm Sleeper exposes full-season per-player stats without auth, while building the other Sleeper jobs. If it doesn't, find the January truth source now, not in January.
 
+10. **Questionnaire ranker (conditional)** — KTC-style "Who finishes higher?" head-to-head pairs that sort into a personalized ranking behind the scenes. Lowers the barrier for league-mates intimidated by a 300-player drag list. Build if early adopters bounce off the Master Sheet; skip if they engage with drag-and-drop. Merge-sort driven by user picks; results feed directly into their board.
+
 **Deferred from Phase 1:** entrance-screen format setup, seasonal-checkpoint state machine, notes column, choose-your-base. All additive later; none needed to lock a board.
 
 ### Kickoff morning (~Sept 10) — the lock

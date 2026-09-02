@@ -7,11 +7,13 @@ import com.fantasyseers.api.dto.RankedPlayerDto;
 import com.fantasyseers.api.repository.UserRepository;
 import com.fantasyseers.api.service.BoardService;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Year;
@@ -20,7 +22,11 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/boards")
 @RequiredArgsConstructor
+@Validated
 public class BoardController {
+
+    /** Upper bound on entries accepted per board save; the board is at most the top 300 players. */
+    private static final int MAX_ENTRIES = 1000;
 
     private final BoardService boardService;
     private final UserRepository userRepository;
@@ -39,7 +45,7 @@ public class BoardController {
     @PutMapping("/{id}/entries")
     public ResponseEntity<BoardDto.BoardResponse> upsertEntries(
             @PathVariable Long id,
-            @Valid @RequestBody List<RankedPlayerDto> entries,
+            @RequestBody @Size(max = MAX_ENTRIES, message = "Too many ranking entries") List<@Valid RankedPlayerDto> entries,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         Long userId = userRepository.findByUsername(userDetails.getUsername())
