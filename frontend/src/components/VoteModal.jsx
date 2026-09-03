@@ -29,13 +29,13 @@ function QuickAmounts({ max, onSelect }) {
   return (
     <div className="flex gap-2 mt-2">
       {amounts.map(a => (
-        <button key={a} onClick={() => onSelect(String(a))}
+        <button key={a} type="button" onClick={() => onSelect(String(a))}
           className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-300 transition-all bg-void-800 border border-void-700 hover:border-void-600"
         >
           {a.toLocaleString()}
         </button>
       ))}
-      <button onClick={() => onSelect(String(max))}
+      <button type="button" onClick={() => onSelect(String(max))}
         className="flex-1 py-1.5 text-xs font-semibold rounded-lg text-gold-400 transition-all chip-gold hover:bg-gold-200/60"
       >
         Max
@@ -83,6 +83,9 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="vote-dialog-title"
         className="w-full sm:max-w-md max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-xl p-7 animate-slide-up glass-card shadow-modal"
       >
         {!split ? (
@@ -90,14 +93,14 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             {/* Header */}
             <div className="flex items-start justify-between mb-5">
               <span className={getSportClass(prop.sport)}>{prop.sport}</span>
-              <button onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-void-800 transition-all text-lg">
+              <button type="button" onClick={onClose} aria-label="Close vote dialog"
+                className="text-slate-400 hover:text-slate-600 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-void-800 transition-all text-lg">
                 ✕
               </button>
             </div>
 
             {/* Prop title */}
-            <p className="font-cinzel text-xl font-700 text-slate-100 leading-snug mb-6">
+            <p id="vote-dialog-title" className="font-cinzel text-xl font-700 text-slate-100 leading-snug mb-6">
               {prop.title}
             </p>
 
@@ -126,12 +129,14 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             {/* Wager */}
             <div className="mb-2">
               <div className="flex items-center justify-between mb-2">
-                <label className="text-xs text-slate-500 uppercase tracking-widest">Your wager</label>
+                <label htmlFor="vote-wager" className="text-xs text-slate-500 uppercase tracking-widest">Your wager</label>
                 <span className="text-xs text-gold-400 font-mono">
                   {userPoints.toLocaleString()} pts available
                 </span>
               </div>
               <input
+                id="vote-wager"
+                name="wager"
                 type="number"
                 value={wager}
                 onChange={(e) => setWager(e.target.value)}

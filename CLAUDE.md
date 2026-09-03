@@ -347,6 +347,6 @@ UPDATE users SET role = 'ADMIN' WHERE username = 'your_username';
 User must log out and back in to get a fresh JWT with the ADMIN role.
 
 **Live URLs:**
-- Frontend: https://frontend-production-0b29.up.railway.app
+- Frontend: https://fantasyseers.up.railway.app
 - Backend: https://fantasy-seers-backend-production.up.railway.app
 - Health check: `GET /actuator/health` → `{"status":"UP"}`

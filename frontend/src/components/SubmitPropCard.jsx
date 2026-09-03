@@ -74,9 +74,10 @@ export default function SubmitPropCard({ onSubmitted }) {
 
   if (!isExpanded) {
     return (
-      <div
+      <button
+        type="button"
         onClick={() => setIsExpanded(true)}
-        className="mb-4 rounded-xl p-5 cursor-pointer transition-all duration-300 group glass-card-hover shadow-card"
+        className="mb-4 rounded-xl p-5 cursor-pointer transition-all duration-300 group glass-card-hover shadow-card w-full text-left"
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-void-800 border border-void-700">
@@ -94,7 +95,7 @@ export default function SubmitPropCard({ onSubmitted }) {
             </svg>
           </div>
         </div>
-      </div>
+      </button>
     );
   }
 
@@ -116,8 +117,9 @@ export default function SubmitPropCard({ onSubmitted }) {
 
       {/* Title */}
       <div className="mb-3">
-        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Your call</label>
+        <label htmlFor="prop-title" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Your call</label>
         <input
+          id="prop-title"
           name="title"
           value={form.title}
           onChange={handleChange}
@@ -128,8 +130,9 @@ export default function SubmitPropCard({ onSubmitted }) {
 
       {/* Description */}
       <div className="mb-3">
-        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Context <span className="normal-case text-slate-400">(optional)</span></label>
+        <label htmlFor="prop-description" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Context <span className="normal-case text-slate-400">(optional)</span></label>
         <textarea
+          id="prop-description"
           name="description"
           value={form.description}
           onChange={handleChange}
@@ -142,8 +145,9 @@ export default function SubmitPropCard({ onSubmitted }) {
       {/* Sport + closing time */}
       <div className="flex gap-3 mb-3">
         <div>
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Sport</label>
+          <label htmlFor="prop-sport" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Sport</label>
           <select
+            id="prop-sport"
             name="sport"
             value={form.sport}
             onChange={handleChange}
@@ -154,8 +158,9 @@ export default function SubmitPropCard({ onSubmitted }) {
           </select>
         </div>
         <div className="flex-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Closes at</label>
+          <label htmlFor="prop-closes-at" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Closes at</label>
           <input
+            id="prop-closes-at"
             name="closesAt"
             type="datetime-local"
             value={form.closesAt}
@@ -166,8 +171,8 @@ export default function SubmitPropCard({ onSubmitted }) {
       </div>
 
       {/* Scope */}
-      <div className="mb-3">
-        <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Visibility</label>
+      <fieldset className="mb-3">
+        <legend className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Visibility</legend>
         <div className="flex gap-2 flex-wrap">
           {SCOPES.map(s => (
             <button
@@ -184,12 +189,12 @@ export default function SubmitPropCard({ onSubmitted }) {
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       {/* Group selector — shown when scope requires a group */}
       {needsGroup && (
         <div className="mb-3">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Group</label>
+          <label htmlFor="prop-group" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Group</label>
           {groups.length === 0 ? (
             <p className="text-slate-400 text-xs">
               You have no groups yet.{" "}
@@ -197,6 +202,7 @@ export default function SubmitPropCard({ onSubmitted }) {
             </p>
           ) : (
             <select
+              id="prop-group"
               name="groupId"
               value={form.groupId}
               onChange={handleChange}
@@ -215,8 +221,9 @@ export default function SubmitPropCard({ onSubmitted }) {
       {/* Wager limits */}
       <div className="flex gap-3 mb-5">
         <div className="flex-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Min wager <span className="normal-case text-slate-400">(optional)</span></label>
+          <label htmlFor="prop-min-wager" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Min wager <span className="normal-case text-slate-400">(optional)</span></label>
           <input
+            id="prop-min-wager"
             name="minWager"
             type="number"
             value={form.minWager}
@@ -226,8 +233,9 @@ export default function SubmitPropCard({ onSubmitted }) {
           />
         </div>
         <div className="flex-1">
-          <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Max wager <span className="normal-case text-slate-400">(optional)</span></label>
+          <label htmlFor="prop-max-wager" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Max wager <span className="normal-case text-slate-400">(optional)</span></label>
           <input
+            id="prop-max-wager"
             name="maxWager"
             type="number"
             value={form.maxWager}

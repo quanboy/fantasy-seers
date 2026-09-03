@@ -450,8 +450,10 @@ export default function AdminDashboard() {
           </p>
           <div className="flex gap-3 items-end">
             <div className="flex-1">
-              <label className="text-xs text-slate-500 font-mono mb-1 block">Season</label>
+              <label htmlFor="lock-season" className="text-xs text-slate-500 font-mono mb-1 block">Season</label>
               <input
+                id="lock-season"
+                name="lockSeason"
                 type="number"
                 min="2000"
                 max="2100"

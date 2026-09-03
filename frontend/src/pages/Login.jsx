@@ -2,6 +2,10 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
+export function getLoginErrorMessage(error) {
+  return error.response?.data?.message || "Invalid credentials";
+}
+
 function OracleLogo() {
   return (
     <div className="flex flex-col items-center gap-0 mb-8">
@@ -9,7 +13,7 @@ function OracleLogo() {
         <img
           src="/logo.png"
           alt="Fantasy Seers"
-          className="w-72 h-72 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"
+          className="w-48 h-48 sm:w-56 sm:h-56 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"
         />
       </div>
       <div className="text-center">
@@ -37,7 +41,7 @@ export default function Login() {
       await login(form);
       navigate("/");
     } catch (err) {
-      setError(err.response?.data?.message || "Invalid credentials");
+      setError(getLoginErrorMessage(err));
     } finally {
       setLoading(false);
     }
@@ -76,40 +80,49 @@ export default function Login() {
           </p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 font-body alert-error">
+            <div role="alert" className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 font-body alert-error">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
+              <label htmlFor="login-username" className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
                 Username
               </label>
               <input
+                id="login-username"
+                name="username"
                 type="text"
                 value={form.username}
                 onChange={(e) => setForm({ ...form, username: e.target.value })}
                 className="input-base"
                 placeholder="your_username"
+                autoComplete="username"
+                maxLength={50}
                 required
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
+              <label htmlFor="login-password" className="block text-xs text-slate-500 uppercase tracking-widest mb-2 font-body">
                 Password
               </label>
               <div className="relative">
                 <input
+                  id="login-password"
+                  name="password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={(e) => setForm({ ...form, password: e.target.value })}
                   className="input-base pr-10"
                   placeholder="••••••••"
+                  autoComplete="current-password"
+                  maxLength={72}
                   required
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                 >
@@ -158,7 +171,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-slate-400 text-xs mt-6">
-          By signing in you agree to our Terms · 18+ only · Gamble responsibly
+          Private league competition · No real-money wagering
         </p>
       </div>
     </div>

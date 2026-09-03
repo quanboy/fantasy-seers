@@ -1,6 +1,8 @@
 # Fantasy Seers 🔮
 
-Social sports prediction platform. Wager points on yes/no props, get rewarded for going against the crowd.
+Private fantasy-football rankings and friendly sports predictions for your league.
+
+Production: https://fantasyseers.up.railway.app
 
 ## Quick Start
 

@@ -8,17 +8,17 @@ public class AuthDto {
 
     public record RegisterRequest(
         @NotBlank @Size(min = 3, max = 50) String username,
-        @NotBlank @Email String email,
-        @NotBlank @Size(min = 6) String password,
-        String inviteCode,
-        String favoriteNflTeam,
-        String favoriteNbaTeam,
-        String almaMater
+        @NotBlank @Email @Size(max = 254) String email,
+        @NotBlank @Size(min = 8, max = 72) String password,
+        @Size(max = 100) String inviteCode,
+        @Size(max = 50) String favoriteNflTeam,
+        @Size(max = 50) String favoriteNbaTeam,
+        @Size(max = 100) String almaMater
     ) {}
 
     public record LoginRequest(
-        @NotBlank String username,
-        @NotBlank String password
+        @NotBlank @Size(max = 50) String username,
+        @NotBlank @Size(max = 72) String password
     ) {}
 
     public record AuthResponse(
