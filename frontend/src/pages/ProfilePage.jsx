@@ -60,28 +60,28 @@ export default function ProfilePage() {
         <h2 className="text-xs text-slate-500 uppercase tracking-widest mb-4">Account</h2>
         <div className="space-y-3">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Username</label>
+            <p className="block text-xs text-slate-400 mb-1">Username</p>
             <p className="text-sm font-semibold text-slate-200">{profile?.username}</p>
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <p className="block text-xs text-slate-400 mb-1">Email</p>
             <p className="text-sm font-semibold text-slate-200">{profile?.email}</p>
           </div>
           {profile?.favoriteNflTeam && (
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Favorite NFL Team</label>
+              <p className="block text-xs text-slate-400 mb-1">Favorite NFL Team</p>
               <p className="text-sm font-semibold text-slate-200">{profile.favoriteNflTeam}</p>
             </div>
           )}
           {profile?.favoriteNbaTeam && (
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Favorite NBA Team</label>
+              <p className="block text-xs text-slate-400 mb-1">Favorite NBA Team</p>
               <p className="text-sm font-semibold text-slate-200">{profile.favoriteNbaTeam}</p>
             </div>
           )}
           {profile?.almaMater && (
             <div>
-              <label className="block text-xs text-slate-400 mb-1">Alma Mater</label>
+              <p className="block text-xs text-slate-400 mb-1">Alma Mater</p>
               <p className="text-sm font-semibold text-slate-200">{profile.almaMater}</p>
             </div>
           )}
@@ -106,8 +106,10 @@ export default function ProfilePage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
+            <label htmlFor="favorite-nfl-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
             <select
+              id="favorite-nfl-team"
+              name="favoriteNflTeam"
               value={form.favoriteNflTeam}
               onChange={e => setForm({ ...form, favoriteNflTeam: e.target.value })}
               className="input-base"
@@ -119,8 +121,10 @@ export default function ProfilePage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
+            <label htmlFor="favorite-nba-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
             <select
+              id="favorite-nba-team"
+              name="favoriteNbaTeam"
               value={form.favoriteNbaTeam}
               onChange={e => setForm({ ...form, favoriteNbaTeam: e.target.value })}
               className="input-base"
@@ -132,8 +136,10 @@ export default function ProfilePage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
+            <label htmlFor="alma-mater" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
             <input
+              id="alma-mater"
+              name="almaMater"
               type="text"
               value={form.almaMater}
               onChange={e => setForm({ ...form, almaMater: e.target.value })}

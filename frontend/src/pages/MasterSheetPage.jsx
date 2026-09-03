@@ -101,9 +101,17 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
           : "hover:bg-void-800/50"
       }`}
     >
-      <div {...attributes} {...listeners} style={{ touchAction: 'none' }}>
+      <button
+        type="button"
+        {...attributes}
+        {...listeners}
+        disabled={locked}
+        aria-label={`Move ${player.fullName}, currently ranked ${overallIndex + 1}`}
+        className="w-11 h-11 -my-2 flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
+        style={{ touchAction: 'none' }}
+      >
         <DragHandle disabled={locked} />
-      </div>
+      </button>
 
       {/* Rank */}
       <span className="text-xs font-mono text-slate-300 w-8 text-right shrink-0 font-semibold">
@@ -145,16 +153,50 @@ export default function MasterSheetPage() {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveMsg, setSaveMsg] = useState(null);
+  const [draftRestored, setDraftRestored] = useState(false);
   const [error, setError] = useState(null);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event) => {
+      if (!dirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [dirty]);
 
   useEffect(() => {
     boardsApi
       .getMySheet()
       .then(({ data }) => {
         setBoardId(data.boardId);
-        setRankings(data.rankings);
+        let nextRankings = data.rankings;
+        if (!data.locked) {
+          try {
+            const draft = JSON.parse(localStorage.getItem(`fs_board_draft:${data.boardId}`));
+            const serverIds = new Set(data.rankings.map((player) => player.playerId));
+            const draftIds = new Set(draft?.rankings?.map((player) => player.playerId));
+            const draftIsValid =
+              Array.isArray(draft?.rankings) &&
+              draft.rankings.length === data.rankings.length &&
+              draftIds.size === serverIds.size &&
+              draft.rankings.every((player) => serverIds.has(player.playerId));
+            if (draftIsValid) {
+              nextRankings = draft.rankings;
+              setDirty(true);
+              setDraftRestored(true);
+            }
+          } catch {
+            localStorage.removeItem(`fs_board_draft:${data.boardId}`);
+          }
+        } else {
+          localStorage.removeItem(`fs_board_draft:${data.boardId}`);
+        }
+        setRankings(nextRankings);
         setIsDefault(data.isDefault);
         setLocked(Boolean(data.locked));
         setScoringFormat(data.scoringFormat);
@@ -163,6 +205,18 @@ export default function MasterSheetPage() {
       .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!boardId || locked || !dirty) return;
+    try {
+      localStorage.setItem(
+        `fs_board_draft:${boardId}`,
+        JSON.stringify({ savedAt: new Date().toISOString(), rankings })
+      );
+    } catch {
+      // The explicit save button still works if storage is unavailable.
+    }
+  }, [boardId, dirty, locked, rankings]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -273,7 +327,9 @@ export default function MasterSheetPage() {
         }))
       );
       setDirty(false);
+      setDraftRestored(false);
       setIsDefault(false);
+      localStorage.removeItem(`fs_board_draft:${boardId}`);
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
@@ -302,7 +358,7 @@ export default function MasterSheetPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-2">
+      <div className="sticky top-14 z-20 -mx-2 px-2 py-2 mb-2 flex items-start justify-between gap-4 bg-void-950/95 backdrop-blur-sm">
         <div>
           <h1 className="font-cinzel text-xl font-bold text-slate-100">
             Master Sheet
@@ -312,6 +368,13 @@ export default function MasterSheetPage() {
               ? "Your season-start rankings are final"
               : "Drag players to set your personal rankings"}
           </p>
+          {dirty && !locked && (
+            <p className="text-xs text-gold-400 mt-1" role="status">
+              {draftRestored
+                ? "Unsaved changes restored from this device"
+                : "Unsaved changes are protected on this device"}
+            </p>
+          )}
         </div>
         <button
           onClick={handleSave}
@@ -344,6 +407,7 @@ export default function MasterSheetPage() {
           </p>
           <button
             onClick={() => setBannerDismissed(true)}
+            aria-label="Dismiss consensus rankings message"
             className="text-slate-500 hover:text-slate-300 ml-3 shrink-0"
           >
             <svg

@@ -36,7 +36,8 @@ export default function AppLayout() {
             <div className="lg:hidden flex items-center gap-1">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="text-slate-400 hover:text-slate-200 p-0.5 rounded-lg hover:bg-void-800"
+                aria-label="Open navigation"
+                className="text-slate-400 hover:text-slate-200 w-11 h-11 flex items-center justify-center rounded-lg hover:bg-void-800"
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="3" y1="6" x2="21" y2="6" />

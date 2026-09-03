@@ -13,6 +13,7 @@ import GroupSettingsPage from "./pages/GroupSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import MasterSheetPage from "./pages/MasterSheetPage";
+import NotFoundPage from "./pages/NotFoundPage";
 import AppLayout from "./components/AppLayout";
 import "./index.css";
 
@@ -23,8 +24,8 @@ Sentry.init({
   integrations: [
     Sentry.browserTracingIntegration(),
     Sentry.replayIntegration({
-      maskAllText: false,
-      blockAllMedia: false,
+      maskAllText: true,
+      blockAllMedia: true,
     }),
   ],
   tracesSampleRate: 0.2,
@@ -88,6 +89,7 @@ function App() {
               }
             />
           </Route>
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

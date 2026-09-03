@@ -95,8 +95,10 @@ export default function Dashboard() {
                   </Link>
                 </p>
                 <button
+                  type="button"
                   onClick={() => setProfileBannerDismissed(true)}
-                  className="text-gold-500 hover:text-gold-700 ml-3 shrink-0"
+                  aria-label="Dismiss profile reminder"
+                  className="text-gold-500 hover:text-gold-700 ml-3 shrink-0 w-11 h-11 flex items-center justify-center rounded-lg"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

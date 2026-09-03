@@ -35,7 +35,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen auth-mesh flex items-center justify-center px-4 py-8 sm:py-12">
       {/* Decorative elements */}
       <div className="fixed top-0 left-0 w-48 h-48 pointer-events-none opacity-20">
         <svg viewBox="0 0 192 192" fill="none" className="text-oracle-500"><path d="M0 192V0h192" stroke="currentColor" strokeWidth="1" strokeDasharray="4 8"/></svg>
@@ -46,62 +46,74 @@ export default function Register() {
 
       <div className="w-full max-w-sm animate-slide-up">
         {/* Header */}
-        <div className="text-center mb-10">
+        <div className="text-center mb-6">
           <div className="animate-float inline-block mb-4">
-            <img src="/logo.png" alt="Fantasy Seers" className="w-72 h-72 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"  />
+            <img src="/logo.png" alt="Fantasy Seers" className="w-48 h-48 sm:w-56 sm:h-56 object-contain drop-shadow-[0_0_40px_rgba(79,70,229,0.3)]"  />
           </div>
           <h1 className="font-display text-3xl font-800 text-slate-100 tracking-tight">Fantasy Seers</h1>
           <p className="text-slate-500 text-sm mt-1">Your vision. Your edge. Your arena.</p>
         </div>
 
         <div className="glass-card p-7">
-          <p className="font-display text-lg font-700 text-slate-100 mb-1">Create your account</p>
-          <p className="text-slate-400 text-xs mb-6">Join thousands of seers competing daily</p>
+          <p className="font-display text-lg font-700 text-slate-100 mb-1">Join your league</p>
+          <p className="text-slate-400 text-xs mb-6">Build your rankings and compare picks with friends</p>
 
           {error && (
-            <div className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 alert-error">
+            <div role="alert" className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 alert-error">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-busy={loading}>
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Username</label>
+              <label htmlFor="register-username" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Username</label>
               <input
+                id="register-username"
+                name="username"
                 type="text"
                 value={form.username}
                 onChange={e => setForm({ ...form, username: e.target.value })}
                 className="input-base"
                 placeholder="seer_handle"
+                autoComplete="username"
                 minLength={3}
+                maxLength={50}
                 required
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Email</label>
+              <label htmlFor="register-email" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Email</label>
               <input
+                id="register-email"
+                name="email"
                 type="email"
                 value={form.email}
                 onChange={e => setForm({ ...form, email: e.target.value })}
                 className="input-base"
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
               />
             </div>
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Password</label>
+              <label htmlFor="register-password" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Password</label>
               <div className="relative">
                 <input
+                  id="register-password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
                   value={form.password}
                   onChange={e => setForm({ ...form, password: e.target.value })}
                   className="input-base pr-10"
-                  placeholder="Min. 6 characters"
-                  minLength={6}
+                  placeholder="Min. 8 characters"
+                  autoComplete="new-password"
+                  minLength={8}
+                  maxLength={72}
                   required
                 />
                 <button
                   type="button"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                 >
@@ -122,13 +134,17 @@ export default function Register() {
             </div>
 
             <div>
-              <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Invite Code</label>
+              <label htmlFor="register-invite-code" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Invite Code</label>
               <input
+                id="register-invite-code"
+                name="inviteCode"
                 type="text"
                 value={form.inviteCode}
                 onChange={e => setForm({ ...form, inviteCode: e.target.value })}
                 className="input-base"
                 placeholder="Enter your league invite code"
+                autoComplete="off"
+                maxLength={100}
               />
             </div>
 
@@ -140,8 +156,10 @@ export default function Register() {
               </div>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
+                  <label htmlFor="favorite-nfl-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
                   <select
+                    id="favorite-nfl-team"
+                    name="favoriteNflTeam"
                     value={form.favoriteNflTeam}
                     onChange={e => setForm({ ...form, favoriteNflTeam: e.target.value })}
                     className="input-base"
@@ -153,8 +171,10 @@ export default function Register() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
+                  <label htmlFor="favorite-nba-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
                   <select
+                    id="favorite-nba-team"
+                    name="favoriteNbaTeam"
                     value={form.favoriteNbaTeam}
                     onChange={e => setForm({ ...form, favoriteNbaTeam: e.target.value })}
                     className="input-base"
@@ -166,8 +186,10 @@ export default function Register() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
+                  <label htmlFor="alma-mater" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
                   <input
+                    id="alma-mater"
+                    name="almaMater"
                     type="text"
                     value={form.almaMater}
                     onChange={e => setForm({ ...form, almaMater: e.target.value })}
@@ -209,7 +231,7 @@ export default function Register() {
         </div>
 
         <p className="text-center text-slate-400 text-xs mt-6">
-          18+ only · Fantasy Seers is not a licensed gambling site · Play responsibly
+          Private league competition · No real-money wagering
         </p>
       </div>
     </div>
