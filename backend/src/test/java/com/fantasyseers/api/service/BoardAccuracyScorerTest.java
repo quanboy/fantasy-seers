@@ -1,23 +1,29 @@
 package com.fantasyseers.api.service;
 
-import com.fantasyseers.api.service.BoardAccuracyScorer.AccuracyResult;
-import com.fantasyseers.api.service.BoardAccuracyScorer.PlayerRankError;
+import com.fantasyseers.api.service.BoardAccuracyScorer.BoardScoreResult;
+import com.fantasyseers.api.service.BoardAccuracyScorer.PlayerScoreReceipt;
 import com.fantasyseers.api.service.BoardAccuracyScorer.PredictedRank;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Spec (2026 MVP): a locked board's accuracy score is the mean absolute
- * rank error between the user's predicted overall rank and the player's
- * end-of-season finish rank under the board's scoring format. Lower is better.
+ * Spec (2026 MVP): a locked board publishes mean absolute rank error and
+ * consensus-relative Edge using sigma = 1.
+ *
+ * <p>Missing and deep finishes are capped against each board's ranked depth so
+ * full and partial boards receive proportional penalties.
  */
 class BoardAccuracyScorerTest {
+
+    private static final int MAXIMUM_DEPTH = BoardAccuracyScorer.MAXIMUM_BOARD_DEPTH;
 
     private final BoardAccuracyScorer scorer = new BoardAccuracyScorer();
 
@@ -30,7 +36,7 @@ class BoardAccuracyScorerTest {
         );
         Map<Long, Integer> actualFinish = Map.of(1L, 1, 2L, 2, 3L, 3);
 
-        AccuracyResult result = scorer.score(predicted, actualFinish, 300);
+        BoardScoreResult result = score(predicted, actualFinish);
 
         assertAll(
                 () -> assertEquals(0.0, result.averageRankError()),
@@ -51,11 +57,32 @@ class BoardAccuracyScorerTest {
         Map<Long, Integer> actualFinish = Map.of(1L, 3, 2L, 1, 3L, 2);
         // errors: |1-3| + |2-1| + |3-2| = 2 + 1 + 1 = 4
 
-        AccuracyResult result = scorer.score(predicted, actualFinish, 300);
+        BoardScoreResult result = score(predicted, actualFinish);
 
         assertAll(
-                () -> assertEquals(4.0 / 3.0, result.averageRankError()),
+                () -> assertEquals(4.0 / 3.0, result.averageRankError(), 1e-9),
                 () -> assertEquals(4, result.totalRankError())
+        );
+    }
+
+    @Test
+    void calculatesConsensusRelativeEdgeAndCompleteReceipts() {
+        List<PredictedRank> predicted = List.of(
+                new PredictedRank(1L, 1),
+                new PredictedRank(2L, 2)
+        );
+        Map<Long, Integer> actualFinish = Map.of(1L, 2, 2L, 1);
+        Map<Long, Integer> frozenConsensus = Map.of(1L, 2, 2L, 2);
+
+        BoardScoreResult result = scorer.score(predicted, actualFinish, frozenConsensus);
+
+        assertAll(
+                () -> assertEquals(1.0, result.averageRankError()),
+                () -> assertEquals(-0.5, result.averageEdge()),
+                () -> assertEquals(1.0, result.breakdown().getFirst().sigma()),
+                () -> assertEquals(1.0, result.breakdown().getFirst().userError()),
+                () -> assertEquals(0.0, result.breakdown().getFirst().consensusError()),
+                () -> assertEquals(-1.0, result.breakdown().getFirst().edge())
         );
     }
 
@@ -63,19 +90,22 @@ class BoardAccuracyScorerTest {
     void scoreIsIndependentOfPredictedListOrder() {
         Map<Long, Integer> actualFinish = Map.of(1L, 3, 2L, 1, 3L, 2);
 
-        AccuracyResult inOrder = scorer.score(List.of(
+        BoardScoreResult inOrder = score(List.of(
                 new PredictedRank(1L, 1),
                 new PredictedRank(2L, 2),
                 new PredictedRank(3L, 3)
-        ), actualFinish, 300);
+        ), actualFinish);
 
-        AccuracyResult shuffled = scorer.score(List.of(
+        BoardScoreResult shuffled = score(List.of(
                 new PredictedRank(3L, 3),
                 new PredictedRank(1L, 1),
                 new PredictedRank(2L, 2)
-        ), actualFinish, 300);
+        ), actualFinish);
 
-        assertEquals(inOrder.averageRankError(), shuffled.averageRankError());
+        assertAll(
+                () -> assertEquals(inOrder.averageRankError(), shuffled.averageRankError(), 1e-9),
+                () -> assertEquals(inOrder.averageEdge(), shuffled.averageEdge(), 1e-9)
+        );
     }
 
     @Test
@@ -87,16 +117,19 @@ class BoardAccuracyScorerTest {
                 new PredictedRank(99L, 3)
         );
         Map<Long, Integer> actualFinish = Map.of(1L, 1, 2L, 2);
+        int cap = 3 + BoardAccuracyScorer.FINISH_RANK_BUFFER;
+        int expectedError = cap - 3;
 
-        AccuracyResult result = scorer.score(predicted, actualFinish, 300);
+        BoardScoreResult result = score(predicted, actualFinish);
 
         assertAll(
-                () -> assertEquals(317.0 / 3.0, result.averageRankError()),
-                () -> assertEquals(317, result.totalRankError()),
+                () -> assertEquals((double) expectedError / 3.0, result.averageRankError(), 1e-9),
+                () -> assertEquals(expectedError, result.totalRankError()),
                 () -> assertEquals(3, result.scoredPlayerCount()),
                 () -> assertEquals(1, result.unmatchedPlayerCount()),
                 () -> assertEquals(
-                        new PlayerRankError(99L, 3, null, 320, 317),
+                        new PlayerScoreReceipt(99L, 3, 3, null, cap, 1.0,
+                                expectedError, expectedError, 0.0),
                         result.breakdown().get(2)
                 )
         );
@@ -110,12 +143,12 @@ class BoardAccuracyScorerTest {
         );
         Map<Long, Integer> actualFinish = Map.of(1L, 4, 2L, 2);
 
-        AccuracyResult result = scorer.score(predicted, actualFinish, 300);
+        BoardScoreResult result = score(predicted, actualFinish);
 
         assertEquals(
                 List.of(
-                        new PlayerRankError(1L, 1, 4, 4, 3),
-                        new PlayerRankError(2L, 5, 2, 2, 3)
+                        new PlayerScoreReceipt(1L, 1, 1, 4, 4, 1.0, 3.0, 3.0, 0.0),
+                        new PlayerScoreReceipt(2L, 5, 5, 2, 2, 1.0, 3.0, 3.0, 0.0)
                 ),
                 result.breakdown()
         );
@@ -123,26 +156,49 @@ class BoardAccuracyScorerTest {
 
     @Test
     void capsActualFinishesBeyondBoardDepthAndBuffer() {
-        AccuracyResult result = scorer.score(
+        int cap = 1 + BoardAccuracyScorer.FINISH_RANK_BUFFER;
+        int wayDeep = MAXIMUM_DEPTH + BoardAccuracyScorer.FINISH_RANK_BUFFER + 100;
+        int expectedError = cap - 1;
+
+        BoardScoreResult result = score(
                 List.of(new PredictedRank(1L, 1)),
-                Map.of(1L, 400),
-                300
+                Map.of(1L, wayDeep)
         );
 
         assertAll(
-                () -> assertEquals(319.0, result.averageRankError()),
-                () -> assertEquals(319, result.totalRankError()),
+                () -> assertEquals((double) expectedError, result.averageRankError(), 1e-9),
+                () -> assertEquals(expectedError, result.totalRankError()),
                 () -> assertEquals(
-                        new PlayerRankError(1L, 1, 400, 320, 319),
+                        new PlayerScoreReceipt(1L, 1, 1, wayDeep, cap, 1.0,
+                                expectedError, expectedError, 0.0),
                         result.breakdown().getFirst()
                 )
         );
     }
 
     @Test
+    void capsMissingFinishesAgainstTheScoredBoardsDepth() {
+        List<PredictedRank> predicted = IntStream.rangeClosed(1, 150)
+                .mapToObj(rank -> new PredictedRank(rank, rank))
+                .toList();
+        Map<Long, Integer> actualFinish = IntStream.rangeClosed(2, 150)
+                .boxed()
+                .collect(Collectors.toMap(Integer::longValue, rank -> rank));
+        int boardDepthCap = 150 + BoardAccuracyScorer.FINISH_RANK_BUFFER;
+
+        BoardScoreResult result = score(predicted, actualFinish);
+
+        assertEquals(
+                new PlayerScoreReceipt(1L, 1, 1, null, boardDepthCap, 1.0,
+                        boardDepthCap - 1, boardDepthCap - 1, 0.0),
+                result.breakdown().getFirst()
+        );
+    }
+
+    @Test
     void rejectsEmptyBoard() {
         assertThrows(IllegalArgumentException.class,
-                () -> scorer.score(List.of(), Map.of(), 300));
+                () -> scorer.score(List.of(), Map.of(), Map.of()));
     }
 
     @Test
@@ -153,32 +209,51 @@ class BoardAccuracyScorerTest {
         );
 
         assertThrows(IllegalArgumentException.class,
-                () -> scorer.score(predicted, Map.of(1L, 1), 300));
+                () -> scorer.score(predicted, Map.of(1L, 1), Map.of(1L, 1)));
     }
 
     @Test
-    void rejectsInvalidBoardDepthAndRanks() {
+    void requiresFrozenConsensusForEveryScoredPlayer() {
+        assertThrows(IllegalArgumentException.class,
+                () -> scorer.score(
+                        List.of(new PredictedRank(1L, 1)),
+                        Map.of(1L, 1),
+                        Map.of()
+                ));
+    }
+
+    @Test
+    void rejectsInvalidRanks() {
         assertAll(
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> scorer.score(List.of(new PredictedRank(1L, 1)), Map.of(1L, 1), 0)),
+                        () -> scorer.score(List.of(new PredictedRank(1L, 0)), Map.of(1L, 1), Map.of(1L, 1))),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> scorer.score(List.of(new PredictedRank(1L, 0)), Map.of(1L, 1), 300)),
+                        () -> scorer.score(List.of(new PredictedRank(1L, MAXIMUM_DEPTH + 1)),
+                                Map.of(1L, 1), Map.of(1L, 1))),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> scorer.score(List.of(new PredictedRank(1L, 301)), Map.of(1L, 1), 300)),
+                        () -> scorer.score(List.of(new PredictedRank(1L, 1)),
+                                Map.of(1L, 0), Map.of(1L, 1))),
                 () -> assertThrows(IllegalArgumentException.class,
-                        () -> scorer.score(List.of(new PredictedRank(1L, 1)), Map.of(1L, 0), 300))
+                        () -> scorer.score(List.of(new PredictedRank(1L, 1)),
+                                Map.of(1L, 1), Map.of(1L, 0)))
         );
     }
 
     @Test
     void returnsAnImmutableBreakdown() {
-        AccuracyResult result = scorer.score(
+        BoardScoreResult result = score(
                 List.of(new PredictedRank(1L, 1)),
-                Map.of(1L, 1),
-                300
+                Map.of(1L, 1)
         );
 
         assertThrows(UnsupportedOperationException.class,
-                () -> result.breakdown().add(new PlayerRankError(2L, 2, 2, 2, 0)));
+                () -> result.breakdown().add(
+                        new PlayerScoreReceipt(2L, 2, 2, 2, 2, 1.0, 0.0, 0.0, 0.0)));
+    }
+
+    private BoardScoreResult score(List<PredictedRank> predicted, Map<Long, Integer> actualFinish) {
+        Map<Long, Integer> matchingConsensus = predicted.stream()
+                .collect(Collectors.toMap(PredictedRank::playerId, PredictedRank::predictedRank));
+        return scorer.score(predicted, actualFinish, matchingConsensus);
     }
 }
