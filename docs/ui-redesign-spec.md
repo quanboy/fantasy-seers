@@ -4,6 +4,8 @@ Status: accepted design direction; implementation not started.
 
 Source: screenshot-led design interview completed September 15, 2026. The decisions below supersede earlier suggestions in that interview. The screenshot is a visual reference, not a requirement to reproduce every feature or example value.
 
+The original screenshot contains account information and is not published with this spec. The visual baselines and element treatments below are the repository's reviewable styling contract; implementation must not depend on access to the private attachment. Fidelity means following those documented treatments and dimensions, not pixel-matching the original image. Its right rail, promotional artwork, slogans, bell, duplicate desktop user footer, and example data are explicitly excluded below.
+
 ## Scope
 
 Apply the screenshot's visual language across the app, redesign the shared desktop shell, and reshape the Master Sheet. Other pages inherit consistent typography, colors, surfaces, and controls; their workflows remain intact. Preserve the existing phone header and navigation arrangement.
@@ -26,7 +28,17 @@ Place player search within the Master Sheet, above position filters. The page he
 
 ## Styling
 
-Use dark navy surfaces and brighter violet accents in place of the current indigo emphasis. Exact token values and responsive breakpoints are implementation details to verify visually.
+Use dark navy surfaces and brighter violet accents in place of the current indigo emphasis. The following implementation baselines make the visual direction measurable. They translate the accepted design into starting values, rather than claiming exact sampled colors or separately approved pixel dimensions. Tune only as needed for contrast, content fit, and browser verification, and record material deviations.
+
+| Baseline | Starting target |
+| --- | --- |
+| Shell geometry | Desktop at 1024px and above; 56px header, 192px sidebar below it; retain existing phone header/drawer dimensions below that breakpoint |
+| Content geometry | 16px desktop gutters and section gaps; ranking table fills the remaining width; no reserved right-column space |
+| Banner and type | Approximately 96px desktop banner with 16px padding; 32px desktop title, 20px phone title; allow growth for content/zoom |
+| Surface tokens | Page #0C0F1A, navy surface #121626, subtle separator #252B3F; retain readable slate text tokens |
+| Accent and row details | Violet fill #7C3AED, bright border/focus #A78BFA, 12% violet selected tint; 8px control corners, 12px panel corners; 48px minimum rows and 32px headshots |
+
+The narrower sidebar and wide table intentionally replace the current centered narrow board. Verify at the reference's 1140px width as well as 1440px desktop and 390px/320px phone widths. A fixed height must never clip enlarged text. If the desktop header becomes crowded, let search shrink within readable limits before changing the phone layout.
 
 | Element | Treatment |
 | --- | --- |
