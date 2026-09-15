@@ -22,7 +22,7 @@ docker-compose up --build
 ```
 fantasy-seers/
 ├── docker-compose.yml
-├── backend/                  # Spring Boot API (Java 21)
+├── backend/                  # Spring Boot API (Java 25)
 │   ├── src/main/java/com/fantasyseers/api/
 │   │   ├── config/           # Security, JPA auditing
 │   │   ├── controller/       # REST endpoints

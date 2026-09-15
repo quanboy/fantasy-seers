@@ -11,7 +11,7 @@ Fantasy Seers is a social sports prediction platform where users wager points on
 ```
 fantasy-seers/
 ├── docker-compose.yml
-├── backend/                     # Spring Boot 3.2.3 / Java 21 / Maven
+├── backend/                     # Spring Boot 3.5.12 / Java 25 / Maven
 │   ├── pom.xml
 │   ├── Dockerfile
 │   └── src/main/java/com/fantasyseers/api/
@@ -76,7 +76,7 @@ cd frontend && npm install && npm run dev
 
 | Layer       | Tech                                                         |
 |-------------|--------------------------------------------------------------|
-| Backend     | Spring Boot 3.2.3, Java 21, Spring Security 6, Spring Data JPA, Spring Actuator |
+| Backend     | Spring Boot 3.5.12, Java 25, Spring Security 6, Spring Data JPA, Spring Actuator |
 | Auth        | JWT (JJWT 0.12.5), stateless, stored in localStorage         |
 | Database    | PostgreSQL 15, Flyway migrations, Hibernate ORM              |
 | Monitoring  | Sentry (frontend @sentry/react, backend sentry-spring-boot-starter-jakarta) |
