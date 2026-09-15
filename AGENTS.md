@@ -189,14 +189,14 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 | `/login`      | Login           | public       |
 | `/register`   | Register        | public       |
 | `/`           | MasterSheetPage | PrivateRoute |
-| `/props`      | Redirect to `/` | PrivateRoute |
+| `/props`      | Dashboard       | PrivateRoute |
 | `/groups`     | GroupsPage      | PrivateRoute |
-| `/groups/:id` | Redirect to `/groups` | PrivateRoute |
+| `/groups/:id` | GroupFeedPage   | PrivateRoute |
 | `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
 | `/master-sheet`| Redirect to `/` | PrivateRoute |
-| `/leaderboard`| Redirect to `/` | PrivateRoute |
+| `/leaderboard`| LeaderboardPage | PrivateRoute |
 | `/profile`    | ProfilePage     | PrivateRoute |
-| `/admin`      | AdminDashboard (board controls only) | AdminRoute |
+| `/admin`      | AdminDashboard  | AdminRoute   |
 
 - **PrivateRoute** — redirects unauthenticated users to `/login`
 - **AdminRoute** — redirects non-ADMIN users to `/`
@@ -206,20 +206,24 @@ Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundar
 Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `userApi`, `rankingsApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
-- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username and sign out). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Master Sheet, Leagues, Profile, Board Admin (admin-only). Logo + text link to `/`.
+- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Master Sheet, Props Feed, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
 - Mobile top bar shows hamburger + logo (links to `/`) on left; username, points, sign out on right.
 
 ### Key UI Patterns
-- **Parked props UI** — prop, vote, and prop-leaderboard components remain in source for historical preservation, but their routes and navigation are intentionally hidden. Do not silently submit wagers behind a wager-free UI.
+- **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Shows inline `alert-error` on submission failure.
+- **PropCard** — unified card with 7 visual states. Split data shows loading spinner while fetching and inline error if fetch fails.
+- **VoteModal** — "Back to Feed" button wrapped in `try/finally` so modal always closes even if `onVoted()` throws.
+- **Dashboard** — sport filter pills (ALL, NFL, NBA, MLB, NHL). Handles paginated API response (`data.content || data`). Error state with "Try Again" button.
 - **Login/Register** — password field has show/hide toggle (eye icon).
 - **GroupsPage** — join success toast (auto-dismiss 4s). Separate `groupsError`/`invitesError` states.
 - **GroupSettingsPage** — kick/leave errors display inline (no `alert()` calls).
-- **AdminDashboard** — exposes only the irreversible season-board lock and its confirmation flow.
+- **AdminDashboard** — all three fetches have error states with retry or graceful fallback.
+- **LeaderboardPage** — medal colors use `text-gold-400`/`text-slate-300`/`text-gold-600`. Error state replaces table content.
 - **MasterSheetPage** — personalized NFL player ranking sheet. Drag-and-drop via @dnd-kit. Columns: Rank, Player (Team), Position (positional rank chip), ADP. Position filter pills (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Falls back to consensus rankings when user has no saved rankings (`isDefault: true` banner). Locked boards show their stamped format and disable dragging/saving.
 
 ### Shared Utils
-- `src/utils/sportClasses.js` — `getSportClass()` function (used by the parked PropCard and VoteModal components)
+- `src/utils/sportClasses.js` — `getSportClass()` function (used by PropCard, VoteModal, AdminDashboard)
 - `src/utils/teams.js` — `NFL_TEAMS` and `NBA_TEAMS` arrays (used by Register, ProfilePage)
 
 ### Theme & Design Tokens

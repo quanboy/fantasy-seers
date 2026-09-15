@@ -221,7 +221,7 @@ export default function GroupsPage() {
             {groups.map(group => (
               <Link
                 key={group.id}
-                to={`/groups/${group.id}/settings`}
+                to={`/groups/${group.id}`}
                 className="block rounded-xl p-5 transition-all glass-card-hover"
               >
                 <div className="flex items-start justify-between gap-3">

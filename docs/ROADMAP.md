@@ -4,7 +4,7 @@
 
 **Success bar for 2026–27:** ≥3 league-mates besides me maintain boards through the season, and their locked SEASON_START boards get scored in January 2027.
 
-**Parked:** props/points wagering system (backend and historical data preserved, user-facing routes hidden, no new work; retire-or-keep decided in the offseason) · AI research chatbot (backburner, salvageable from `feature/chatbot-idea`).
+**Parked:** props/points wagering system (stays live, demoted in nav, frozen — no new work; retire-or-keep decided in the offseason) · AI research chatbot (backburner, salvageable from `feature/chatbot-idea`).
 
 ---
 

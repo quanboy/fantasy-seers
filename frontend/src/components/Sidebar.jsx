@@ -15,6 +15,15 @@ const navItems = [
     ),
   },
   {
+    label: "Props Feed",
+    path: "/props",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
+      </svg>
+    ),
+  },
+  {
     label: "Leagues",
     path: "/groups",
     icon: (
@@ -23,6 +32,20 @@ const navItems = [
         <circle cx="9" cy="7" r="4" />
         <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+      </svg>
+    ),
+  },
+  {
+    label: "Leaderboard",
+    path: "/leaderboard",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5C7 4 6 9 6 9z" />
+        <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5C17 4 18 9 18 9z" />
+        <path d="M4 22h16" />
+        <path d="M10 22V8a2 2 0 0 0-2-2H6" />
+        <path d="M14 22V8a2 2 0 0 1 2-2h2" />
+        <rect x="6" y="14" width="12" height="8" rx="1" />
       </svg>
     ),
   },
@@ -39,7 +62,7 @@ const navItems = [
 ];
 
 const adminItem = {
-  label: "Board Admin",
+  label: "Admin Uploads",
   path: "/admin",
   icon: (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

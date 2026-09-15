@@ -1,6 +1,6 @@
 # Fantasy Seers 🔮
 
-Private fantasy-football rankings for your league.
+Private fantasy-football rankings and friendly sports predictions for your league.
 
 Production: https://fantasyseers.up.railway.app
 

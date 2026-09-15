@@ -201,6 +201,11 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Bonus callout */}
+            <div className="rounded-lg px-4 py-3 text-xs text-gold-400 chip-gold">
+              <span className="font-bold">Welcome bonus:</span> Start with <span className="font-mono">1,000</span> free points.
+            </div>
+
             <button
               type="submit"
               disabled={loading}
@@ -226,7 +231,7 @@ export default function Register() {
         </div>
 
         <p className="text-center text-slate-400 text-xs mt-6">
-          Private league rankings · Your board, frozen in time
+          Private league competition · No real-money wagering
         </p>
       </div>
     </div>
