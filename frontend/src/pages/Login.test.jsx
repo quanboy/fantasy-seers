@@ -27,5 +27,6 @@ describe("Login", () => {
     expect(screen.getByLabelText("Username")).toHaveAttribute("autocomplete", "username");
     expect(screen.getByLabelText("Password")).toHaveAttribute("autocomplete", "current-password");
     expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
+    expect(screen.queryByText(/wager|points/i)).not.toBeInTheDocument();
   });
 });

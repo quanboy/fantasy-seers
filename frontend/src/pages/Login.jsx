@@ -171,7 +171,7 @@ export default function Login() {
         </div>
 
         <p className="text-center text-slate-400 text-xs mt-6">
-          Private league competition · No real-money wagering
+          Private league rankings · Built for season-long receipts
         </p>
       </div>
     </div>

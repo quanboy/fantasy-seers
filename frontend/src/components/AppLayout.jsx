@@ -1,29 +1,11 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { Outlet, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, setUser, logout } = useAuth();
-
-  const userRef = useRef(user);
-  useEffect(() => { userRef.current = user; }, [user]);
-  useEffect(() => {
-    const interval = setInterval(async () => {
-      try {
-        const { data } = await userApi.getMe();
-        const current = userRef.current;
-        if (current && data.pointBank !== current.pointBank) {
-          const updated = { ...current, pointBank: data.pointBank };
-          localStorage.setItem("fs_user", JSON.stringify(updated));
-          setUser(updated);
-        }
-      } catch {}
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [setUser]);
+  const { user, logout } = useAuth();
 
   return (
     <div className="min-h-screen bg-void-950 flex">
@@ -51,20 +33,11 @@ export default function AppLayout() {
             {/* Spacer */}
             <div className="flex-1" />
 
-            {/* Right: username, points, sign out */}
+            {/* Right: username and sign out */}
             <div className="flex items-center gap-3 h-10">
               <span className="text-slate-400 text-sm font-medium truncate max-w-[100px] sm:max-w-none">
                 {user?.username}
               </span>
-
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg chip-gold">
-                <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-gold-500">
-                  <circle cx="6" cy="6" r="5" fill="currentColor" opacity="0.9" />
-                </svg>
-                <span className="text-gold-400 font-bold text-sm font-mono">
-                  {user?.pointBank?.toLocaleString() ?? 0}
-                </span>
-              </div>
 
               <button
                 onClick={logout}

@@ -5,13 +5,10 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import GroupsPage from "./pages/GroupsPage";
-import GroupFeedPage from "./pages/GroupFeedPage";
 import GroupSettingsPage from "./pages/GroupSettingsPage";
 import ProfilePage from "./pages/ProfilePage";
-import LeaderboardPage from "./pages/LeaderboardPage";
 import MasterSheetPage from "./pages/MasterSheetPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import AppLayout from "./components/AppLayout";
@@ -73,11 +70,11 @@ function App() {
             }
           >
             <Route index element={<MasterSheetPage />} />
-            <Route path="props" element={<Dashboard />} />
+            <Route path="props" element={<Navigate to="/" replace />} />
             <Route path="groups" element={<GroupsPage />} />
-            <Route path="groups/:id" element={<GroupFeedPage />} />
+            <Route path="groups/:id" element={<Navigate to="/groups" replace />} />
             <Route path="groups/:id/settings" element={<GroupSettingsPage />} />
-            <Route path="leaderboard" element={<LeaderboardPage />} />
+            <Route path="leaderboard" element={<Navigate to="/" replace />} />
             <Route path="master-sheet" element={<Navigate to="/" replace />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route

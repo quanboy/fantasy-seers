@@ -23,6 +23,7 @@ describe("Register", () => {
     expect(screen.getByLabelText("Favorite NFL Team")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
     expect(screen.getByText("Build your rankings and compare picks with friends")).toBeInTheDocument();
+    expect(screen.queryByText(/wager|free points|welcome bonus/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/thousands of seers/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/gamble responsibly/i)).not.toBeInTheDocument();
   });
