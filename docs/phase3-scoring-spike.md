@@ -149,18 +149,19 @@ input shape; scoring consumes it as-is.
    σ = 1, degrading gracefully to unweighted error). Worth stating in the roadmap:
    *Phase 3 scoring quality is gated on Phase 2 shipping*, which the current
    sequencing already implies but doesn't say.
-3. **Frozen consensus per checkpoint.** `consensus_rankings` is a single mutable
-   table; baseline-relative scoring needs consensus *as of the board's checkpoint*.
-   Cleanest fix: a system-owned user whose boards are consensus snapshots, one per
-   checkpoint — consensus then flows through the exact same snapshot/scoring pipeline
-   and appears on the leaderboard as a row ("did you beat consensus" becomes literally
-   two rows). Same trick gives an ADP-order baseline board for free.
+3. **Frozen consensus per checkpoint.** Resolved for the 2026 season-start lock by
+   V22 and `BoardLockService`: non-login system users own consensus and Sleeper ADP
+   baseline boards. Both baselines are frozen in the same transaction as user boards,
+   so consensus flows through the same snapshot/scoring pipeline and can appear on
+   the leaderboard as a row ("did you beat consensus" becomes literally two rows).
 4. **Format on the board.** Resolved for 2026 by V19: `scoring_format`/`superflex`
-   are copied from the centralized app format onto every `board_snapshot`. The
-   provisional `FULL_PPR`, single-QB format must be confirmed before locking.
+   are copied from the centralized app format onto every `board_snapshot`. Production
+   was confirmed as `HALF_PPR`, single-QB on 2026-09-14.
 5. **Immutability enforcement.** Resolved for 2026 by V20: locked snapshots carry
    `locked_at`, ranking writes are refused, and the admin global lock freezes each
-   user's board as `SEASON_START`. Scoring must only read rows with `locked_at` set.
+   user's board plus consensus and Sleeper ADP system baselines as `SEASON_START`.
+   The confirmed 2026 format is `HALF_PPR`, single-QB. Scoring must only read rows
+   with `locked_at` set.
 6. **Player-universe churn.** `nfl_players` is a 300-player seed. Players who finish
    top-100 but aren't in the table (rookie breakouts) silently vanish from scoring.
    Needs full-universe ingestion; a ranked player who leaves the league scores via

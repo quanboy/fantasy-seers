@@ -36,6 +36,9 @@ public class AppConfig implements WebMvcConfigurer {
         return username -> {
             User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+            if (user.getAccountType() != User.AccountType.HUMAN) {
+                throw new UsernameNotFoundException("User not found: " + username);
+            }
             return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword(),

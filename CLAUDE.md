@@ -25,7 +25,7 @@ fantasy-seers/
 │   └── src/main/resources/
 │       ├── application.yml
 │       ├── application-prod.yml # Production profile (activate via SPRING_PROFILES_ACTIVE=prod)
-│       └── db/migration/        # Flyway SQL migrations (V1–V21)
+│       └── db/migration/        # Flyway SQL migrations (V1–V22)
 ├── frontend/                    # React 18 + Vite 5 + Tailwind CSS 3
 │   ├── package.json
 │   ├── Dockerfile               # Multi-stage: npm build → nginx
@@ -94,7 +94,7 @@ cd frontend && npm install && npm run dev
 - JWT secret read from `JWT_SECRET` env var (no default — app fails without it)
 - JWT expiry: 24h (`JWT_EXPIRATION_MS: 86400000`)
 - Sleeper player sync: daily at 04:15 UTC (`SLEEPER_PLAYER_SYNC_CRON`), disable with `SLEEPER_PLAYER_SYNC_ENABLED=false`
-- 2026 league format: provisional `FULL_PPR`, single-QB. Set `LEAGUE_FORMAT_CONFIRMED=true` only after verifying the real league; the global lock refuses provisional formats.
+- 2026 league format: confirmed `HALF_PPR`, single-QB in production. Repository defaults remain provisional (`FULL_PPR`, `LEAGUE_FORMAT_CONFIRMED=false`) so an unconfigured deployment cannot lock boards.
 - Server port: `${PORT:8080}` — configurable for PaaS
 - CORS: `${CORS_ALLOWED_ORIGINS:http://localhost:*}` — must be set to actual domain in production
 - Sentry: `${SENTRY_DSN:}` — empty = disabled (safe for local dev)
@@ -156,8 +156,9 @@ Migrations live in `backend/src/main/resources/db/migration/` and run automatica
 - **V19__stamp_board_scoring_format.sql** — app-wide scoring format copied onto every board snapshot
 - **V20__lock_board_snapshots.sql** — immutable snapshot lock timestamp and locked-board index
 - **V21__fix_adp_snapshot_timestamp.sql** — align `captured_at` column to TIMESTAMPTZ (matches `locked_at`)
+- **V22__add_system_baseline_accounts.sql** — distinguish human/system accounts and seed non-login consensus and Sleeper ADP baseline owners
 
-**Adding a new migration:** Create the next sequential file (currently `V22__description.sql`) in snake_case. Do not modify existing migration files.
+**Adding a new migration:** Create the next sequential file (currently `V23__description.sql`) in snake_case. Do not modify existing migration files.
 
 ---
 
@@ -323,11 +324,11 @@ VITE_SENTRY_DSN=                  (optional, from sentry.io)
 
 **League format env vars (backend):**
 ```
-LEAGUE_SCORING_FORMAT=FULL_PPR
+LEAGUE_SCORING_FORMAT=HALF_PPR
 LEAGUE_SUPERFLEX=false
-LEAGUE_FORMAT_CONFIRMED=false
+LEAGUE_FORMAT_CONFIRMED=true
 ```
-Keep confirmation false until the real league settings are known.
+These are the confirmed 2026 production settings. Keep confirmation false in any new environment until its scoring settings are verified.
 
 **Frontend runtime env vars:**
 ```

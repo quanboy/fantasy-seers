@@ -2,11 +2,14 @@ package com.fantasyseers.api.service;
 
 import com.fantasyseers.api.config.LeagueFormat;
 import com.fantasyseers.api.dto.BoardLockResponse;
+import com.fantasyseers.api.entity.AdpSnapshot;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.SnapshotEntry;
 import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
+import com.fantasyseers.api.repository.AdpSnapshotRepository;
+import com.fantasyseers.api.repository.ConsensusRankingRepository;
 import com.fantasyseers.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,9 +26,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BoardLockService {
 
+    private static final int BASELINE_RANKING_DEPTH = 300;
+
     private final BoardSnapshotRepository boardSnapshotRepository;
     private final UserRepository userRepository;
     private final DefaultBoardRankingService defaultBoardRankingService;
+    private final ConsensusRankingRepository consensusRankingRepository;
+    private final AdpSnapshotRepository adpSnapshotRepository;
     private final LeagueFormat leagueFormat;
 
     @Transactional
@@ -43,7 +50,7 @@ public class BoardLockService {
         Map<Long, BoardSnapshot> preseasonByUser = indexByUser(
                 boardSnapshotRepository.findAllBySeasonAndSnapshotType(season, SnapshotType.PRESEASON)
         );
-        List<User> users = userRepository.findAll();
+        List<User> users = userRepository.findAllByAccountType(User.AccountType.HUMAN);
         List<BoardSnapshot> boardsToLock = new ArrayList<>();
         List<DefaultBoardRankingService.DefaultRanking> defaultRankings = null;
         int alreadyLocked = 0;
@@ -89,6 +96,47 @@ public class BoardLockService {
             boardsToLock.add(board);
         }
 
+        for (User.AccountType baselineType : List.of(
+                User.AccountType.CONSENSUS_BASELINE,
+                User.AccountType.ADP_BASELINE
+        )) {
+            User baselineUser = userRepository.findByAccountType(baselineType)
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Cannot lock boards because the " + baselineType + " account is missing"
+                    ));
+            if (lockedByUser.containsKey(baselineUser.getId())) {
+                alreadyLocked++;
+                continue;
+            }
+
+            List<SnapshotEntry> baselineEntries = baselineEntries(baselineType);
+            if (baselineEntries.isEmpty()) {
+                throw new IllegalStateException(
+                        "Cannot lock boards because the " + baselineType + " rankings are missing"
+                );
+            }
+            if (baselineEntries.size() != BASELINE_RANKING_DEPTH) {
+                throw new IllegalStateException(
+                        "Cannot lock boards because the " + baselineType
+                                + " baseline must contain exactly " + BASELINE_RANKING_DEPTH + " rankings"
+                );
+            }
+
+            BoardSnapshot baselineBoard = BoardSnapshot.builder()
+                    .user(baselineUser)
+                    .season(season)
+                    .snapshotType(SnapshotType.SEASON_START)
+                    .scoringFormat(leagueFormat.getScoringFormat())
+                    .superflex(leagueFormat.isSuperflex())
+                    .lockedAt(completedAt)
+                    .build();
+            for (SnapshotEntry entry : baselineEntries) {
+                entry.setSnapshot(baselineBoard);
+                baselineBoard.getEntries().add(entry);
+            }
+            boardsToLock.add(baselineBoard);
+        }
+
         if (!boardsToLock.isEmpty()) {
             boardSnapshotRepository.saveAllAndFlush(boardsToLock);
         }
@@ -100,6 +148,34 @@ public class BoardLockService {
                 leagueFormat.isSuperflex(),
                 completedAt
         );
+    }
+
+    private List<SnapshotEntry> baselineEntries(User.AccountType baselineType) {
+        if (baselineType == User.AccountType.CONSENSUS_BASELINE) {
+            return consensusRankingRepository.findAllByOrderByOverallRankAsc().stream()
+                    .limit(BASELINE_RANKING_DEPTH)
+                    .map(ranking -> SnapshotEntry.builder()
+                            .player(ranking.getPlayer())
+                            .userRank(ranking.getOverallRank())
+                            .build())
+                    .toList();
+        }
+
+        LocalDateTime capturedAt = adpSnapshotRepository
+                .findLatestCapturedAtBySource(AdpSnapshot.SLEEPER_SOURCE)
+                .orElseThrow(() -> new IllegalStateException(
+                        "Cannot lock boards because no Sleeper ADP snapshot is available"
+                ));
+        List<AdpSnapshot> snapshots = adpSnapshotRepository
+                .findAllBySourceAndCapturedAtOrderByValueAsc(AdpSnapshot.SLEEPER_SOURCE, capturedAt);
+        List<SnapshotEntry> entries = new ArrayList<>();
+        for (int index = 0; index < Math.min(snapshots.size(), BASELINE_RANKING_DEPTH); index++) {
+            entries.add(SnapshotEntry.builder()
+                    .player(snapshots.get(index).getPlayer())
+                    .userRank(index + 1)
+                    .build());
+        }
+        return entries;
     }
 
     private Map<Long, BoardSnapshot> indexByUser(List<BoardSnapshot> boards) {

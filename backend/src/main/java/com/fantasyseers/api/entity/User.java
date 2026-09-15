@@ -36,6 +36,11 @@ public class User {
     @Builder.Default
     private Role role = Role.USER;
 
+    @Column(name = "account_type", nullable = false, length = 30)
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private AccountType accountType = AccountType.HUMAN;
+
     @Column(name = "favorite_nfl_team", length = 50)
     private String favoriteNflTeam;
 
@@ -65,5 +70,11 @@ public class User {
 
     public enum Role {
         USER, ADMIN
+    }
+
+    public enum AccountType {
+        HUMAN,
+        CONSENSUS_BASELINE,
+        ADP_BASELINE
     }
 }
