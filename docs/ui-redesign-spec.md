@@ -32,13 +32,17 @@ Use dark navy surfaces and brighter violet accents in place of the current indig
 
 | Baseline | Starting target |
 | --- | --- |
-| Shell geometry | Desktop at 1024px and above; 56px header, 192px sidebar below it; retain existing phone header/drawer dimensions below that breakpoint |
+| Shell geometry | Desktop at 1024px and above; minimum 56px header, 192px sidebar below it; retain existing phone header/drawer baseline dimensions below that breakpoint |
 | Content geometry | 16px desktop gutters and section gaps; ranking table fills the remaining width; no reserved right-column space |
 | Banner and type | Approximately 96px desktop banner with 16px padding; 32px desktop title, 20px phone title; allow growth for content/zoom |
 | Surface tokens | Page #0C0F1A, navy surface #121626, subtle separator #252B3F; retain readable slate text tokens |
 | Accent and row details | Violet fill #7C3AED, bright border/focus #A78BFA, 12% violet selected tint; 8px control corners, 12px panel corners; 48px minimum rows and 32px headshots |
 
 The narrower sidebar and wide table intentionally replace the current centered narrow board. Verify at the reference's 1140px width as well as 1440px desktop and 390px/320px phone widths. A fixed height must never clip enlarged text. If the desktop header becomes crowded, let search shrink within readable limits before changing the phone layout.
+
+The header may wrap its content and grow above its baseline height when enlarged text requires it. Preserve the phone control arrangement while allowing vertical growth. Sidebar positioning and sticky-toolbar offsets must follow the actual header height, rather than assuming a constant 56px.
+
+Shell and row breakpoints are independent: use the existing drawer shell below 1024px, and compact row identity below 640px. At 640-1023px, tablets use the drawer shell and the full team-name row presentation. These are starting implementation breakpoints; verify at 639/640px and 1023/1024px as well as the phone and desktop widths above.
 
 | Element | Treatment |
 | --- | --- |
@@ -78,11 +82,17 @@ Do not add player-count metrics or a last-saved timestamp for this redesign.
 | Position | Colored chip including positional rank, such as RB3 |
 | ADP | Aligned numeric column preserving actual data and missing-value handling |
 
-Start at a 48px minimum desktop row height. Allow rows to grow for enlarged text rather than clipping. Verify density with actual long names and the full board in a browser.
+Start at a 48px minimum row height at every viewport width. Use 32px headshots and at least 44px by 44px drag targets on phones as well as desktop. Allow rows to grow for enlarged text rather than clipping. Verify density with actual long names and the full board in a browser.
 
-On narrow screens, hide the full team name and use the logo plus abbreviation. Retain headshots, drag handle, rank, position rank, and ADP with responsive spacing. Keep information readable without horizontal page overflow.
+Below 640px, hide the full team name and use the logo plus abbreviation. Retain headshots, drag handle, rank, position rank, and ADP with responsive spacing. Keep information readable without horizontal page overflow; reduce inter-column gaps and allow player names to wrap before shrinking the image or drag target.
 
 Do not add a decorative row chevron or imply an unimplemented player-detail action.
+
+### Team-name data
+
+The board currently supplies `nflTeam` abbreviations. Add a shared frontend lookup from normalized team codes to full display names; the existing `NFL_TEAMS` dropdown list is not this lookup. Use the same lookup for row identity and team-name search, and align logo resolution with those codes. Preserve stored codes and board response semantics.
+
+Verify the lookup against codes supplied by the player sync and add explicit aliases where needed. Keep it with the shared team utilities so future team-name or code changes have one mapping to maintain. An unknown nonempty code displays and remains searchable as that code; a missing team displays "Free Agent" with "FA" in compact rows. Missing logo assets still use the abbreviation fallback. Verify code/full-name search and unknown/free-agent fallbacks during implementation.
 
 ### Image data
 
@@ -102,7 +112,9 @@ Dragging under position-only filtering preserves the slots occupied by excluded 
 
 ### Text search
 
-Desktop search is available in the shared header. Entering a search elsewhere navigates to Master Sheet with the query retained. Search within the user's current board by player name, team, or position; this is not a user-account search. Phone search uses the same behavior within the Master Sheet page.
+Desktop search is available in the shared header. From another page, typing edits the search field without navigating. Pressing Enter or activating its labeled submit control navigates to Master Sheet with the trimmed query retained and applied. Blur does not navigate; an empty or whitespace-only submission does nothing. Preserve input focus through navigation so the user can continue typing.
+
+Within Master Sheet, desktop and phone search both filter immediately as the query changes. Search within the user's current board by player name, team abbreviation or mapped full name, or position; this is not a user-account search. Phone search remains inside the Master Sheet page.
 
 Search filters immediately and intersects with selected positions. Provide a labeled field, a clear action, and a useful no-matches state. A query must not reset unsaved board edits.
 
@@ -131,15 +143,15 @@ Clearing search alone preserves the selected positions. The "Show in board" acti
 
 - Save the full board correctly with search or position filters active; preserve unsaved drafts and existing save-failure handling.
 - Verify multi-select drag preserves excluded-position slots and updates ranks correctly; locked boards reject all edits.
-- Verify search by name/team/position, cross-page search navigation, combined filters, empty results, clearing, and Show in board without losing unsaved edits.
+- Verify search by name/team code/full team name/position and unknown/free-agent fallbacks. Verify that cross-page typing and blur do not navigate, Enter/submit navigates with query and focus retained, and blank submission does nothing. Check immediate in-page filtering, combined filters, empty results, clearing, and Show in board without losing unsaved edits.
 - Verify all drag input methods are disabled under text search, and Show in board reveals the intended row without unlocking a locked board.
 - Verify imagery fallback and correct response mapping for both default and personalized boards.
 
 ### Visual and accessibility
 
-- Inspect wide desktop, laptop, tablet, and narrow phone layouts with real row content and a full board.
+- Inspect wide desktop, laptop, tablet, and narrow phone layouts with real row content and a full board, including both sides of the 640px row and 1024px shell breakpoints.
 - Confirm the existing phone header/drawer arrangement remains intact, the toolbar does not obscure content, and the right rail is absent.
-- Check long names, enlarged text, keyboard focus, and usable drag targets. Respect reduced motion for scroll/highlight effects.
+- Check long names, enlarged text, keyboard focus, and 44px drag targets at all widths. Verify 48px minimum mobile rows, 32px headshots, and growing headers with correctly adjusted sidebar/toolbar offsets. Respect reduced motion for scroll/highlight effects.
 - Review shared-style effects on existing authenticated pages and Login/Register, preserving their workflows.
 - Run the frontend build and relevant behavior tests; run backend mapping tests when changing the board response. Record browser evidence separately from automated test results.
 
