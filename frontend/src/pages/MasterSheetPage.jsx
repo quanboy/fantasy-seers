@@ -142,8 +142,139 @@ function SkeletonRow() {
   return <div className="skeleton h-10 rounded-lg" />;
 }
 
+function BoardGuide({
+  season,
+  isDefault,
+  locked,
+  dirty,
+  saving,
+  scoringFormat,
+  superflex,
+}) {
+  const status = locked
+    ? "Locked"
+    : saving
+      ? "Saving"
+      : dirty
+        ? "Changes not saved"
+        : isDefault
+          ? "Not saved yet"
+          : "Saved";
+
+  const statusClass = locked
+    ? "border-gold-500/30 bg-gold-500/10 text-gold-300"
+    : dirty
+      ? "border-gold-500/30 bg-gold-500/10 text-gold-300"
+      : !isDefault
+        ? "border-win-500/30 bg-win-500/10 text-win-300"
+        : "border-void-600 bg-void-800 text-slate-300";
+
+  const title = locked
+    ? "Your season board is final"
+    : isDefault
+      ? "Make this board yours"
+      : dirty
+        ? "Finish by saving your changes"
+        : "Your rankings are saved";
+
+  const description = locked
+    ? "This is the ranking order that will represent you for the season."
+    : isDefault
+      ? "Start with the consensus order, then drag players into the order you believe in."
+      : dirty
+        ? "Your new order is protected on this device, but it is not on the league server yet."
+        : "You can keep adjusting this order until your league locks the boards.";
+
+  const hasPersonalOrder = locked || dirty || !isDefault;
+  const isSaved = locked || (!isDefault && !dirty);
+  const steps = [
+    {
+      label: "Rank players",
+      detail: locked ? "Final order" : hasPersonalOrder ? "Personal order" : "Drag to reorder",
+      state: hasPersonalOrder ? "complete" : "current",
+    },
+    {
+      label: "Save your sheet",
+      detail: locked ? "On file" : saving ? "Saving now" : dirty ? "Save changes" : isSaved ? "On file" : "Required",
+      state: isSaved ? "complete" : dirty || saving ? "current" : "pending",
+    },
+    {
+      label: "League lock",
+      detail: locked ? "Final for season" : "At league deadline",
+      state: locked ? "complete" : "pending",
+    },
+  ];
+
+  const formatLabel = scoringFormat
+    ? scoringFormat.replaceAll("_", " ")
+    : "League format";
+
+  return (
+    <section className="relative overflow-hidden rounded-2xl border border-oracle-500/25 bg-gradient-to-br from-oracle-900/45 via-void-900 to-void-900 px-5 py-5 sm:px-6 sm:py-6 mb-5 shadow-card">
+      <div aria-hidden="true" className="absolute -right-12 -top-16 h-40 w-40 rounded-full border border-oracle-400/10" />
+      <div aria-hidden="true" className="absolute -right-4 -top-8 h-24 w-24 rounded-full border border-gold-400/10" />
+
+      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-lg">
+          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-oracle-300">
+            {season || 2026} draft room
+          </p>
+          <h2 className="mt-2 font-display text-xl font-bold text-slate-100">
+            {title}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-300">
+            {description}
+          </p>
+        </div>
+        <div
+          role="status"
+          className={`self-start whitespace-nowrap rounded-full border px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider ${statusClass}`}
+        >
+          {status}
+        </div>
+      </div>
+
+      <ol className="relative mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
+        {steps.map((step, index) => {
+          const markerClass = step.state === "complete"
+            ? "border-win-500/50 bg-win-500/15 text-win-300"
+            : step.state === "current"
+              ? "border-oracle-400/60 bg-oracle-500/20 text-oracle-200"
+              : "border-void-600 bg-void-800/80 text-slate-500";
+
+          return (
+            <li key={step.label} className="relative flex items-center gap-3 rounded-xl border border-void-700/80 bg-void-950/35 p-3 sm:block sm:min-h-24">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold ${markerClass}`}>
+                {step.state === "complete" ? "✓" : index + 1}
+              </span>
+              <div className="sm:mt-3">
+                <p className="text-sm font-semibold text-slate-200">{step.label}</p>
+                <p className="mt-0.5 text-xs text-slate-500">{step.detail}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div className="relative mt-4 flex flex-col gap-2 border-t border-void-700/80 pt-4 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <p className={isDefault && !locked ? "text-gold-300" : "text-slate-400"}>
+          {isDefault && !locked
+            ? "If you never save, this starting order is what locks for the season."
+            : locked
+              ? "League lock complete. Rankings can no longer be changed."
+              : "Save again whenever you change the order."}
+        </p>
+        <p className="shrink-0 font-mono text-slate-500">
+          {formatLabel} · {superflex ? "Superflex" : "Single-QB"}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export default function MasterSheetPage() {
   const [boardId, setBoardId] = useState(null);
+  const [season, setSeason] = useState(null);
   const [rankings, setRankings] = useState([]);
   const [isDefault, setIsDefault] = useState(true);
   const [locked, setLocked] = useState(false);
@@ -155,7 +286,6 @@ export default function MasterSheetPage() {
   const [saveMsg, setSaveMsg] = useState(null);
   const [draftRestored, setDraftRestored] = useState(false);
   const [error, setError] = useState(null);
-  const [bannerDismissed, setBannerDismissed] = useState(false);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
 
   useEffect(() => {
@@ -197,6 +327,7 @@ export default function MasterSheetPage() {
           localStorage.removeItem(`fs_board_draft:${data.boardId}`);
         }
         setRankings(nextRankings);
+        setSeason(data.season);
         setIsDefault(data.isDefault);
         setLocked(Boolean(data.locked));
         setScoringFormat(data.scoringFormat);
@@ -387,44 +518,16 @@ export default function MasterSheetPage() {
         </button>
       </div>
 
-      {/* Locked banner */}
-      {locked && !loading && (
-        <div className="glass-card px-4 py-3 mb-5 border border-gold-500/30">
-          <p className="text-sm font-semibold text-gold-400">
-            Season-start board locked
-          </p>
-          <p className="text-xs text-slate-400 mt-1">
-            {scoringFormat || "League format"} · {superflex ? "Superflex" : "Single-QB"}
-          </p>
-        </div>
-      )}
-
-      {/* Consensus banner */}
-      {isDefault && !locked && !bannerDismissed && !loading && (
-        <div className="glass-card px-4 py-3 mb-5 flex items-center justify-between">
-          <p className="text-sm text-slate-300">
-            These are consensus expert rankings. Drag to personalize your sheet.
-          </p>
-          <button
-            onClick={() => setBannerDismissed(true)}
-            aria-label="Dismiss consensus rankings message"
-            className="text-slate-500 hover:text-slate-300 ml-3 shrink-0"
-          >
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
+      {!loading && rankings.length > 0 && (
+        <BoardGuide
+          season={season}
+          isDefault={isDefault}
+          locked={locked}
+          dirty={dirty}
+          saving={saving}
+          scoringFormat={scoringFormat}
+          superflex={superflex}
+        />
       )}
 
       {/* Error */}

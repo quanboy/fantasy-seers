@@ -25,6 +25,7 @@ describe("MasterSheetPage", () => {
     boardMocks.getMySheet.mockResolvedValue({
       data: {
         boardId: 42,
+        season: 2026,
         rankings,
         isDefault: true,
         locked: false,
@@ -69,5 +70,65 @@ describe("MasterSheetPage", () => {
       screen.getByRole("button", { name: /Move Bravo Catcher, currently ranked 2/ })
     ).toBeInTheDocument();
     expect(screen.queryByText("Unsaved changes restored from this device")).not.toBeInTheDocument();
+  });
+
+  it("guides a first-time user from the consensus order through the league lock", async () => {
+    render(<MasterSheetPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Make this board yours" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Rank players")).toBeInTheDocument();
+    expect(screen.getByText("Save your sheet")).toBeInTheDocument();
+    expect(screen.getByText("League lock")).toBeInTheDocument();
+    expect(screen.getByText("Not saved yet")).toBeInTheDocument();
+    expect(
+      screen.getByText(/If you never save, this starting order is what locks/)
+    ).toBeInTheDocument();
+  });
+
+  it("shows when the user's personal rankings are safely saved", async () => {
+    boardMocks.getMySheet.mockResolvedValue({
+      data: {
+        boardId: 42,
+        season: 2026,
+        rankings,
+        isDefault: false,
+        locked: false,
+        scoringFormat: "HALF_PPR",
+        superflex: false,
+      },
+    });
+
+    render(<MasterSheetPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Your rankings are saved" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Saved")).toBeInTheDocument();
+    expect(screen.getByText("HALF PPR · Single-QB")).toBeInTheDocument();
+  });
+
+  it("explains that a locked board is final", async () => {
+    boardMocks.getMySheet.mockResolvedValue({
+      data: {
+        boardId: 42,
+        season: 2026,
+        rankings,
+        isDefault: false,
+        locked: true,
+        scoringFormat: "HALF_PPR",
+        superflex: true,
+      },
+    });
+
+    render(<MasterSheetPage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Your season board is final" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Final for season")).toBeInTheDocument();
+    expect(screen.getByText("HALF PPR · Superflex")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Locked" })).toBeDisabled();
   });
 });
