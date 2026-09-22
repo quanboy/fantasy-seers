@@ -13,9 +13,20 @@ docker-compose up --build
 
 | Service  | URL                        |
 |----------|----------------------------|
-| Frontend | http://localhost:5173       |
+| Frontend | http://localhost            |
 | Backend  | http://localhost:8080       |
 | Database | localhost:5432              |
+
+### Local demo login
+
+The Docker Compose stack starts Spring with the `local` profile and creates this normal user when it is missing:
+
+```
+Username: demo
+Password: demo-only-password
+```
+
+The seeder never runs unless both the `local` profile and `DEMO_ACCOUNT_ENABLED=true` are active. It is explicitly excluded from the `prod` profile and never overwrites an existing account. Override the local credentials through the `DEMO_ACCOUNT_*` values documented in `.env.example`.
 
 ## Project Structure
 

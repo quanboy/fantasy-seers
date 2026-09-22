@@ -26,10 +26,15 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fantasyseers_db
       SPRING_DATASOURCE_USERNAME: fantasyseers
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set (see .env.example)}
+      SPRING_PROFILES_ACTIVE: local
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a random string of at least 48 bytes (see .env.example)}
       JWT_EXPIRATION_MS: 86400000
       REGISTRATION_INVITE_CODE: ${REGISTRATION_INVITE_CODE:-}
+      DEMO_ACCOUNT_ENABLED: "true"
+      DEMO_ACCOUNT_USERNAME: ${DEMO_ACCOUNT_USERNAME:-demo}
+      DEMO_ACCOUNT_EMAIL: ${DEMO_ACCOUNT_EMAIL:-demo@local.fantasyseers.invalid}
+      DEMO_ACCOUNT_PASSWORD: ${DEMO_ACCOUNT_PASSWORD:-demo-only-password}
       # Set in Railway — leave empty for local dev
       SENTRY_DSN: ${SENTRY_DSN:-}
     ports:

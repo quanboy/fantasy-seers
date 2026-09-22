@@ -38,6 +38,12 @@ cors:
 registration:
   invite-code: ${REGISTRATION_INVITE_CODE:}
 
+demo-account:
+  enabled: ${DEMO_ACCOUNT_ENABLED:false}
+  username: ${DEMO_ACCOUNT_USERNAME:demo}
+  email: ${DEMO_ACCOUNT_EMAIL:demo@local.fantasyseers.invalid}
+  password: ${DEMO_ACCOUNT_PASSWORD:demo-only-password}
+
 security:
   # Enable ONLY when behind a trusted reverse proxy (Railway/nginx) that appends the
   # real client IP to X-Forwarded-For. Must be true on Railway, or all users share a
