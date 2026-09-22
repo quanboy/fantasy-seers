@@ -141,6 +141,18 @@ export default function Login() {
                 </button>
               </div>
             </div>
+            {import.meta.env.DEV && (
+              <button
+                type="button"
+                onClick={() => setForm({
+                  username: "demo",
+                  password: "demo-only-password",
+                })}
+                className="w-full rounded-lg border border-void-600 px-4 py-2.5 text-sm font-semibold text-slate-300 transition-colors hover:border-oracle-500 hover:text-slate-100"
+              >
+                Use demo account
+              </button>
+            )}
             <button
               type="submit"
               disabled={loading}

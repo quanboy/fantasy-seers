@@ -30,6 +30,7 @@ services:
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set to a random string of at least 48 bytes (see .env.example)}
       JWT_EXPIRATION_MS: 86400000
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:*,http://127.0.0.1:*}
       REGISTRATION_INVITE_CODE: ${REGISTRATION_INVITE_CODE:-}
       DEMO_ACCOUNT_ENABLED: "true"
       DEMO_ACCOUNT_USERNAME: ${DEMO_ACCOUNT_USERNAME:-demo}

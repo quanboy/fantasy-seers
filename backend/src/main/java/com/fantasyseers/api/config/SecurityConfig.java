@@ -39,7 +39,7 @@ public class SecurityConfig {
     private final RequestSizeLimitFilter requestSizeLimitFilter;
     private final UserDetailsService userDetailsService;
 
-    @Value("${cors.allowed-origins:http://localhost:*}")
+    @Value("${cors.allowed-origins:http://localhost:*,http://127.0.0.1:*}")
     private String allowedOrigins;
 
     @Bean
