@@ -93,7 +93,7 @@ export default function GroupsPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-2xl mx-auto py-6 sm:py-8">
         {/* Create + Join forms */}
         <div className="grid sm:grid-cols-2 gap-4 mb-8">
           {/* Create */}

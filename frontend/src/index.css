@@ -13,6 +13,17 @@
     @apply bg-void-950 text-slate-300 font-body;
   }
 
+  .app-shell-body {
+    min-height: calc(100vh - var(--app-header-height));
+  }
+
+  @media (min-width: 1024px) {
+    .app-sidebar {
+      top: var(--app-header-height);
+      height: calc(100vh - var(--app-header-height));
+    }
+  }
+
   /* Custom scrollbar */
   ::-webkit-scrollbar {
     width: 4px;
@@ -58,6 +69,12 @@
   }
   .btn-oracle:hover {
     transform: translateY(-1px);
+    box-shadow: 0 0 20px theme('colors.oracle.500 / 0.22');
+  }
+  .btn-oracle:focus-visible {
+    outline: 2px solid theme('colors.oracle.400');
+    outline-offset: 2px;
+    box-shadow: 0 0 20px theme('colors.oracle.500 / 0.22');
   }
   .btn-oracle:active {
     transform: translateY(0);
@@ -82,8 +99,8 @@
     outline: none;
   }
   .input-base:focus {
-    border-color: theme('colors.void.600');
-    box-shadow: 0 0 0 2px rgba(58, 66, 89, 0.3);
+    border-color: theme('colors.oracle.400');
+    box-shadow: 0 0 0 2px theme('colors.oracle.400 / 0.2');
   }
 
   /* === Sport badge === */
@@ -128,12 +145,12 @@
 
   /* === Chip variants (small bordered badges/buttons) === */
   .chip-oracle {
-    background: rgba(79, 70, 229, 0.1);
-    border: 1px solid rgba(79, 70, 229, 0.2);
+    background: theme('colors.oracle.500 / 0.1');
+    border: 1px solid theme('colors.oracle.500 / 0.2');
   }
   .chip-oracle-active {
-    background: rgba(79, 70, 229, 0.15);
-    border: 1px solid rgba(79, 70, 229, 0.35);
+    background: theme('colors.oracle.500 / 0.15');
+    border: 1px solid theme('colors.oracle.400 / 0.6');
   }
   .chip-gold {
     background: rgba(249, 115, 22, 0.1);

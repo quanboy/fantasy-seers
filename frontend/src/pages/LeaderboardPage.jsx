@@ -38,7 +38,7 @@ export default function LeaderboardPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6">
+    <div className="max-w-2xl mx-auto py-6">
       {/* Tabs */}
       <div className="flex items-center gap-2 mb-5 flex-wrap">
         <button

@@ -44,7 +44,7 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+      <div className="max-w-xl mx-auto py-6 sm:py-8">
         <div className="skeleton h-10 w-48 mb-6" />
         <div className="skeleton h-64" />
       </div>
@@ -52,7 +52,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 sm:px-6 py-6 sm:py-8 animate-fade-in">
+    <div className="max-w-xl mx-auto py-6 sm:py-8 animate-fade-in">
       <h1 className="font-display text-2xl font-800 text-slate-100 mb-6">Profile</h1>
 
       {/* Account section — read-only */}

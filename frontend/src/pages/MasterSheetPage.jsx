@@ -487,9 +487,9 @@ export default function MasterSheetPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-2xl mx-auto py-6 sm:py-8">
       {/* Header */}
-      <div className="sticky top-14 z-20 -mx-2 px-2 py-2 mb-2 flex items-start justify-between gap-4 bg-void-950/95 backdrop-blur-sm">
+      <div className="sticky z-20 -mx-2 px-2 py-2 mb-2 flex items-start justify-between gap-4 bg-void-950/95 backdrop-blur-sm" style={{ top: "var(--app-header-height)" }}>
         <div>
           <h1 className="font-cinzel text-xl font-bold text-slate-100">
             Master Sheet

@@ -66,7 +66,7 @@ export default function GroupFeedPage() {
 
   return (
     <>
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+    <div className="max-w-2xl mx-auto py-6 sm:py-8">
         {loading && (
           <div className="space-y-4 mt-4">
             <div className="skeleton h-16 mb-6" />
