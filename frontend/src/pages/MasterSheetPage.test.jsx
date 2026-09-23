@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage from "./MasterSheetPage";
@@ -13,8 +13,8 @@ vi.mock("../api/client", () => ({
 }));
 
 const rankings = [
-  { playerId: 1, fullName: "Alpha Runner", position: "RB", nflTeam: "BUF", adp: 1, overallRank: 1, positionalRank: 1 },
-  { playerId: 2, fullName: "Bravo Catcher", position: "WR", nflTeam: "DET", adp: 2, overallRank: 2, positionalRank: 1 },
+  { playerId: 1, sleeperId: "1001", fullName: "Alpha Runner", position: "RB", nflTeam: "BUF", adp: 1, overallRank: 1, positionalRank: 1 },
+  { playerId: 2, sleeperId: "1002", fullName: "Bravo Catcher", position: "WR", nflTeam: "DET", adp: 2, overallRank: 2, positionalRank: 1 },
 ];
 
 describe("MasterSheetPage", () => {
@@ -76,15 +76,41 @@ describe("MasterSheetPage", () => {
     render(<MasterSheetPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "Make this board yours" })
+      await screen.findByRole("heading", { name: "Master Sheet" })
     ).toBeInTheDocument();
     expect(screen.getByText("Rank players")).toBeInTheDocument();
     expect(screen.getByText("Save your sheet")).toBeInTheDocument();
     expect(screen.getByText("League lock")).toBeInTheDocument();
-    expect(screen.getByText("Not saved yet")).toBeInTheDocument();
+    expect(screen.getByText("Not saved")).toBeInTheDocument();
     expect(
-      screen.getByText(/If you never save, this starting order is what locks/)
+      screen.getByText(/Consensus rankings are your starting point/)
     ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Dismiss consensus explanation" })).toBeInTheDocument();
+
+    const toolbar = screen.getByRole("toolbar", { name: "Ranking controls" });
+    expect(within(toolbar).getByRole("button", { name: "ALL" })).toBeInTheDocument();
+    expect(within(toolbar).getByRole("button", { name: "Save Rankings" })).toBeDisabled();
+  });
+
+  it("shows player and team imagery with readable fallbacks", async () => {
+    render(<MasterSheetPage />);
+
+    const headshot = await screen.findByRole("img", { name: "Alpha Runner headshot" });
+    const teamLogo = screen.getByRole("img", { name: "Buffalo Bills logo" });
+    expect(headshot).toHaveAttribute(
+      "src",
+      "https://sleepercdn.com/content/nfl/players/thumb/1001.jpg"
+    );
+    expect(teamLogo).toHaveAttribute(
+      "src",
+      "https://a.espncdn.com/i/teamlogos/nfl/500/buf.png"
+    );
+    expect(screen.getByText("Buffalo Bills")).toBeInTheDocument();
+
+    fireEvent.error(headshot);
+    fireEvent.error(teamLogo);
+    expect(screen.getByLabelText("Alpha Runner initials")).toHaveTextContent("AR");
+    expect(screen.getByLabelText("Buffalo Bills abbreviation")).toHaveTextContent("BUF");
   });
 
   it("shows when the user's personal rankings are safely saved", async () => {
@@ -103,10 +129,10 @@ describe("MasterSheetPage", () => {
     render(<MasterSheetPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "Your rankings are saved" })
+      await screen.findByRole("heading", { name: "Master Sheet" })
     ).toBeInTheDocument();
     expect(screen.getByText("Saved")).toBeInTheDocument();
-    expect(screen.getByText("HALF PPR · Single-QB")).toBeInTheDocument();
+    expect(screen.getByLabelText("Board format: 2026 · HALF PPR · Single-QB")).toBeInTheDocument();
   });
 
   it("explains that a locked board is final", async () => {
@@ -125,10 +151,10 @@ describe("MasterSheetPage", () => {
     render(<MasterSheetPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "Your season board is final" })
+      await screen.findByRole("heading", { name: "Master Sheet" })
     ).toBeInTheDocument();
-    expect(screen.getByText("Final for season")).toBeInTheDocument();
-    expect(screen.getByText("HALF PPR · Superflex")).toBeInTheDocument();
+    expect(screen.getByText(/League lock complete/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Board format: 2026 · HALF PPR · Superflex")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Locked" })).toBeDisabled();
   });
 });

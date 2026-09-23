@@ -5,6 +5,7 @@ import com.fantasyseers.api.dto.BoardDto;
 import com.fantasyseers.api.dto.BoardSheetResponse;
 import com.fantasyseers.api.entity.BoardSnapshot;
 import com.fantasyseers.api.entity.NflPlayer;
+import com.fantasyseers.api.entity.SnapshotEntry;
 import com.fantasyseers.api.entity.SnapshotType;
 import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.BoardSnapshotRepository;
@@ -58,7 +59,7 @@ class BoardServiceTest {
         BoardSnapshot board = BoardSnapshot.builder()
                 .id(11L).user(user).season(2026).build();
         NflPlayer player = NflPlayer.builder()
-                .id(21L).fullName("Player One").position("WR")
+                .id(21L).sleeperId("sleeper-21").fullName("Player One").position("WR")
                 .nflTeam("TEST").adp(17).build();
 
         when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, SnapshotType.PRESEASON))
@@ -80,8 +81,34 @@ class BoardServiceTest {
                 () -> assertEquals(LeagueFormat.DEFAULT_SCORING_FORMAT, response.scoringFormat()),
                 () -> assertEquals(LeagueFormat.DEFAULT_SUPERFLEX, response.superflex()),
                 () -> assertTrue(response.isDefault()),
+                () -> assertEquals("sleeper-21", response.rankings().getFirst().sleeperId()),
                 () -> assertEquals(8, response.rankings().getFirst().overallRank()),
                 () -> assertEquals(3, response.rankings().getFirst().positionalRank())
+        );
+    }
+
+    @Test
+    void savedBoardRankingsIncludeSleeperIdentity() {
+        User user = User.builder().id(7L).username("seer").build();
+        BoardSnapshot board = BoardSnapshot.builder()
+                .id(11L).user(user).season(2026).build();
+        NflPlayer player = NflPlayer.builder()
+                .id(21L).sleeperId("sleeper-21").fullName("Player One").position("WR")
+                .nflTeam("BUF").adp(17).build();
+        SnapshotEntry entry = SnapshotEntry.builder()
+                .snapshot(board).player(player).userRank(4).build();
+
+        when(boardSnapshotRepository.findByUserIdAndSeasonAndSnapshotType(7L, 2026, SnapshotType.PRESEASON))
+                .thenReturn(Optional.of(board));
+        when(snapshotEntryRepository.findAllBySnapshotIdOrderByUserRankAsc(11L))
+                .thenReturn(List.of(entry));
+
+        BoardSheetResponse response = boardService.getMySheet(7L, 2026);
+
+        assertAll(
+                () -> assertEquals("sleeper-21", response.rankings().getFirst().sleeperId()),
+                () -> assertEquals(4, response.rankings().getFirst().overallRank()),
+                () -> assertEquals(1, response.rankings().getFirst().positionalRank())
         );
     }
 

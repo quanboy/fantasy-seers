@@ -2,6 +2,7 @@ package com.fantasyseers.api.dto;
 
 public record RankedPlayerResponse(
         Long playerId,
+        String sleeperId,
         String fullName,
         String position,
         String nflTeam,

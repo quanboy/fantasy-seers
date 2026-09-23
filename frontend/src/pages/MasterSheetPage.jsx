@@ -17,6 +17,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { getNflTeamInfo } from "../utils/teams";
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
 
@@ -59,14 +60,80 @@ function DragHandle({ disabled }) {
   );
 }
 
+function getInitials(fullName) {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "?";
+}
+
+function PlayerHeadshot({ player }) {
+  const [failed, setFailed] = useState(false);
+  const hasHeadshot = Boolean(player.sleeperId) && player.position !== "DEF";
+
+  if (!hasHeadshot || failed) {
+    return (
+      <span
+        aria-label={`${player.fullName} initials`}
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-void-600 bg-void-800 text-[10px] font-bold text-slate-200"
+      >
+        {getInitials(player.fullName)}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={`https://sleepercdn.com/content/nfl/players/thumb/${encodeURIComponent(player.sleeperId)}.jpg`}
+      alt={`${player.fullName} headshot`}
+      width="32"
+      height="32"
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-8 w-8 shrink-0 rounded-full border border-void-600 bg-void-800 object-cover object-top"
+    />
+  );
+}
+
+function TeamLogo({ team }) {
+  const [failed, setFailed] = useState(false);
+
+  if (!team.logoUrl || failed) {
+    return (
+      <span
+        aria-label={`${team.name} abbreviation`}
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-void-800 font-mono text-[8px] font-bold text-slate-400"
+      >
+        {team.code}
+      </span>
+    );
+  }
+
+  return (
+    <img
+      src={team.logoUrl}
+      alt={`${team.name} logo`}
+      width="24"
+      height="24"
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className="h-6 w-6 shrink-0 object-contain"
+    />
+  );
+}
+
 function ColumnHeader() {
   return (
-    <div className="flex items-center gap-3 px-3 py-2 border-b border-void-700 mb-1">
-      <div className="w-5 shrink-0" />
-      <span className="text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider w-8 text-right shrink-0">Rank</span>
-      <span className="text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider flex-1">Player</span>
-      <span className="text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider w-12 shrink-0">Pos</span>
-      <span className="text-[10px] font-mono font-semibold text-slate-500 uppercase tracking-wider w-10 text-right shrink-0">ADP</span>
+    <div className="grid grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] items-center gap-x-1 border-b border-void-700 px-0.5 py-2 sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px] sm:gap-x-3 sm:px-3">
+      <span aria-hidden="true" />
+      <span className="text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">Rank</span>
+      <span aria-hidden="true" />
+      <span aria-hidden="true" />
+      <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">Player</span>
+      <span className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">Pos</span>
+      <span className="text-right font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">ADP</span>
     </div>
   );
 }
@@ -87,18 +154,16 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
     zIndex: isDragging ? 50 : undefined,
   };
 
-  const rankDiff = player.consensusOverallRank != null
-    ? player.consensusOverallRank - (overallIndex + 1)
-    : null;
+  const team = getNflTeamInfo(player.nflTeam);
 
   return (
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+      className={`grid min-h-12 grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] items-center gap-x-1 border-b border-void-700/70 px-0.5 transition-colors last:border-b-0 sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px] sm:gap-x-3 sm:px-3 ${
         isDragging
           ? "bg-void-700 shadow-modal"
-          : "hover:bg-void-800/50"
+          : "hover:bg-oracle-500/10"
       }`}
     >
       <button
@@ -114,24 +179,33 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
       </button>
 
       {/* Rank */}
-      <span className="text-xs font-mono text-slate-300 w-8 text-right shrink-0 font-semibold">
+      <span className="flex h-8 w-8 items-center justify-center justify-self-center rounded-lg bg-void-950 font-mono text-xs font-semibold tabular-nums text-slate-400">
         {overallIndex + 1}
       </span>
 
-      {/* Player (Team) */}
-      <div className="flex-1 min-w-0">
-        <span className="text-sm font-medium text-slate-200 truncate block">
-          {player.fullName} <span className="text-slate-500">({player.nflTeam || "FA"})</span>
+      <PlayerHeadshot player={player} />
+      <TeamLogo team={team} />
+
+      {/* Player identity */}
+      <div className="min-w-0 py-1.5">
+        <span className="block break-words text-sm font-semibold leading-tight text-slate-200">
+          {player.fullName}
+        </span>
+        <span className="mt-0.5 hidden text-xs leading-tight text-slate-500 sm:block">
+          {team.name}
+        </span>
+        <span className="mt-0.5 block font-mono text-[10px] text-slate-500 sm:hidden">
+          {team.code}
         </span>
       </div>
 
       {/* Position */}
-      <span className={`text-xs font-mono font-semibold w-12 shrink-0 ${getPositionChipClass(player.position)} px-1.5 py-0.5 rounded text-center`}>
+      <span className={`rounded px-1 py-0.5 text-center font-mono text-xs font-semibold sm:px-1.5 ${getPositionChipClass(player.position)}`}>
         {player.position}{player.positionalRank}
       </span>
 
       {/* ADP */}
-      <span className="text-xs font-mono text-slate-500 w-10 text-right shrink-0">
+      <span className="text-right font-mono text-xs tabular-nums text-slate-500">
         {player.adp ?? "—"}
       </span>
     </div>
@@ -151,40 +225,6 @@ function BoardGuide({
   scoringFormat,
   superflex,
 }) {
-  const status = locked
-    ? "Locked"
-    : saving
-      ? "Saving"
-      : dirty
-        ? "Changes not saved"
-        : isDefault
-          ? "Not saved yet"
-          : "Saved";
-
-  const statusClass = locked
-    ? "border-gold-500/30 bg-gold-500/10 text-gold-300"
-    : dirty
-      ? "border-gold-500/30 bg-gold-500/10 text-gold-300"
-      : !isDefault
-        ? "border-win-500/30 bg-win-500/10 text-win-300"
-        : "border-void-600 bg-void-800 text-slate-300";
-
-  const title = locked
-    ? "Your season board is final"
-    : isDefault
-      ? "Make this board yours"
-      : dirty
-        ? "Finish by saving your changes"
-        : "Your rankings are saved";
-
-  const description = locked
-    ? "This is the ranking order that will represent you for the season."
-    : isDefault
-      ? "Start with the consensus order, then drag players into the order you believe in."
-      : dirty
-        ? "Your new order is protected on this device, but it is not on the league server yet."
-        : "You can keep adjusting this order until your league locks the boards.";
-
   const hasPersonalOrder = locked || dirty || !isDefault;
   const isSaved = locked || (!isDefault && !dirty);
   const steps = [
@@ -208,68 +248,64 @@ function BoardGuide({
   const formatLabel = scoringFormat
     ? scoringFormat.replaceAll("_", " ")
     : "League format";
+  const seasonLabel = season ?? "Season pending";
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-oracle-500/25 bg-gradient-to-br from-oracle-900/45 via-void-900 to-void-900 px-5 py-5 sm:px-6 sm:py-6 mb-5 shadow-card">
-      <div aria-hidden="true" className="absolute -right-12 -top-16 h-40 w-40 rounded-full border border-oracle-400/10" />
-      <div aria-hidden="true" className="absolute -right-4 -top-8 h-24 w-24 rounded-full border border-gold-400/10" />
+    <section className="relative mb-4 min-h-24 overflow-hidden rounded-xl border border-oracle-500/25 bg-gradient-to-br from-oracle-900/45 via-void-900 to-void-900 px-5 py-4 shadow-card sm:px-6">
+      <div aria-hidden="true" className="absolute -right-12 -top-20 h-48 w-48 rounded-full border border-oracle-400/10" />
+      <div aria-hidden="true" className="absolute right-24 top-0 h-px w-56 rotate-[-18deg] bg-gradient-to-r from-transparent via-oracle-400/20 to-transparent" />
 
-      <div className="relative flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="max-w-lg">
-          <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.22em] text-oracle-300">
-            {season || 2026} draft room
+      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="max-w-xl">
+          <p className="font-cinzel text-[10px] font-bold uppercase tracking-[0.24em] text-oracle-300">
+            Fantasy Seers
           </p>
-          <h2 className="mt-2 font-display text-xl font-bold text-slate-100">
-            {title}
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            {description}
+          <h1 className="mt-1 font-cinzel text-xl font-bold leading-tight text-slate-100 sm:text-[32px]">
+            Master Sheet
+          </h1>
+          <p className="mt-1 text-sm text-slate-200">
+            {locked ? "Your season-start rankings are final." : "Drag players to build your personal rankings."}
+          </p>
+          <p
+            aria-label={`Board format: ${seasonLabel} · ${formatLabel} · ${superflex ? "Superflex" : "Single-QB"}`}
+            className="mt-1 font-mono text-[10px] uppercase tracking-wider text-slate-500"
+          >
+            {seasonLabel} · {formatLabel} · {superflex ? "Superflex" : "Single-QB"}
           </p>
         </div>
-        <div
-          role="status"
-          className={`self-start whitespace-nowrap rounded-full border px-3 py-1.5 font-mono text-[11px] font-semibold uppercase tracking-wider ${statusClass}`}
-        >
-          {status}
-        </div>
-      </div>
 
-      <ol className="relative mt-6 grid gap-3 sm:grid-cols-3 sm:gap-4">
+        <ol className="grid grid-cols-3 gap-2 lg:w-[420px]">
         {steps.map((step, index) => {
           const markerClass = step.state === "complete"
-            ? "border-win-500/50 bg-win-500/15 text-win-300"
+            ? "border-win-500/50 bg-win-500/15 text-win-400"
             : step.state === "current"
               ? "border-oracle-400/60 bg-oracle-500/20 text-oracle-200"
               : "border-void-600 bg-void-800/80 text-slate-500";
 
           return (
-            <li key={step.label} className="relative flex items-center gap-3 rounded-xl border border-void-700/80 bg-void-950/35 p-3 sm:block sm:min-h-24">
-              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-mono text-xs font-bold ${markerClass}`}>
+            <li key={step.label} className="flex min-w-0 items-center gap-2 rounded-lg border border-void-700/80 bg-void-950/35 p-2">
+              <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border font-mono text-[10px] font-bold ${markerClass}`}>
                 {step.state === "complete" ? "✓" : index + 1}
               </span>
-              <div className="sm:mt-3">
-                <p className="text-sm font-semibold text-slate-200">{step.label}</p>
-                <p className="mt-0.5 text-xs text-slate-500">{step.detail}</p>
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold leading-tight text-slate-200">{step.label}</p>
+                <p className="mt-0.5 hidden text-[10px] leading-tight text-slate-500 sm:block">{step.detail}</p>
               </div>
             </li>
           );
         })}
-      </ol>
-
-      <div className="relative mt-4 flex flex-col gap-2 border-t border-void-700/80 pt-4 text-xs sm:flex-row sm:items-center sm:justify-between">
-        <p className={isDefault && !locked ? "text-gold-300" : "text-slate-400"}>
-          {isDefault && !locked
-            ? "If you never save, this starting order is what locks for the season."
-            : locked
-              ? "League lock complete. Rankings can no longer be changed."
-              : "Save again whenever you change the order."}
-        </p>
-        <p className="shrink-0 font-mono text-slate-500">
-          {formatLabel} · {superflex ? "Superflex" : "Single-QB"}
-        </p>
+        </ol>
       </div>
     </section>
   );
+}
+
+function getSaveStatus({ locked, saving, dirty, isDefault }) {
+  if (locked) return "Locked";
+  if (saving) return "Saving";
+  if (dirty) return "Unsaved";
+  if (isDefault) return "Not saved";
+  return "Saved";
 }
 
 export default function MasterSheetPage() {
@@ -287,6 +323,7 @@ export default function MasterSheetPage() {
   const [draftRestored, setDraftRestored] = useState(false);
   const [error, setError] = useState(null);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
+  const [consensusNoticeDismissed, setConsensusNoticeDismissed] = useState(false);
 
   useEffect(() => {
     const warnBeforeLeaving = (event) => {
@@ -486,38 +523,15 @@ export default function MasterSheetPage() {
     });
   };
 
-  return (
-    <div className="max-w-2xl mx-auto py-6 sm:py-8">
-      {/* Header */}
-      <div className="sticky z-20 -mx-2 px-2 py-2 mb-2 flex items-start justify-between gap-4 bg-void-950/95 backdrop-blur-sm" style={{ top: "var(--app-header-height)" }}>
-        <div>
-          <h1 className="font-cinzel text-xl font-bold text-slate-100">
-            Master Sheet
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            {locked
-              ? "Your season-start rankings are final"
-              : "Drag players to set your personal rankings"}
-          </p>
-          {dirty && !locked && (
-            <p className="text-xs text-gold-400 mt-1" role="status">
-              {draftRestored
-                ? "Unsaved changes restored from this device"
-                : "Unsaved changes are protected on this device"}
-            </p>
-          )}
-        </div>
-        <button
-          onClick={handleSave}
-          disabled={locked || !dirty || saving}
-          className={`btn-oracle px-4 py-2 text-sm font-semibold rounded-lg shrink-0 transition-all ${
-            (locked || (!dirty && !saveMsg)) ? "opacity-50 cursor-not-allowed" : ""
-          }`}
-        >
-          {locked ? "Locked" : saving ? "Saving..." : saveMsg || "Save Rankings"}
-        </button>
-      </div>
+  const saveStatus = getSaveStatus({ locked, saving, dirty, isDefault });
+  const saveStatusClass = locked || dirty
+    ? "border-gold-500/30 bg-gold-500/10 text-gold-400"
+    : !isDefault
+      ? "border-win-500/30 bg-win-500/10 text-win-400"
+      : "border-void-600 bg-void-800 text-slate-400";
 
+  return (
+    <div className="mx-auto w-full py-4 sm:py-6">
       {!loading && rankings.length > 0 && (
         <BoardGuide
           season={season}
@@ -530,31 +544,89 @@ export default function MasterSheetPage() {
         />
       )}
 
+      {isDefault && !locked && !consensusNoticeDismissed && !loading && (
+        <div className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-oracle-500/20 bg-oracle-500/10 px-4 py-3">
+          <p className="text-sm text-slate-200">
+            <span className="font-semibold">Consensus rankings are your starting point.</span>{" "}
+            Drag players into your order and save it before the league locks.
+          </p>
+          <button
+            type="button"
+            onClick={() => setConsensusNoticeDismissed(true)}
+            aria-label="Dismiss consensus explanation"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-void-800 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {locked && !loading && (
+        <div className="mb-3 rounded-lg border border-gold-500/30 bg-gold-500/10 px-4 py-3 text-sm text-gold-400">
+          <span className="font-semibold">League lock complete.</span> Rankings can no longer be changed.
+        </div>
+      )}
+
+      {dirty && !locked && !loading && (
+        <p className="mb-2 text-xs text-gold-400" role="status">
+          {draftRestored
+            ? "Unsaved changes restored from this device"
+            : "Unsaved changes are protected on this device"}
+        </p>
+      )}
+
       {/* Error */}
       {error && (
-        <div className="alert-error mb-4">
+        <div className="alert-error mb-4 rounded-lg px-4 py-3">
           <p className="text-sm text-loss-400">{error}</p>
         </div>
       )}
 
-      {/* Position filter bar */}
+      {/* Ranking controls */}
       {!loading && (
-        <div className="flex flex-wrap gap-2 mb-5">
-          {POSITIONS.map((pos) => {
-            const active =
-              pos === "ALL" ? isAllSelected : selectedPositions.includes(pos);
-            return (
-              <button
-                key={pos}
-                onClick={() => togglePosition(pos)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  active ? "chip-oracle-active" : "chip-oracle"
-                }`}
-              >
-                {pos}
-              </button>
-            );
-          })}
+        <div
+          role="toolbar"
+          aria-label="Ranking controls"
+          className="sticky z-20 -mx-2 mb-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-y border-void-700 bg-void-950/95 px-2 py-2 backdrop-blur-sm"
+          style={{ top: "var(--app-header-height)" }}
+        >
+          <div className="flex min-w-0 gap-2 overflow-x-auto py-1" aria-label="Position filters">
+            {POSITIONS.map((pos) => {
+              const active =
+                pos === "ALL" ? isAllSelected : selectedPositions.includes(pos);
+              return (
+                <button
+                  key={pos}
+                  onClick={() => togglePosition(pos)}
+                  aria-pressed={active}
+                  className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-bold transition-all ${
+                    active ? "chip-oracle-active" : "chip-oracle"
+                  }`}
+                >
+                  {pos}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span
+              role="status"
+              className={`whitespace-nowrap rounded-full border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider ${saveStatusClass}`}
+            >
+              {saveStatus}
+            </span>
+            <button
+              onClick={handleSave}
+              disabled={locked || !dirty || saving}
+              aria-label={locked ? "Locked" : saving ? "Saving rankings" : saveMsg || "Save Rankings"}
+              className={`btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold transition-all ${
+                (locked || (!dirty && !saveMsg)) ? "opacity-50 cursor-not-allowed" : ""
+              }`}
+            >
+              {locked ? "Locked" : saving ? "Saving..." : saveMsg || "Save"}
+            </button>
+          </div>
         </div>
       )}
 
@@ -569,7 +641,7 @@ export default function MasterSheetPage() {
 
       {/* Player list */}
       {!loading && rankings.length > 0 && (
-        <div className="glass-card p-2 sm:p-3">
+        <div className="-mx-2 overflow-hidden rounded-xl border border-void-700 bg-void-900 sm:mx-0">
           <ColumnHeader />
           <DndContext
             sensors={sensors}

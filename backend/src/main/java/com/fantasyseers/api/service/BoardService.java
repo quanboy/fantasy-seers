@@ -150,13 +150,8 @@ public class BoardService {
     private RankedPlayerResponse toRankedPlayerResponse(
             DefaultBoardRankingService.DefaultRanking ranking
     ) {
-        NflPlayer player = ranking.player();
-        return new RankedPlayerResponse(
-                player.getId(),
-                player.getFullName(),
-                player.getPosition(),
-                player.getNflTeam(),
-                player.getAdp() != null ? player.getAdp().doubleValue() : null,
+        return toRankedPlayerResponse(
+                ranking.player(),
                 ranking.overallRank(),
                 ranking.positionalRank()
         );
@@ -169,17 +164,26 @@ public class BoardService {
                     NflPlayer player = entry.getPlayer();
                     String position = player.getPosition();
                     int positionalRank = posCounters.merge(position, 1, Integer::sum);
-                    return new RankedPlayerResponse(
-                            player.getId(),
-                            player.getFullName(),
-                            position,
-                            player.getNflTeam(),
-                            player.getAdp() != null ? player.getAdp().doubleValue() : null,
-                            entry.getUserRank(),
-                            positionalRank
-                    );
+                    return toRankedPlayerResponse(player, entry.getUserRank(), positionalRank);
                 })
                 .toList();
+    }
+
+    private RankedPlayerResponse toRankedPlayerResponse(
+            NflPlayer player,
+            int overallRank,
+            int positionalRank
+    ) {
+        return new RankedPlayerResponse(
+                player.getId(),
+                player.getSleeperId(),
+                player.getFullName(),
+                player.getPosition(),
+                player.getNflTeam(),
+                player.getAdp() != null ? player.getAdp().doubleValue() : null,
+                overallRank,
+                positionalRank
+        );
     }
 
     private BoardDto.BoardResponse toResponse(BoardSnapshot board) {
