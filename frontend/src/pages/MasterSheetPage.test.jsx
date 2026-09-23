@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import MasterSheetPage from "./MasterSheetPage";
+import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
@@ -17,6 +17,25 @@ const rankings = [
   { playerId: 1, sleeperId: "1001", fullName: "Alpha Runner", position: "RB", nflTeam: "BUF", adp: 1, overallRank: 1, positionalRank: 1 },
   { playerId: 2, sleeperId: "1002", fullName: "Bravo Catcher", position: "WR", nflTeam: "DET", adp: 2, overallRank: 2, positionalRank: 1 },
 ];
+
+it("reorders filtered players without moving excluded-position slots", () => {
+  const fullBoard = [
+    rankings[0],
+    rankings[1],
+    { playerId: 3, fullName: "Charlie Passer", position: "QB" },
+    { playerId: 4, fullName: "Delta Catcher", position: "WR" },
+  ];
+
+  const reordered = reorderFilteredPlayers(
+    fullBoard,
+    [fullBoard[1], fullBoard[3]],
+    ["WR"],
+    4,
+    2
+  );
+
+  expect(reordered.map((player) => player.playerId)).toEqual([1, 4, 3, 2]);
+});
 
 function renderMasterSheet(initialEntry = "/") {
   return render(
@@ -262,5 +281,20 @@ describe("MasterSheetPage", () => {
       { playerId: 2, rank: 2 },
       { playerId: 1, rank: 1 },
     ]));
+  });
+
+  it("preserves the draft and reports a rejected save", async () => {
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    boardMocks.upsertEntries.mockRejectedValue({
+      response: { data: { message: "Rankings service is unavailable" } },
+    });
+    const user = userEvent.setup();
+    renderMasterSheet();
+
+    await user.click(await screen.findByRole("button", { name: "Save Rankings" }));
+
+    expect(await screen.findByText("Rankings service is unavailable")).toBeInTheDocument();
+    expect(localStorage.getItem("fs_board_draft:42")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Save Rankings" })).toBeEnabled();
   });
 });

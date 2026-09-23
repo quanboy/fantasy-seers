@@ -1,10 +1,22 @@
 # Fantasy Seers UI redesign specification
 
-Status: accepted design direction; implementation not started.
+Status: implemented and verified locally; not deployed.
 
 Source: screenshot-led design interview completed September 15, 2026. The decisions below supersede earlier suggestions in that interview. The screenshot is a visual reference, not a requirement to reproduce every feature or example value.
 
 The original screenshot contains account information and is not published with this spec. The visual baselines and element treatments below are the repository's reviewable styling contract; implementation must not depend on access to the private attachment. Fidelity means following those documented treatments and dimensions, not pixel-matching the original image. Its right rail, promotional artwork, slogans, bell, duplicate desktop user footer, and example data are explicitly excluded below.
+
+## Implementation record
+
+The redesign was implemented on September 22, 2026 in three checkpoints:
+
+- `404017c` redesigned the shared shell and visual tokens while preserving the phone header and drawer.
+- `748e47e` reshaped the Master Sheet banner, status, toolbar, player imagery, team identity, and ranking rows.
+- `90a448f` added shared player search, cross-page navigation, Show in board, and the search drag guard.
+
+Local verification covered the complete frontend test suite, production build, and all 40 backend tests. Browser rendering was measured at 320px, 390px, 639px, 640px, 1023px, 1024px, 1140px, and 1440px. The 640px identity change and 1024px shell/search change occurred on the intended sides of their breakpoints, with no horizontal page overflow. Rows remained at least 48px tall, headshots remained 32px, and drag targets remained 44px by 44px. At 200% root text size, the desktop header grew from 57px to 113px and the sidebar offset followed it to 113px without horizontal overflow.
+
+Keyboard traversal retained visible focus on the brand link, search field, search submit, account controls, and navigation. The authenticated Props, Leagues, Leaderboard, and Profile pages plus Login and Register were checked for shared-style regressions and horizontal overflow. Automated behavior coverage includes draft recovery, save failure, locked-board messaging, position filtering, complete-board saving under filters, image fallbacks, search matching and clearing, Show in board, and cross-page search submission semantics.
 
 ## Scope
 
@@ -157,4 +169,4 @@ Clearing search alone preserves the selected positions. The "Show in board" acti
 
 ## Delivery boundary
 
-This document records the accepted design and necessary implementation details. It does not claim that app code, external image integration, browser verification, or deployment is complete. No external publication is part of creating this specification.
+This document records the accepted design, completed local implementation, and verification evidence. Deployment remains a separate action; no production publication is claimed here.

@@ -23,6 +23,30 @@ import { withPlayerSearchQuery } from "../utils/playerSearch";
 import { getNflTeamInfo } from "../utils/teams";
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
+const PLAYER_GRID_COLUMNS =
+  "grid grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px]";
+
+export function reorderFilteredPlayers(
+  rankings,
+  filteredRankings,
+  selectedPositions,
+  activeId,
+  overId
+) {
+  const filteredIds = filteredRankings.map((player) => player.playerId);
+  const oldFilteredIndex = filteredIds.indexOf(activeId);
+  const newFilteredIndex = filteredIds.indexOf(overId);
+  if (oldFilteredIndex < 0 || newFilteredIndex < 0) return rankings;
+
+  const reorderedIds = arrayMove(filteredIds, oldFilteredIndex, newFilteredIndex);
+  const playersById = new Map(rankings.map((player) => [player.playerId, player]));
+  let filteredIndex = 0;
+
+  return rankings.map((player) => {
+    if (!selectedPositions.includes(player.position)) return player;
+    return playersById.get(reorderedIds[filteredIndex++]);
+  });
+}
 
 function getPositionChipClass(position) {
   switch (position) {
@@ -129,7 +153,7 @@ function TeamLogo({ team }) {
 
 function ColumnHeader() {
   return (
-    <div className="grid grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] items-center gap-x-1 border-b border-void-700 px-0.5 py-2 sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px] sm:gap-x-3 sm:px-3">
+    <div className={`${PLAYER_GRID_COLUMNS} items-center gap-x-1 border-b border-void-700 px-0.5 py-2 sm:gap-x-3 sm:px-3`}>
       <span aria-hidden="true" />
       <span className="text-center font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-500">Rank</span>
       <span aria-hidden="true" />
@@ -171,7 +195,7 @@ function SortablePlayerRow({
       ref={setNodeRef}
       id={`player-row-${player.playerId}`}
       style={style}
-      className={`grid min-h-12 grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] items-center gap-x-1 border-b border-void-700/70 px-0.5 transition-colors last:border-b-0 sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px] sm:gap-x-3 sm:px-3 ${
+      className={`${PLAYER_GRID_COLUMNS} min-h-12 items-center gap-x-1 border-b border-void-700/70 px-0.5 transition-colors motion-reduce:transition-none last:border-b-0 sm:gap-x-3 sm:px-3 ${
         highlighted
           ? "bg-oracle-500/20 ring-2 ring-inset ring-oracle-400"
           : isDragging
@@ -478,35 +502,13 @@ export default function MasterSheetPage() {
           return recalcRanks(reordered);
         }
 
-        // When filtered: map the drag onto the full list
-        const filteredIds = filteredRankings.map((p) => p.playerId);
-        const oldFilteredIndex = filteredIds.indexOf(active.id);
-        const newFilteredIndex = filteredIds.indexOf(over.id);
-        const reorderedFiltered = arrayMove(
-          filteredIds,
-          oldFilteredIndex,
-          newFilteredIndex
+        const merged = reorderFilteredPlayers(
+          prev,
+          filteredRankings,
+          selectedPositions,
+          active.id,
+          over.id
         );
-
-        // Rebuild full list: keep non-filtered in place, slot filtered in order
-        const filteredMap = new Map(
-          prev
-            .filter((p) => selectedPositions.includes(p.position))
-            .map((p) => [p.playerId, p])
-        );
-        const reorderedFilteredPlayers = reorderedFiltered.map((id) =>
-          filteredMap.get(id)
-        );
-
-        // Merge: walk through original list, replacing filtered players in new order
-        let fi = 0;
-        const merged = prev.map((p) => {
-          if (selectedPositions.includes(p.position)) {
-            return reorderedFilteredPlayers[fi++];
-          }
-          return p;
-        });
-
         return recalcRanks(merged);
       });
 
