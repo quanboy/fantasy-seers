@@ -55,8 +55,10 @@ export default function Register() {
         </div>
 
         <div className="glass-card p-7">
-          <p className="font-display text-lg font-700 text-slate-100 mb-1">Join your league</p>
-          <p className="text-slate-400 text-xs mb-6">Build your rankings and compare picks with friends</p>
+          <p className="font-display text-lg font-700 text-slate-100 mb-1">Create your account</p>
+          <p className="text-slate-400 text-xs mb-6">
+            Build your rankings first. After signing in, use a separate group invite code on the Leagues page to join friends.
+          </p>
 
           {error && (
             <div role="alert" className="mb-4 px-4 py-3 rounded-lg text-sm text-loss-400 alert-error">
@@ -134,7 +136,7 @@ export default function Register() {
             </div>
 
             <div>
-              <label htmlFor="register-invite-code" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Invite Code</label>
+              <label htmlFor="register-invite-code" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Registration Code</label>
               <input
                 id="register-invite-code"
                 name="inviteCode"
@@ -142,7 +144,7 @@ export default function Register() {
                 value={form.inviteCode}
                 onChange={e => setForm({ ...form, inviteCode: e.target.value })}
                 className="input-base"
-                placeholder="Enter your league invite code"
+                placeholder="Enter your registration code"
                 autoComplete="off"
                 maxLength={100}
               />
@@ -214,9 +216,9 @@ export default function Register() {
               {loading ? (
                 <span className="flex items-center justify-center gap-2">
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  Summoning your account...
+                  Creating your account...
                 </span>
-              ) : 'Join the Arena'}
+              ) : 'Create Account'}
             </button>
           </form>
 

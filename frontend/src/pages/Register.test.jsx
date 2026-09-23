@@ -19,10 +19,15 @@ describe("Register", () => {
     expect(screen.getByLabelText("Username")).toHaveAttribute("autocomplete", "username");
     expect(screen.getByLabelText("Email")).toHaveAttribute("autocomplete", "email");
     expect(screen.getByLabelText("Password")).toHaveAttribute("minlength", "8");
-    expect(screen.getByLabelText("Invite Code")).toBeInTheDocument();
+    expect(screen.getByText("Create your account")).toBeInTheDocument();
+    expect(screen.getByLabelText("Registration Code")).toHaveAttribute(
+      "placeholder",
+      "Enter your registration code"
+    );
     expect(screen.getByLabelText("Favorite NFL Team")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show password" })).toBeInTheDocument();
-    expect(screen.getByText("Build your rankings and compare picks with friends")).toBeInTheDocument();
+    expect(screen.getByText(/After signing in, use a separate group invite code/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create Account" })).toBeInTheDocument();
     expect(screen.queryByText(/thousands of seers/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/gamble responsibly/i)).not.toBeInTheDocument();
   });

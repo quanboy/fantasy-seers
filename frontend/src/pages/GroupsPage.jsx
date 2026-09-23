@@ -120,7 +120,10 @@ export default function GroupsPage() {
 
           {/* Join */}
           <div className="rounded-xl p-5 glass-card">
-            <h2 className="font-display text-sm font-700 text-slate-100 mb-4">Join a Group</h2>
+            <h2 className="font-display text-sm font-700 text-slate-100 mb-1">Join a Group</h2>
+            <p className="mb-4 text-xs text-slate-400">
+              Your group invite code is separate from your registration code.
+            </p>
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <input
                 value={joinCode}
@@ -212,7 +215,7 @@ export default function GroupsPage() {
 
         {!loading && !groupsError && groups.length === 0 && (
           <div className="glass-card p-8 text-center">
-            <p className="text-slate-500 text-sm">No groups yet.</p>
+            <p className="text-slate-500 text-sm">No groups yet. Create one or enter a group invite code above.</p>
           </div>
         )}
 
