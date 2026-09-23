@@ -1,12 +1,19 @@
 import { useState, useEffect, useRef } from "react";
-import { Outlet, Link } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
+import PlayerSearchField from "./PlayerSearchField";
+import { withPlayerSearchQuery } from "../utils/playerSearch";
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, setUser, logout } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isMasterSheet = location.pathname === "/" || location.pathname === "/master-sheet";
+  const routeQuery = new URLSearchParams(location.search).get("q") ?? "";
+  const [playerQuery, setPlayerQuery] = useState(isMasterSheet ? routeQuery : "");
   const shellRef = useRef(null);
   const headerRef = useRef(null);
 
@@ -42,6 +49,35 @@ export default function AppLayout() {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (isMasterSheet) setPlayerQuery(routeQuery);
+  }, [isMasterSheet, routeQuery]);
+
+  const updateMasterSheetQuery = (value) => {
+    const params = withPlayerSearchQuery(location.search, value);
+    const search = params.toString();
+    navigate({ pathname: "/", search: search ? `?${search}` : "" }, { replace: true });
+  };
+
+  const handlePlayerSearchChange = (event) => {
+    const value = event.target.value;
+    setPlayerQuery(value);
+    if (isMasterSheet) updateMasterSheetQuery(value);
+  };
+
+  const handlePlayerSearchSubmit = (event) => {
+    event.preventDefault();
+    const query = playerQuery.trim();
+    if (!query) return;
+    setPlayerQuery(query);
+    updateMasterSheetQuery(query);
+  };
+
+  const clearPlayerSearch = () => {
+    setPlayerQuery("");
+    if (isMasterSheet) updateMasterSheetQuery("");
+  };
+
   return (
     <div ref={shellRef} className="min-h-screen bg-void-950" style={{ "--app-header-height": "3.5rem" }}>
       <header ref={headerRef} className="sticky top-0 z-30 min-h-14 border-b border-void-700 glass-nav">
@@ -68,8 +104,17 @@ export default function AppLayout() {
             </Link>
           </div>
 
-          {/* Reserved for the shared player search in redesign checkpoint 3. */}
-          <div className="min-w-0 flex-1" />
+          <div className="hidden min-w-0 flex-1 justify-center px-4 lg:flex">
+            <PlayerSearchField
+              value={playerQuery}
+              onChange={handlePlayerSearchChange}
+              onSubmit={handlePlayerSearchSubmit}
+              onClear={clearPlayerSearch}
+              className="w-full max-w-xl"
+            />
+          </div>
+
+          <div className="min-w-0 flex-1 lg:hidden" />
 
           <div className="flex h-10 items-center gap-2 sm:gap-3">
             <span className="max-w-[88px] truncate text-sm font-medium text-slate-400 sm:max-w-none">

@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import AppLayout from "./AppLayout";
 
@@ -18,12 +18,18 @@ vi.mock("../api/client", () => ({
   userApi: { getMe: vi.fn() },
 }));
 
-function renderLayout() {
+function LocationProbe() {
+  const location = useLocation();
+  return <output aria-label="Current location">{`${location.pathname}${location.search}`}</output>;
+}
+
+function renderLayout(initialEntry = "/") {
   return render(
-    <MemoryRouter initialEntries={["/"]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route element={<AppLayout />}>
-          <Route index element={<h1>Master Sheet</h1>} />
+          <Route index element={<><h1>Master Sheet</h1><LocationProbe /></>} />
+          <Route path="props" element={<><h1>Props Feed</h1><LocationProbe /></>} />
         </Route>
       </Routes>
     </MemoryRouter>
@@ -61,5 +67,36 @@ describe("AppLayout", () => {
 
     await user.click(screen.getByRole("button", { name: "Close navigation" }));
     expect(openButton).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("keeps cross-page search local until submission, then opens the matching Master Sheet query", async () => {
+    const user = userEvent.setup();
+    renderLayout("/props");
+
+    const search = screen.getByRole("searchbox", { name: "Search players" });
+    await user.type(search, "  Josh Allen  ");
+    await user.tab();
+
+    expect(screen.getByRole("heading", { name: "Props Feed" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Current location")).toHaveTextContent("/props");
+
+    await user.click(search);
+    await user.keyboard("{Enter}");
+
+    expect(await screen.findByRole("heading", { name: "Master Sheet" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Current location")).toHaveTextContent("/?q=Josh+Allen");
+    expect(search).toHaveFocus();
+    expect(search).toHaveValue("Josh Allen");
+  });
+
+  it("does nothing when a cross-page search submission is blank", async () => {
+    const user = userEvent.setup();
+    renderLayout("/props");
+
+    const search = screen.getByRole("searchbox", { name: "Search players" });
+    await user.type(search, "   ");
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByLabelText("Current location")).toHaveTextContent("/props");
   });
 });

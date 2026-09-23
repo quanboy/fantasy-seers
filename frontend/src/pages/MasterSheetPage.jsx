@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
 import {
   DndContext,
@@ -17,6 +17,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useSearchParams } from "react-router-dom";
+import PlayerSearchField from "../components/PlayerSearchField";
+import { withPlayerSearchQuery } from "../utils/playerSearch";
 import { getNflTeamInfo } from "../utils/teams";
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
@@ -138,7 +141,14 @@ function ColumnHeader() {
   );
 }
 
-function SortablePlayerRow({ player, overallIndex, locked }) {
+function SortablePlayerRow({
+  player,
+  overallIndex,
+  locked,
+  searchActive,
+  highlighted,
+  onShowInBoard,
+}) {
   const {
     attributes,
     listeners,
@@ -146,7 +156,7 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: player.playerId, disabled: locked });
+  } = useSortable({ id: player.playerId, disabled: locked || searchActive });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -159,9 +169,12 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
   return (
     <div
       ref={setNodeRef}
+      id={`player-row-${player.playerId}`}
       style={style}
       className={`grid min-h-12 grid-cols-[44px_32px_32px_24px_minmax(52px,1fr)_40px_20px] items-center gap-x-1 border-b border-void-700/70 px-0.5 transition-colors last:border-b-0 sm:grid-cols-[44px_36px_32px_24px_minmax(0,1fr)_48px_40px] sm:gap-x-3 sm:px-3 ${
-        isDragging
+        highlighted
+          ? "bg-oracle-500/20 ring-2 ring-inset ring-oracle-400"
+          : isDragging
           ? "bg-void-700 shadow-modal"
           : "hover:bg-oracle-500/10"
       }`}
@@ -170,12 +183,12 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
         type="button"
         {...attributes}
         {...listeners}
-        disabled={locked}
+        disabled={locked || searchActive}
         aria-label={`Move ${player.fullName}, currently ranked ${overallIndex + 1}`}
         className="w-11 h-11 -my-2 flex items-center justify-center rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
         style={{ touchAction: 'none' }}
       >
-        <DragHandle disabled={locked} />
+        <DragHandle disabled={locked || searchActive} />
       </button>
 
       {/* Rank */}
@@ -197,6 +210,16 @@ function SortablePlayerRow({ player, overallIndex, locked }) {
         <span className="mt-0.5 block font-mono text-[10px] text-slate-500 sm:hidden">
           {team.code}
         </span>
+        {searchActive && (
+          <button
+            type="button"
+            onClick={() => onShowInBoard(player)}
+            aria-label={`Show ${player.fullName} in board`}
+            className="mt-1 text-left text-[11px] font-semibold leading-tight text-oracle-300 underline decoration-oracle-400/50 underline-offset-2 hover:text-oracle-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
+          >
+            Show in board
+          </button>
+        )}
       </div>
 
       {/* Position */}
@@ -224,6 +247,7 @@ function BoardGuide({
   saving,
   scoringFormat,
   superflex,
+  searchActive,
 }) {
   const hasPersonalOrder = locked || dirty || !isDefault;
   const isSaved = locked || (!isDefault && !dirty);
@@ -264,7 +288,11 @@ function BoardGuide({
             Master Sheet
           </h1>
           <p className="mt-1 text-sm text-slate-200">
-            {locked ? "Your season-start rankings are final." : "Drag players to build your personal rankings."}
+            {locked
+              ? "Your season-start rankings are final."
+              : searchActive
+                ? "Search results keep their real board rank. Clear search to reorder."
+                : "Drag players to build your personal rankings."}
           </p>
           <p
             aria-label={`Board format: ${seasonLabel} · ${formatLabel} · ${superflex ? "Superflex" : "Single-QB"}`}
@@ -309,6 +337,7 @@ function getSaveStatus({ locked, saving, dirty, isDefault }) {
 }
 
 export default function MasterSheetPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
   const [season, setSeason] = useState(null);
   const [rankings, setRankings] = useState([]);
@@ -324,6 +353,11 @@ export default function MasterSheetPage() {
   const [error, setError] = useState(null);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
   const [consensusNoticeDismissed, setConsensusNoticeDismissed] = useState(false);
+  const [revealedPlayer, setRevealedPlayer] = useState(null);
+  const revealTimerRef = useRef(null);
+  const searchQuery = searchParams.get("q") ?? "";
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
+  const searchActive = Boolean(normalizedSearchQuery);
 
   useEffect(() => {
     const warnBeforeLeaving = (event) => {
@@ -335,6 +369,8 @@ export default function MasterSheetPage() {
     window.addEventListener("beforeunload", warnBeforeLeaving);
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [dirty]);
+
+  useEffect(() => () => clearTimeout(revealTimerRef.current), []);
 
   useEffect(() => {
     boardsApi
@@ -401,9 +437,17 @@ export default function MasterSheetPage() {
   const isAllSelected = selectedPositions.includes("ALL");
 
   const filteredRankings = useMemo(() => {
-    if (isAllSelected) return rankings;
-    return rankings.filter((p) => selectedPositions.includes(p.position));
-  }, [rankings, selectedPositions, isAllSelected]);
+    const positionMatches = isAllSelected
+      ? rankings
+      : rankings.filter((player) => selectedPositions.includes(player.position));
+
+    if (!normalizedSearchQuery) return positionMatches;
+    return positionMatches.filter((player) => {
+      const team = getNflTeamInfo(player.nflTeam);
+      return [player.fullName, player.position, team.code, team.name]
+        .some((value) => value.toLowerCase().includes(normalizedSearchQuery));
+    });
+  }, [rankings, selectedPositions, isAllSelected, normalizedSearchQuery]);
 
   const overallIndexMap = useMemo(() => {
     const map = new Map();
@@ -422,7 +466,7 @@ export default function MasterSheetPage() {
 
   const handleDragEnd = useCallback(
     (event) => {
-      if (locked) return;
+      if (locked || searchActive) return;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
@@ -445,9 +489,6 @@ export default function MasterSheetPage() {
         );
 
         // Rebuild full list: keep non-filtered in place, slot filtered in order
-        const nonFiltered = prev.filter(
-          (p) => !selectedPositions.includes(p.position)
-        );
         const filteredMap = new Map(
           prev
             .filter((p) => selectedPositions.includes(p.position))
@@ -471,7 +512,7 @@ export default function MasterSheetPage() {
 
       setDirty(true);
     },
-    [locked, isAllSelected, filteredRankings, selectedPositions, recalcRanks]
+    [locked, searchActive, isAllSelected, filteredRankings, selectedPositions, recalcRanks]
   );
 
   const handleSave = async () => {
@@ -523,6 +564,25 @@ export default function MasterSheetPage() {
     });
   };
 
+  const updateSearchQuery = (value) => {
+    const nextParams = withPlayerSearchQuery(searchParams, value);
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const showInBoard = (player) => {
+    clearTimeout(revealTimerRef.current);
+    updateSearchQuery("");
+    setSelectedPositions(["ALL"]);
+    setRevealedPlayer(player);
+
+    setTimeout(() => {
+      const row = document.getElementById(`player-row-${player.playerId}`);
+      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+      row?.scrollIntoView?.({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    }, 0);
+    revealTimerRef.current = setTimeout(() => setRevealedPlayer(null), 4000);
+  };
+
   const saveStatus = getSaveStatus({ locked, saving, dirty, isDefault });
   const saveStatusClass = locked || dirty
     ? "border-gold-500/30 bg-gold-500/10 text-gold-400"
@@ -541,6 +601,17 @@ export default function MasterSheetPage() {
           saving={saving}
           scoringFormat={scoringFormat}
           superflex={superflex}
+          searchActive={searchActive}
+        />
+      )}
+
+      {!loading && (
+        <PlayerSearchField
+          value={searchQuery}
+          onChange={(event) => updateSearchQuery(event.target.value)}
+          onSubmit={(event) => event.preventDefault()}
+          onClear={() => updateSearchQuery("")}
+          className="mb-3 lg:hidden"
         />
       )}
 
@@ -572,6 +643,18 @@ export default function MasterSheetPage() {
           {draftRestored
             ? "Unsaved changes restored from this device"
             : "Unsaved changes are protected on this device"}
+        </p>
+      )}
+
+      {searchActive && !loading && (
+        <p className="mb-2 text-xs text-slate-400" role="status">
+          Search results are view-only. Clear search to reorder players.
+        </p>
+      )}
+
+      {revealedPlayer && !searchActive && (
+        <p className="mb-2 text-xs text-oracle-300" role="status">
+          {revealedPlayer.fullName} is shown in the full board.
         </p>
       )}
 
@@ -640,7 +723,7 @@ export default function MasterSheetPage() {
       )}
 
       {/* Player list */}
-      {!loading && rankings.length > 0 && (
+      {!loading && filteredRankings.length > 0 && (
         <div className="-mx-2 overflow-hidden rounded-xl border border-void-700 bg-void-900 sm:mx-0">
           <ColumnHeader />
           <DndContext
@@ -658,10 +741,24 @@ export default function MasterSheetPage() {
                     player={player}
                     overallIndex={overallIndexMap.get(player.playerId)}
                     locked={locked}
+                    searchActive={searchActive}
+                    highlighted={revealedPlayer?.playerId === player.playerId}
+                    onShowInBoard={showInBoard}
                   />
               ))}
             </SortableContext>
           </DndContext>
+        </div>
+      )}
+
+      {!loading && rankings.length > 0 && filteredRankings.length === 0 && (
+        <div className="rounded-xl border border-void-700 bg-void-900 px-6 py-10 text-center">
+          <p className="text-sm font-semibold text-slate-200">
+            No players match this search and position filter.
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            Clear the search or choose another position.
+          </p>
         </div>
       )}
 
