@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useAuthDialog } from "../context/AuthDialogContext";
+import { loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
 import {
   DndContext,
   closestCenter,
@@ -379,6 +380,7 @@ export default function MasterSheetPage() {
   const [dirty, setDirty] = useState(false);
   const [saveMsg, setSaveMsg] = useState(null);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [guestDraftStored, setGuestDraftStored] = useState(false);
   const [error, setError] = useState(null);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
   const [consensusNoticeDismissed, setConsensusNoticeDismissed] = useState(false);
@@ -410,7 +412,15 @@ export default function MasterSheetPage() {
       .then(({ data }) => {
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
-        if (!data.locked) {
+        if (isGuest) {
+          const guestDraft = loadGuestDraft(data, { players: data.rankings });
+          if (guestDraft) {
+            nextRankings = guestDraft;
+            setDirty(true);
+            setDraftRestored(true);
+            setGuestDraftStored(true);
+          }
+        } else if (!data.locked) {
           try {
             const draft = JSON.parse(localStorage.getItem(`fs_board_draft:${data.boardId}`));
             const serverIds = new Set(data.rankings.map((player) => player.playerId));
@@ -441,6 +451,11 @@ export default function MasterSheetPage() {
       .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
       .finally(() => setLoading(false));
   }, [isGuest]);
+
+  useEffect(() => {
+    if (!isGuest || !dirty || !season) return;
+    setGuestDraftStored(saveGuestDraft({ season, scoringFormat, superflex }, rankings));
+  }, [isGuest, dirty, season, scoringFormat, superflex, rankings]);
 
   useEffect(() => {
     if (!boardId || locked || !dirty) return;
@@ -651,7 +666,11 @@ export default function MasterSheetPage() {
       {dirty && !locked && !loading && (
         <p className="mb-2 text-xs text-gold-400" role="status">
           {isGuest
-            ? "Sign up to keep these changes"
+            ? draftRestored
+              ? "Guest rankings restored from this device"
+              : guestDraftStored
+                ? "Saved on this device. Sign up to keep them in your account."
+                : "Sign up to keep these changes"
             : draftRestored
               ? "Unsaved changes restored from this device"
               : "Unsaved changes are protected on this device"}

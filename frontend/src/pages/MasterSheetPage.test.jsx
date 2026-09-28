@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
+import { saveGuestDraft } from "../utils/guestDraft";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
@@ -76,6 +77,62 @@ describe("MasterSheetPage", () => {
       },
     });
     boardMocks.upsertEntries.mockResolvedValue({ data: {} });
+  });
+
+  describe("for guests", () => {
+    const guestSheet = { season: 2026, scoringFormat: "HALF_PPR", superflex: false };
+
+    beforeEach(() => {
+      auth.user = null;
+      boardMocks.getDefaultSheet.mockResolvedValue({
+        data: { boardId: null, ...guestSheet, rankings, isDefault: true, locked: false },
+      });
+    });
+
+    it("restores guest rankings saved on this device", async () => {
+      saveGuestDraft(guestSheet, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Bravo Catcher, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.getByText("Guest rankings restored from this device")).toBeInTheDocument();
+      expect(boardMocks.getMySheet).not.toHaveBeenCalled();
+    });
+
+    it("ignores guest rankings that no longer match the board", async () => {
+      saveGuestDraft(guestSheet, [rankings[1]]);
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
+    });
+
+    it("ignores guest rankings made for a different scoring format", async () => {
+      saveGuestDraft({ ...guestSheet, scoringFormat: "FULL_PPR" }, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+    });
+
+    it("never restores guest rankings onto a signed-in board", async () => {
+      auth.user = { username: "demo", role: "USER" };
+      saveGuestDraft({ season: 2026, scoringFormat: "FULL_PPR", superflex: false }, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
+    });
   });
 
   it("shows guests the public default sheet and asks them to sign up to save", async () => {
