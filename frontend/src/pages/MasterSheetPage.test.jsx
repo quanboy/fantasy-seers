@@ -6,11 +6,18 @@ import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
+  getDefaultSheet: vi.fn(),
   upsertEntries: vi.fn(),
 }));
 
+const auth = vi.hoisted(() => ({ user: null }));
+
 vi.mock("../api/client", () => ({
   boardsApi: boardMocks,
+}));
+
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => auth,
 }));
 
 const rankings = [
@@ -48,7 +55,9 @@ function renderMasterSheet(initialEntry = "/") {
 describe("MasterSheetPage", () => {
   beforeEach(() => {
     localStorage.clear();
+    auth.user = { username: "demo", role: "USER" };
     boardMocks.getMySheet.mockReset();
+    boardMocks.getDefaultSheet.mockReset();
     boardMocks.upsertEntries.mockReset();
     boardMocks.getMySheet.mockResolvedValue({
       data: {
@@ -62,6 +71,32 @@ describe("MasterSheetPage", () => {
       },
     });
     boardMocks.upsertEntries.mockResolvedValue({ data: {} });
+  });
+
+  it("shows guests the public default sheet and asks them to sign up to save", async () => {
+    auth.user = null;
+    boardMocks.getDefaultSheet.mockResolvedValue({
+      data: {
+        boardId: null,
+        season: 2026,
+        rankings,
+        isDefault: true,
+        locked: false,
+        scoringFormat: "HALF_PPR",
+        superflex: false,
+      },
+    });
+
+    renderMasterSheet();
+
+    expect(
+      await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+    ).toBeInTheDocument();
+    expect(boardMocks.getMySheet).not.toHaveBeenCalled();
+
+    const toolbar = screen.getByRole("toolbar", { name: "Ranking controls" });
+    expect(within(toolbar).getByRole("link", { name: "Sign up to save" })).toHaveAttribute("href", "/register");
+    expect(within(toolbar).queryByRole("button", { name: "Save Rankings" })).not.toBeInTheDocument();
   });
 
   it("restores a local draft, warns before unload, and clears it after saving", async () => {

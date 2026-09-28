@@ -8,9 +8,12 @@ api.interceptors.request.use(config => {
   return config
 })
 
+export const SESSION_EXPIRED_EVENT = 'fs:session-expired'
+
 function showSessionExpiredToast() {
   const toast = document.createElement('div')
-  toast.textContent = 'Your session expired. Please log in again.'
+  toast.setAttribute('role', 'status')
+  toast.textContent = 'Your session expired. Log in again to keep saving.'
   Object.assign(toast.style, {
     position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
     background: '#1e293b', color: '#f1f5f9', padding: '12px 24px',
@@ -18,6 +21,7 @@ function showSessionExpiredToast() {
     fontFamily: 'Inter, sans-serif', fontSize: '14px', boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
   })
   document.body.appendChild(toast)
+  setTimeout(() => toast.remove(), 5000)
 }
 
 api.interceptors.response.use(
@@ -25,12 +29,13 @@ api.interceptors.response.use(
   err => {
     const url = err.config?.url || ''
     const isAuthRoute = url.startsWith('/auth/')
-    if (err.response?.status === 401 && !isAuthRoute) {
+    // An expired session drops to guest mode in place (no reload), so unsaved work survives.
+    const sentToken = Boolean(err.config?.headers?.Authorization)
+    if (err.response?.status === 401 && !isAuthRoute && sentToken && localStorage.getItem('fs_token')) {
       localStorage.removeItem('fs_token')
+      localStorage.removeItem('fs_user')
       showSessionExpiredToast()
-      setTimeout(() => { window.location.href = '/login' }, 2000)
-    } else if (err.response?.status === 403 && !localStorage.getItem('fs_token') && !isAuthRoute) {
-      window.location.href = '/login'
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
     }
     return Promise.reject(err)
   }
@@ -88,6 +93,7 @@ export const userApi = {
 
 export const boardsApi = {
   getMySheet:    (season) => api.get('/v1/boards/my-sheet', { params: season ? { season } : {} }),
+  getDefaultSheet: (season) => api.get('/v1/boards/default', { params: season ? { season } : {} }),
   createBoard:   (season) => api.post('/v1/boards', { season }),
   getBoard:      (id)     => api.get(`/v1/boards/${id}`),
   upsertEntries: (id, entries) => api.put(`/v1/boards/${id}/entries`, entries),

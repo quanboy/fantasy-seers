@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
+import { useAuth } from "../context/AuthContext";
 import {
   DndContext,
   closestCenter,
@@ -17,7 +18,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import PlayerSearchField from "../components/PlayerSearchField";
 import { withPlayerSearchQuery } from "../utils/playerSearch";
 import { getNflTeamInfo } from "../utils/teams";
@@ -361,6 +362,8 @@ function getSaveStatus({ locked, saving, dirty, isDefault }) {
 }
 
 export default function MasterSheetPage() {
+  const { user } = useAuth();
+  const isGuest = !user;
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
   const [season, setSeason] = useState(null);
@@ -397,8 +400,11 @@ export default function MasterSheetPage() {
   useEffect(() => () => clearTimeout(revealTimerRef.current), []);
 
   useEffect(() => {
-    boardsApi
-      .getMySheet()
+    setLoading(true);
+    setError(null);
+    setDirty(false);
+    setDraftRestored(false);
+    (isGuest ? boardsApi.getDefaultSheet() : boardsApi.getMySheet())
       .then(({ data }) => {
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
@@ -432,7 +438,7 @@ export default function MasterSheetPage() {
       })
       .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
     if (!boardId || locked || !dirty) return;
@@ -642,9 +648,11 @@ export default function MasterSheetPage() {
 
       {dirty && !locked && !loading && (
         <p className="mb-2 text-xs text-gold-400" role="status">
-          {draftRestored
-            ? "Unsaved changes restored from this device"
-            : "Unsaved changes are protected on this device"}
+          {isGuest
+            ? "Sign up to keep these changes"
+            : draftRestored
+              ? "Unsaved changes restored from this device"
+              : "Unsaved changes are protected on this device"}
         </p>
       )}
 
@@ -701,6 +709,14 @@ export default function MasterSheetPage() {
             >
               {saveStatus}
             </span>
+            {isGuest ? (
+              <Link
+                to="/register"
+                className="btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold"
+              >
+                Sign up to save
+              </Link>
+            ) : (
             <button
               onClick={handleSave}
               disabled={locked || !dirty || saving}
@@ -711,6 +727,7 @@ export default function MasterSheetPage() {
             >
               {locked ? "Locked" : saving ? "Saving..." : saveMsg || "Save"}
             </button>
+            )}
           </div>
         </div>
       )}

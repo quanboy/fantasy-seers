@@ -5,6 +5,7 @@ const navItems = [
   {
     label: "Master Sheet",
     path: "/",
+    public: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -17,6 +18,7 @@ const navItems = [
   {
     label: "Props Feed",
     path: "/props",
+    public: true,
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z" />
@@ -76,7 +78,11 @@ const adminItem = {
 export default function Sidebar({ open, onClose }) {
   const { user } = useAuth();
 
-  const items = user?.role === "ADMIN" ? [...navItems, adminItem] : navItems;
+  const items = !user
+    ? navItems.filter((item) => item.public)
+    : user.role === "ADMIN"
+      ? [...navItems, adminItem]
+      : navItems;
 
   return (
     <>
@@ -141,6 +147,7 @@ export default function Sidebar({ open, onClose }) {
         </nav>
 
         {/* User footer */}
+        {user && (
         <div className="mt-auto border-t border-void-700 px-4 py-4 lg:hidden">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-oracle-500/15 flex items-center justify-center text-oracle-300 text-xs font-bold">
@@ -152,6 +159,7 @@ export default function Sidebar({ open, onClose }) {
             </div>
           </div>
         </div>
+        )}
       </aside>
     </>
   );
