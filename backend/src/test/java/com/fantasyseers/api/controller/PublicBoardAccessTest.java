@@ -10,6 +10,8 @@ import com.fantasyseers.api.security.TokenBlacklistService;
 import com.fantasyseers.api.service.BoardService;
 import com.fantasyseers.api.service.PropService;
 import com.fantasyseers.api.service.VoteService;
+import jakarta.servlet.DispatcherType;
+import jakarta.servlet.RequestDispatcher;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -18,6 +20,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.jpa.mapping.JpaMetamodelMappingContext;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -63,8 +66,8 @@ class PublicBoardAccessTest {
 
     @Test
     void guestCannotReadPersonalBoards() throws Exception {
-        mockMvc.perform(get("/api/v1/boards/my-sheet")).andExpect(status().isForbidden());
-        mockMvc.perform(get("/api/v1/boards/11")).andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/v1/boards/my-sheet")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/boards/11")).andExpect(status().isUnauthorized());
         verifyNoInteractions(boardService);
     }
 
@@ -73,11 +76,11 @@ class PublicBoardAccessTest {
         mockMvc.perform(post("/api/v1/boards")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"season\":2026}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         mockMvc.perform(put("/api/v1/boards/11/entries")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("[]"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         verifyNoInteractions(boardService);
     }
 
@@ -86,7 +89,24 @@ class PublicBoardAccessTest {
         mockMvc.perform(post("/api/props/5/vote")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"choice\":\"YES\",\"wagerAmount\":50}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
         verifyNoInteractions(voteService);
+    }
+
+    @Test
+    @WithMockUser(roles = "USER")
+    void signedInUserWithoutAdminRoleIsForbiddenNotUnauthenticated() throws Exception {
+        mockMvc.perform(get("/api/admin/props/pending")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void errorDispatchKeepsTheOriginalStatus() throws Exception {
+        // A real container forwards denied requests to /error without re-running the JWT filter.
+        mockMvc.perform(get("/error").with(request -> {
+                    request.setDispatcherType(DispatcherType.ERROR);
+                    request.setAttribute(RequestDispatcher.ERROR_STATUS_CODE, 403);
+                    return request;
+                }))
+                .andExpect(status().isForbidden());
     }
 }
