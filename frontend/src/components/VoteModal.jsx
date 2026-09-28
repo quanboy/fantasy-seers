@@ -108,6 +108,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             <div className="grid grid-cols-2 gap-3 mb-6">
               <button
                 onClick={() => setChoice("YES")}
+                aria-pressed={choice === "YES"}
                 className={`py-5 rounded-lg font-display font-700 text-lg transition-all duration-200 ${
                   choice === "YES"
                     ? "vote-yes scale-95"
@@ -118,6 +119,7 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
               </button>
               <button
                 onClick={() => setChoice("NO")}
+                aria-pressed={choice === "NO"}
                 className={`py-5 rounded-lg font-display font-700 text-lg transition-all duration-200 ${
                   choice === "NO" ? "vote-no scale-95" : "vote-no-idle"
                 }`}

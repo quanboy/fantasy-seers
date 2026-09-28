@@ -22,6 +22,9 @@ export default function Dashboard() {
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [sportFilter, setSportFilter] = useState("ALL");
+  // A vote a guest started before signing in; resumed once they're signed in.
+  const [pendingVote, setPendingVote] = useState(null);
+  const [voteNotice, setVoteNotice] = useState(null);
 
   const fetchProps = () => {
     setError(null);
@@ -53,8 +56,33 @@ export default function Dashboard() {
     fetchProps();
   };
 
-  // Voting needs an account. Resuming the vote after login comes with the voting-continuation work.
-  const handleVote = isGuest ? () => openAuthDialog("login") : setSelectedProp;
+  // Guests sign in first; the vote then reopens for explicit confirmation (never auto-submitted).
+  const handleVote = isGuest
+    ? (vote) => openAuthDialog("login", { onAuthenticated: () => setPendingVote(vote) })
+    : setSelectedProp;
+
+  useEffect(() => {
+    if (!pendingVote || isGuest) return;
+    const vote = pendingVote;
+    setPendingVote(null);
+    Promise.all([propsApi.getById(vote.id), userApi.getMe()])
+      .then(([{ data: prop }, { data: me }]) => {
+        setUser((current) => {
+          const updated = { ...current, pointBank: me.pointBank };
+          localStorage.setItem("fs_user", JSON.stringify(updated));
+          return updated;
+        });
+        if (prop.userChoice) {
+          setVoteNotice("You already voted on this prop.");
+        } else if (prop.status !== "OPEN" || new Date(prop.closesAt) <= new Date()) {
+          setVoteNotice("Voting has closed.");
+        } else {
+          setSelectedProp({ ...prop, _initialChoice: vote._initialChoice, _initialWager: vote._initialWager });
+        }
+      })
+      .catch(() => setVoteNotice("Couldn't load that prop. Please try again."))
+      .finally(fetchProps);
+  }, [pendingVote, isGuest]);
 
   const filtered = useMemo(() => {
     if (sportFilter === "ALL") return props;
@@ -86,6 +114,20 @@ export default function Dashboard() {
             <p className="text-slate-500 text-sm mb-4">{error}</p>
             <button onClick={fetchProps} className="btn-oracle px-6 py-2.5 text-sm">
               Try Again
+            </button>
+          </div>
+        )}
+
+        {voteNotice && (
+          <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3">
+            <p className="text-sm text-slate-200">{voteNotice}</p>
+            <button
+              type="button"
+              onClick={() => setVoteNotice(null)}
+              aria-label="Dismiss"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-void-700 hover:text-slate-200"
+            >
+              ×
             </button>
           </div>
         )}
