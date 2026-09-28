@@ -11,6 +11,11 @@ const boardMocks = vi.hoisted(() => ({
 }));
 
 const auth = vi.hoisted(() => ({ user: null }));
+const openAuthDialog = vi.hoisted(() => vi.fn());
+
+vi.mock("../context/AuthDialogContext", () => ({
+  useAuthDialog: () => ({ openAuthDialog }),
+}));
 
 vi.mock("../api/client", () => ({
   boardsApi: boardMocks,
@@ -95,7 +100,8 @@ describe("MasterSheetPage", () => {
     expect(boardMocks.getMySheet).not.toHaveBeenCalled();
 
     const toolbar = screen.getByRole("toolbar", { name: "Ranking controls" });
-    expect(within(toolbar).getByRole("link", { name: "Sign up to save" })).toHaveAttribute("href", "/register");
+    fireEvent.click(within(toolbar).getByRole("button", { name: "Sign up to save" }));
+    expect(openAuthDialog).toHaveBeenCalledWith("signup");
     expect(within(toolbar).queryByRole("button", { name: "Save Rankings" })).not.toBeInTheDocument();
   });
 

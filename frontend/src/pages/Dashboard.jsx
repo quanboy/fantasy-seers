@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
 import { propsApi, userApi } from "../api/client";
 import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
@@ -13,7 +14,7 @@ function SkeletonCard() {
 export default function Dashboard() {
   const { user, setUser } = useAuth();
   const isGuest = !user;
-  const navigate = useNavigate();
+  const { openAuthDialog } = useAuthDialog();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -52,8 +53,8 @@ export default function Dashboard() {
     fetchProps();
   };
 
-  // Voting needs an account; guests go to login until the in-page dialog exists.
-  const handleVote = isGuest ? () => navigate("/login") : setSelectedProp;
+  // Voting needs an account. Resuming the vote after login comes with the voting-continuation work.
+  const handleVote = isGuest ? () => openAuthDialog("login") : setSelectedProp;
 
   const filtered = useMemo(() => {
     if (sportFilter === "ALL") return props;

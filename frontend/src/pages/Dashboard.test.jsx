@@ -4,7 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import Dashboard from "./Dashboard";
 
-const { auth, api } = vi.hoisted(() => ({
+const { auth, api, openAuthDialog } = vi.hoisted(() => ({
+  openAuthDialog: vi.fn(),
   auth: { user: null, setUser: () => {} },
   api: {
     propsApi: { getPublic: vi.fn(), getSplit: vi.fn() },
@@ -18,6 +19,10 @@ vi.mock("../context/AuthContext", () => ({
 }));
 
 vi.mock("../api/client", () => api);
+
+vi.mock("../context/AuthDialogContext", () => ({
+  useAuthDialog: () => ({ openAuthDialog }),
+}));
 
 const openProp = {
   id: 5,
@@ -43,6 +48,7 @@ function renderFeed() {
 describe("Dashboard", () => {
   beforeEach(() => {
     auth.user = null;
+    openAuthDialog.mockClear();
     api.propsApi.getPublic.mockReset();
     api.userApi.getMe.mockReset();
     api.propsApi.getPublic.mockResolvedValue({ data: { content: [openProp] } });
@@ -57,13 +63,15 @@ describe("Dashboard", () => {
     expect(screen.queryByText(/Make a call/)).not.toBeInTheDocument();
   });
 
-  it("sends guests to log in when they try to vote", async () => {
+  it("asks guests to log in when they try to vote, without leaving the feed", async () => {
     const user = userEvent.setup();
     renderFeed();
 
     await user.click(await screen.findByRole("button", { name: "Yes" }));
 
-    expect(await screen.findByRole("heading", { name: "Login" })).toBeInTheDocument();
+    expect(openAuthDialog).toHaveBeenCalledWith("login");
+    expect(screen.getByText("Will the Bills win on Sunday?")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Login" })).not.toBeInTheDocument();
   });
 
   it("still loads the account and offers the composer to members", async () => {

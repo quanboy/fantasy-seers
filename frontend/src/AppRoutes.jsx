@@ -1,7 +1,7 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./context/AuthContext";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
+import { AuthDialogProvider, useAuthDialog } from "./context/AuthDialogContext";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import GroupsPage from "./pages/GroupsPage";
@@ -25,36 +25,53 @@ function AuthReady({ children }) {
   return children;
 }
 
+// Sends the visitor to the homepage with the auth dialog open; returnTo is where to go after login.
+function AuthPrompt({ mode = "login", returnTo }) {
+  const { openAuthDialog } = useAuthDialog();
+  useEffect(() => {
+    openAuthDialog(mode, { returnTo });
+  }, [openAuthDialog, mode, returnTo]);
+  return <Navigate to="/" replace />;
+}
+
+function useCurrentPath() {
+  const location = useLocation();
+  return `${location.pathname}${location.search}`;
+}
+
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
+  const currentPath = useCurrentPath();
   if (loading)
     return (
       <div className="flex items-center justify-center h-screen text-slate-500">
         Loading...
       </div>
     );
-  return user ? children : <Navigate to="/login" replace />;
+  return user ? children : <AuthPrompt returnTo={currentPath} />;
 }
 
 // Extends PrivateRoute — must be logged in AND have ADMIN role
 function AdminRoute({ children }) {
   const { user, loading } = useAuth();
+  const currentPath = useCurrentPath();
   if (loading)
     return (
       <div className="flex items-center justify-center h-screen text-slate-500">
         Loading...
       </div>
     );
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <AuthPrompt returnTo={currentPath} />;
   if (user.role !== "ADMIN") return <Navigate to="/" replace />;
   return children;
 }
 
 export default function AppRoutes() {
   return (
+    <AuthDialogProvider>
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<AuthPrompt mode="login" />} />
+      <Route path="/register" element={<AuthPrompt mode="signup" />} />
       <Route
         element={
           <AuthReady>
@@ -81,5 +98,6 @@ export default function AppRoutes() {
       </Route>
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
+    </AuthDialogProvider>
   );
 }

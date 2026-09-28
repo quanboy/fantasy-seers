@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
 import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
 import PlayerSearchField from "./PlayerSearchField";
@@ -9,6 +10,7 @@ import { withPlayerSearchQuery } from "../utils/playerSearch";
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, setUser, logout } = useAuth();
+  const { openAuthDialog } = useAuthDialog();
   const location = useLocation();
   const navigate = useNavigate();
   const isMasterSheet = location.pathname === "/" || location.pathname === "/master-sheet";
@@ -75,6 +77,12 @@ export default function AppLayout() {
     updateMasterSheetQuery(query);
   };
 
+  // Leave private pages before clearing the session so they don't prompt for login.
+  const handleSignOut = () => {
+    navigate("/");
+    logout();
+  };
+
   const clearPlayerSearch = () => {
     setPlayerQuery("");
     if (isMasterSheet) updateMasterSheetQuery("");
@@ -134,7 +142,7 @@ export default function AppLayout() {
             </div>
 
             <button
-              onClick={logout}
+              onClick={handleSignOut}
               className="whitespace-nowrap rounded-lg px-2 py-1.5 text-xs text-slate-500 transition-colors hover:bg-void-800 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
             >
               Sign out
@@ -142,18 +150,20 @@ export default function AppLayout() {
           </div>
           ) : (
           <div className="flex h-10 items-center gap-2">
-            <Link
-              to="/login"
+            <button
+              type="button"
+              onClick={() => openAuthDialog("login")}
               className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:bg-void-800 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
             >
               Log in
-            </Link>
-            <Link
-              to="/register"
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthDialog("signup")}
               className="btn-oracle whitespace-nowrap px-3 py-1.5 text-sm"
             >
               Sign up
-            </Link>
+            </button>
           </div>
           )}
         </div>

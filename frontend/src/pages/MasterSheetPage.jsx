@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
 import {
   DndContext,
   closestCenter,
@@ -18,7 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import PlayerSearchField from "../components/PlayerSearchField";
 import { withPlayerSearchQuery } from "../utils/playerSearch";
 import { getNflTeamInfo } from "../utils/teams";
@@ -364,6 +365,7 @@ function getSaveStatus({ locked, saving, dirty, isDefault }) {
 export default function MasterSheetPage() {
   const { user } = useAuth();
   const isGuest = !user;
+  const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
   const [season, setSeason] = useState(null);
@@ -710,12 +712,13 @@ export default function MasterSheetPage() {
               {saveStatus}
             </span>
             {isGuest ? (
-              <Link
-                to="/register"
+              <button
+                type="button"
+                onClick={() => openAuthDialog("signup")}
                 className="btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold"
               >
                 Sign up to save
-              </Link>
+              </button>
             ) : (
             <button
               onClick={handleSave}

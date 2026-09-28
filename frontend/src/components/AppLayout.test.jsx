@@ -6,9 +6,14 @@ import AppLayout from "./AppLayout";
 
 const member = { username: "demo", pointBank: 1000, role: "USER" };
 
-const { auth, getMe } = vi.hoisted(() => ({
+const { auth, getMe, openAuthDialog } = vi.hoisted(() => ({
   auth: { user: null, setUser: vi.fn(), logout: vi.fn() },
   getMe: vi.fn(),
+  openAuthDialog: vi.fn(),
+}));
+
+vi.mock("../context/AuthDialogContext", () => ({
+  useAuthDialog: () => ({ openAuthDialog }),
 }));
 
 vi.mock("../context/AuthContext", () => ({
@@ -41,6 +46,7 @@ describe("AppLayout", () => {
   beforeEach(() => {
     auth.user = member;
     auth.logout.mockClear();
+    openAuthDialog.mockClear();
     getMe.mockReset();
     getMe.mockResolvedValue({ data: member });
   });
@@ -108,13 +114,17 @@ describe("AppLayout", () => {
     expect(screen.getByLabelText("Current location")).toHaveTextContent("/props");
   });
 
-  it("offers guests Log in and Sign up instead of account controls", () => {
+  it("offers guests Log in and Sign up dialogs instead of account controls", async () => {
+    const user = userEvent.setup();
     auth.user = null;
     renderLayout();
 
     const header = screen.getByRole("banner");
-    expect(within(header).getByRole("link", { name: "Log in" })).toHaveAttribute("href", "/login");
-    expect(within(header).getByRole("link", { name: "Sign up" })).toHaveAttribute("href", "/register");
+    await user.click(within(header).getByRole("button", { name: "Log in" }));
+    expect(openAuthDialog).toHaveBeenLastCalledWith("login");
+    await user.click(within(header).getByRole("button", { name: "Sign up" }));
+    expect(openAuthDialog).toHaveBeenLastCalledWith("signup");
+    expect(screen.getByLabelText("Current location")).toHaveTextContent("/");
     expect(within(header).queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
     expect(within(header).queryByLabelText(/points/)).not.toBeInTheDocument();
   });
