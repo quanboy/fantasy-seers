@@ -10,25 +10,28 @@ vi.mock("./AuthContext", () => ({
   useAuth: () => auth,
 }));
 
-function Trigger({ mode, returnTo }) {
+function Trigger({ mode, returnTo, onAuthenticated }) {
   const { openAuthDialog } = useAuthDialog();
   const location = useLocation();
   return (
     <>
       <p aria-label="Current location">{location.pathname}</p>
-      <button type="button" onClick={() => openAuthDialog(mode, { returnTo })}>
+      <button type="button" onClick={() => openAuthDialog(mode, { returnTo, onAuthenticated })}>
         Open auth
+      </button>
+      <button type="button" onClick={() => openAuthDialog("login")}>
+        Plain login
       </button>
     </>
   );
 }
 
-function renderWithTrigger({ mode = "login", returnTo } = {}) {
+function renderWithTrigger({ mode = "login", returnTo, onAuthenticated } = {}) {
   return render(
     <MemoryRouter initialEntries={["/props"]}>
       <AuthDialogProvider>
         <Routes>
-          <Route path="*" element={<Trigger mode={mode} returnTo={returnTo} />} />
+          <Route path="*" element={<Trigger mode={mode} returnTo={returnTo} onAuthenticated={onAuthenticated} />} />
         </Routes>
       </AuthDialogProvider>
     </MemoryRouter>
@@ -191,5 +194,37 @@ describe("AuthDialogProvider", () => {
       email: "seer@example.com",
       password: "safe-password",
     });
+  });
+
+  it("resumes the action that asked for login exactly once", async () => {
+    const onAuthenticated = vi.fn();
+    const user = userEvent.setup();
+    renderWithTrigger({ onAuthenticated });
+    const dialog = await openDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Username"), "demo");
+    await user.type(within(dialog).getByLabelText("Password"), "safe-password");
+    await user.click(within(dialog).getByRole("button", { name: "Log in" }));
+
+    await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not resume a cancelled action, even after a later login", async () => {
+    const onAuthenticated = vi.fn();
+    const user = userEvent.setup();
+    renderWithTrigger({ onAuthenticated });
+
+    const firstDialog = await openDialog(user);
+    fireEvent(firstDialog, new Event("cancel", { cancelable: true }));
+    expect(onAuthenticated).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Plain login" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Username"), "demo");
+    await user.type(within(dialog).getByLabelText("Password"), "safe-password");
+    await user.click(within(dialog).getByRole("button", { name: "Log in" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });
