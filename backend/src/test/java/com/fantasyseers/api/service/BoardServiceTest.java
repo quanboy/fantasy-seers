@@ -26,12 +26,15 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -85,6 +88,34 @@ class BoardServiceTest {
                 () -> assertEquals(8, response.rankings().getFirst().overallRank()),
                 () -> assertEquals(3, response.rankings().getFirst().positionalRank())
         );
+    }
+
+    @Test
+    void defaultSheetServesDefaultRankingsWithoutPersistingAnything() {
+        NflPlayer player = NflPlayer.builder()
+                .id(21L).sleeperId("sleeper-21").fullName("Player One").position("WR")
+                .nflTeam("TEST").adp(17).build();
+        when(leagueFormat.getScoringFormat()).thenReturn("HALF_PPR");
+        when(leagueFormat.isSuperflex()).thenReturn(true);
+        when(defaultBoardRankingService.getRankings()).thenReturn(List.of(
+                new DefaultBoardRankingService.DefaultRanking(player, 8, 3)
+        ));
+
+        BoardSheetResponse response = boardService.getDefaultSheet(2026);
+
+        assertAll(
+                () -> assertNull(response.boardId()),
+                () -> assertEquals(2026, response.season()),
+                () -> assertEquals("HALF_PPR", response.scoringFormat()),
+                () -> assertTrue(response.superflex()),
+                () -> assertFalse(response.locked()),
+                () -> assertNull(response.lockedAt()),
+                () -> assertTrue(response.isDefault()),
+                () -> assertEquals("sleeper-21", response.rankings().getFirst().sleeperId()),
+                () -> assertEquals(8, response.rankings().getFirst().overallRank()),
+                () -> assertEquals(3, response.rankings().getFirst().positionalRank())
+        );
+        verifyNoInteractions(boardSnapshotRepository, snapshotEntryRepository, userRepository);
     }
 
     @Test

@@ -66,6 +66,15 @@ public class BoardController {
         return ResponseEntity.ok(boardService.getMySheet(userId, resolvedSeason));
     }
 
+    /** Public, read-only default sheet for guests. */
+    @GetMapping("/default")
+    public ResponseEntity<BoardSheetResponse> getDefaultSheet(
+            @RequestParam(required = false) Integer season
+    ) {
+        int resolvedSeason = season != null ? season : Year.now().getValue();
+        return ResponseEntity.ok(boardService.getDefaultSheet(resolvedSeason));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<BoardDto.BoardResponse> getBoard(
             @PathVariable Long id,
