@@ -35,9 +35,6 @@ jwt:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*,http://127.0.0.1:*}
 
-registration:
-  invite-code: ${REGISTRATION_INVITE_CODE:}
-
 demo-account:
   enabled: ${DEMO_ACCOUNT_ENABLED:false}
   username: ${DEMO_ACCOUNT_USERNAME:demo}

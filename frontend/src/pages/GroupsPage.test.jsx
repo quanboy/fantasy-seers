@@ -27,7 +27,7 @@ describe("GroupsPage", () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/group invite code is separate from your registration code/i)).toBeInTheDocument();
+    expect(screen.getByText(/Ask the group owner for their 8-character invite code/i)).toBeInTheDocument();
     expect(await screen.findByText(/No groups yet\. Create one or enter a group invite code above\./i)).toBeInTheDocument();
   });
 });

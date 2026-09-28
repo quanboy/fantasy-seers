@@ -1,15 +1,11 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { NFL_TEAMS, NBA_TEAMS } from '../utils/teams'
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
-  const [form, setForm] = useState({
-    username: '', email: '', password: '', inviteCode: '',
-    favoriteNflTeam: '', favoriteNbaTeam: '', almaMater: '',
-  })
+  const [form, setForm] = useState({ username: '', email: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -19,13 +15,7 @@ export default function Register() {
     setError('')
     setLoading(true)
     try {
-      await register({
-        ...form,
-        inviteCode: form.inviteCode.trim(),
-        favoriteNflTeam: form.favoriteNflTeam || null,
-        favoriteNbaTeam: form.favoriteNbaTeam || null,
-        almaMater: form.almaMater.trim() || null,
-      })
+      await register(form)
       navigate('/')
     } catch (err) {
       setError(err.response?.data?.message || 'Registration failed')
@@ -57,7 +47,7 @@ export default function Register() {
         <div className="glass-card p-7">
           <p className="font-display text-lg font-700 text-slate-100 mb-1">Create your account</p>
           <p className="text-slate-400 text-xs mb-6">
-            Build your rankings first. After signing in, use a separate group invite code on the Leagues page to join friends.
+            Build your rankings first. After signing in, join friends with a league invite code on the Leagues page.
           </p>
 
           {error && (
@@ -132,74 +122,6 @@ export default function Register() {
                     </svg>
                   )}
                 </button>
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="register-invite-code" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Registration Code</label>
-              <input
-                id="register-invite-code"
-                name="inviteCode"
-                type="text"
-                value={form.inviteCode}
-                onChange={e => setForm({ ...form, inviteCode: e.target.value })}
-                className="input-base"
-                placeholder="Enter your registration code"
-                autoComplete="off"
-                maxLength={100}
-              />
-            </div>
-
-            {/* Your Identity section */}
-            <div className="pt-4 mt-2 border-t border-void-700">
-              <div className="flex items-center gap-2 mb-4">
-                <p className="text-xs text-slate-500 uppercase tracking-widest">Your Identity</p>
-                <span className="chip-gold text-[10px] px-2 py-0.5 rounded-full font-semibold">Optional</span>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label htmlFor="favorite-nfl-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NFL Team</label>
-                  <select
-                    id="favorite-nfl-team"
-                    name="favoriteNflTeam"
-                    value={form.favoriteNflTeam}
-                    onChange={e => setForm({ ...form, favoriteNflTeam: e.target.value })}
-                    className="input-base"
-                  >
-                    <option value="">Select a team</option>
-                    {NFL_TEAMS.map(team => (
-                      <option key={team} value={team}>{team}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="favorite-nba-team" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Favorite NBA Team</label>
-                  <select
-                    id="favorite-nba-team"
-                    name="favoriteNbaTeam"
-                    value={form.favoriteNbaTeam}
-                    onChange={e => setForm({ ...form, favoriteNbaTeam: e.target.value })}
-                    className="input-base"
-                  >
-                    <option value="">Select a team</option>
-                    {NBA_TEAMS.map(team => (
-                      <option key={team} value={team}>{team}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label htmlFor="alma-mater" className="block text-xs text-slate-500 uppercase tracking-widest mb-2">Alma Mater</label>
-                  <input
-                    id="alma-mater"
-                    name="almaMater"
-                    type="text"
-                    value={form.almaMater}
-                    onChange={e => setForm({ ...form, almaMater: e.target.value })}
-                    className="input-base"
-                    placeholder="e.g. University of Michigan"
-                    maxLength={100}
-                  />
-                </div>
               </div>
             </div>
 

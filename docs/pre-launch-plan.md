@@ -10,6 +10,10 @@ ops/config tasks, no code changes needed.
 
 ## 5. Gate who can register and who shows on the leaderboard — DONE
 
+> **Superseded (2026-09-28):** the registration invite code was removed for open
+> signup (see `public-homepage-plan.md`). `REGISTRATION_INVITE_CODE` is no longer
+> read. The leaderboard gate below still applies.
+
 **Applied.** Registration now requires an invite code validated against the
 `REGISTRATION_INVITE_CODE` env var (`AuthService.java`). If the env var is empty,
 registration is open (backwards-compatible for local dev). The global leaderboard
@@ -71,8 +75,6 @@ broken or insecure. Verify each on the Railway service before inviting anyone.
   real league scoring (`LEAGUE_SCORING_FORMAT`, `LEAGUE_SUPERFLEX`). There is
   currently no in-app way to set this — it requires the env var + redeploy, so plan
   to do it a day before the draft, not during.
-- (If you add registration gating per #5) `REGISTRATION_INVITE_CODE` /
-  `REGISTRATION_OPEN`.
 
 **Frontend service (build-time — Vite bakes these into the bundle):**
 - `VITE_API_BASE_URL=https://<your-backend>.up.railway.app/api` — **must be a build
