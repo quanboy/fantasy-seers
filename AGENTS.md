@@ -33,12 +33,13 @@ fantasy-seers/
 │   ├── .env.example             # Documents VITE_SENTRY_DSN
 │   ├── vite.config.js
 │   └── src/
-│       ├── main.jsx             # Router setup + AuthContext + Sentry init + ErrorBoundary
+│       ├── main.jsx             # AuthContext + Sentry init + ErrorBoundary
+│       ├── AppRoutes.jsx        # Route tree, public/private guards, auth dialog provider
 │       ├── api/client.js        # Axios instance + API methods
-│       ├── context/AuthContext.jsx  # JWT expiry check on load
-│       ├── utils/               # Shared constants (sportClasses.js, teams.js)
-│       ├── components/          # AppLayout, Sidebar, PropCard, SubmitPropCard, VoteModal
-│       └── pages/               # Login, Register, Dashboard, AdminDashboard,
+│       ├── context/             # AuthContext (JWT expiry, session-expiry → guest), AuthDialogContext
+│       ├── utils/               # Shared helpers (sportClasses.js, teams.js, guestDraft.js)
+│       ├── components/          # AppLayout, Sidebar, AuthDialog, PropCard, SubmitPropCard, VoteModal
+│       └── pages/               # MasterSheetPage, Dashboard, AdminDashboard,
 │                                # GroupsPage, GroupFeedPage, GroupSettingsPage, ProfilePage,
 │                                # LeaderboardPage
 ```
@@ -175,6 +176,7 @@ All endpoints are prefixed `/api` and return JSON.
 | AdminController    | `/api/admin`     | `GET /props/pending`, `GET /props/closed`, `POST /props/{id}/approve`, `POST /props/{id}/reject`, `POST /props/{id}/resolve?result=YES\|NO`, `POST /props`, `GET /groups`, `POST /boards/lock?season=YYYY` |
 | LeaderboardController | `/api/leaderboard` | `GET /global` (public), `GET /group/{groupId}` (auth + membership)       |
 | FriendGroupController | `/api/groups` | `POST /`, `POST /join`, `GET /`, `GET /{id}`, `GET /{id}/props`, `PATCH /{id}`, `DELETE /{id}/members/{userId}`, `DELETE /{id}/members/me`, `POST /{id}/invite`, `GET /invites`, `POST /invites/{inviteId}/accept`, `POST /invites/{inviteId}/reject` |
+| BoardController    | `/api/v1/boards` | `GET /default` (public, read-only default sheet), `GET /my-sheet`, `POST /`, `PUT /{id}/entries`, `GET /{id}` |
 | RankingsController | `/api/rankings` | `GET /my-sheet` (user's rankings, consensus fallback), `POST /my-sheet` (save rankings, `{rankings: [{playerId, overallRank, positionalRank}]}`) |
 | Actuator           | `/actuator`      | `GET /health` (public, no details)                                            |
 
@@ -182,49 +184,51 @@ All endpoints are prefixed `/api` and return JSON.
 
 ## Frontend Routing
 
-Defined in `src/main.jsx` using React Router v6. Wrapped in `Sentry.ErrorBoundary`.
+Defined in `src/AppRoutes.jsx` (rendered by `src/main.jsx`) using React Router. Wrapped in `Sentry.ErrorBoundary`.
 
 | Path          | Component       | Guard        |
 |---------------|-----------------|--------------|
-| `/login`      | Login           | public       |
-| `/register`   | Register        | public       |
-| `/`           | MasterSheetPage | PrivateRoute |
-| `/props`      | Dashboard       | PrivateRoute |
+| `/`           | MasterSheetPage | public (guests see the default sheet) |
+| `/props`      | Dashboard       | public (guests browse; voting opens login) |
+| `/master-sheet`| Redirect to `/` | public       |
+| `/login`      | Auth dialog (log in) over `/` | public |
+| `/register`   | Auth dialog (sign up) over `/` | public |
 | `/groups`     | GroupsPage      | PrivateRoute |
 | `/groups/:id` | GroupFeedPage   | PrivateRoute |
 | `/groups/:id/settings` | GroupSettingsPage | PrivateRoute |
-| `/master-sheet`| Redirect to `/` | PrivateRoute |
 | `/leaderboard`| LeaderboardPage | PrivateRoute |
 | `/profile`    | ProfilePage     | PrivateRoute |
 | `/admin`      | AdminDashboard  | AdminRoute   |
 
-- **PrivateRoute** — redirects unauthenticated users to `/login`
-- **AdminRoute** — redirects non-ADMIN users to `/`
-- **AuthContext** — stores user + JWT in localStorage, provides `login`/`logout`. Checks JWT `exp` claim on page load; clears expired tokens immediately.
+- **PrivateRoute** — guests are sent to `/` with the login dialog open, then on to the requested page after login; dismissing stays on `/`
+- **AdminRoute** — same guest behavior; non-ADMIN users are redirected to `/`
+- **AuthContext** — stores user + JWT in localStorage, provides `login`/`register`/`logout`. Checks JWT `exp` claim on page load; clears expired tokens immediately. A 401 on an authenticated request clears the session and drops to guest mode in place (toast, no reload).
+- **AuthDialogContext** — `openAuthDialog(mode, { returnTo, onAuthenticated })` opens the shared native `<dialog>` login/signup form (full-screen on mobile). `onAuthenticated` resumes the action that asked for login, once; dismissal drops it.
 
 ### Frontend API Client (`client.js`)
 Exports namespaced API helpers: `authApi`, `propsApi`, `groupsApi`, `adminApi`, `leaderboardApi`, `userApi`, `rankingsApi`. Each wraps Axios calls to `/api/*`.
 
 ### Layout Architecture
-- **AppLayout** — shared layout wrapper. Renders Sidebar + top nav bar (username, point bank, sign out). Polls `userApi.getMe()` every 30s to refresh point bank across all pages (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
-- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Nav items: Master Sheet, Props Feed, Leagues, Leaderboard, Profile, Admin Uploads (admin-only). Logo + text link to `/`.
+- **AppLayout** — shared layout wrapper for guests and members. Members see username, point bank, sign out (sign out returns to `/` first); guests see Log in / Sign up buttons that open the auth dialog. Polls `userApi.getMe()` every 30s for members only (uses `useRef` to avoid interval churn). Logo and "Fantasy Seers" text in sidebar link to the Master Sheet.
+- **Sidebar** — persistent left sidebar (desktop) / slide-in drawer (mobile). Guests: Master Sheet, Props Feed. Members add Leagues, Leaderboard, Profile, and Admin Uploads (admin-only). Logo + text link to `/`.
 - Mobile top bar shows hamburger + logo (links to `/`) on left; username, points, sign out on right.
 
 ### Key UI Patterns
 - **SubmitPropCard** — expandable form; dynamically shows group selector when scope is `GROUP` or `FRIENDS_AND_GROUP`. Shows inline `alert-error` on submission failure.
 - **PropCard** — unified card with 7 visual states. Split data shows loading spinner while fetching and inline error if fetch fails.
 - **VoteModal** — "Back to Feed" button wrapped in `try/finally` so modal always closes even if `onVoted()` throws.
-- **Dashboard** — sport filter pills (ALL, NFL, NBA, MLB, NHL). Handles paginated API response (`data.content || data`). Error state with "Try Again" button.
-- **Login/Register** — password field has show/hide toggle (eye icon).
+- **Dashboard** — sport filter pills (ALL, NFL, NBA, MLB, NHL). Handles paginated API response (`data.content || data`). Error state with "Try Again" button. Guests get no composer or account calls; a guest vote opens login, then reloads the prop and balance and reopens the vote for confirmation (or shows "Voting has closed." / already voted).
+- **AuthDialog** — login and signup (username, email, password only) with show/hide password toggle, inline errors, single submission.
 - **GroupsPage** — join success toast (auto-dismiss 4s). Separate `groupsError`/`invitesError` states.
 - **GroupSettingsPage** — kick/leave errors display inline (no `alert()` calls).
 - **AdminDashboard** — all three fetches have error states with retry or graceful fallback.
 - **LeaderboardPage** — medal colors use `text-gold-400`/`text-slate-300`/`text-gold-600`. Error state replaces table content.
-- **MasterSheetPage** — personalized NFL player ranking sheet. Drag-and-drop via @dnd-kit. Columns: Rank, Player (Team), Position (positional rank chip), ADP. Position filter pills (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Falls back to consensus rankings when user has no saved rankings (`isDefault: true` banner). Locked boards show their stamped format and disable dragging/saving.
+- **MasterSheetPage** — personalized NFL player ranking sheet. Drag-and-drop via @dnd-kit. Columns: Rank, Player (Team), Position (positional rank chip), ADP. Position filter pills (ALL, QB, RB, WR, TE, K, DEF). Dragging recalculates both overall and positional ranks. Falls back to consensus rankings when user has no saved rankings (`isDefault: true` banner). Locked boards show their stamped format and disable dragging/saving. Guests load `GET /api/v1/boards/default` and their reordering is kept on the device (`utils/guestDraft.js`, keyed by season + scoring format + superflex, separate from account drafts). After login, "Sign up to save" saves guest rankings to an empty board or asks to keep/replace existing work; a header login offers View/Discard; locked boards keep the guest version as a browser-only practice board.
 
 ### Shared Utils
 - `src/utils/sportClasses.js` — `getSportClass()` function (used by PropCard, VoteModal, AdminDashboard)
-- `src/utils/teams.js` — `NFL_TEAMS` and `NBA_TEAMS` arrays (used by Register, ProfilePage)
+- `src/utils/teams.js` — `NFL_TEAMS` and `NBA_TEAMS` arrays (used by ProfilePage)
+- `src/utils/guestDraft.js` — load/save/clear guest rankings in localStorage, validated against the current player pool
 
 ### Theme & Design Tokens
 

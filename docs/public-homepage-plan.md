@@ -2,7 +2,7 @@
 
 Date: 2026-09-23
 
-Status: Design agreed after a grill-me session. Implementation has not started.
+Status: Implemented on the `feat/public-homepage` branch (2026-09-28). Design agreed after a grill-me session.
 
 ## Goal
 
