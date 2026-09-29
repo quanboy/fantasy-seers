@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
 import { loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
 
@@ -58,7 +58,19 @@ function renderMasterSheet(initialEntry = "/") {
   );
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("MasterSheetPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     localStorage.clear();
     auth.user = { username: "demo", role: "USER" };
@@ -235,6 +247,33 @@ describe("MasterSheetPage", () => {
         expect(loadGuestDraft(guestSheet)).toBeNull();
         expect(screen.queryByRole("button", { name: "View guest rankings" })).not.toBeInTheDocument();
       });
+
+      it("offers an in-memory guest draft after header login when storage rejected it", async () => {
+        vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        });
+        expect(saveGuestDraft(guestSheet, guestOrder)).toBe(false);
+        auth.user = { username: "demo", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({ isDefault: false }));
+
+        renderMasterSheet();
+
+        expect(await screen.findByRole("button", { name: "View guest rankings" })).toBeInTheDocument();
+      });
+
+      it("does not offer a stored guest draft that no longer matches the account player pool", async () => {
+        saveGuestDraft(guestSheet, [
+          { ...rankings[0], playerId: 999 },
+          { ...rankings[1], playerId: 1000 },
+        ]);
+        auth.user = { username: "demo", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({ isDefault: false }));
+
+        renderMasterSheet();
+
+        expect(await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "View guest rankings" })).not.toBeInTheDocument();
+      });
     });
 
     it("never restores guest rankings onto a signed-in board", async () => {
@@ -248,6 +287,57 @@ describe("MasterSheetPage", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
     });
+  });
+
+  it("reloads the board when the authenticated account changes", async () => {
+    const secondAccountRankings = [
+      { ...rankings[1], fullName: "Second Account First", overallRank: 1 },
+      { ...rankings[0], fullName: "Second Account Second", overallRank: 2 },
+    ];
+    boardMocks.getMySheet
+      .mockResolvedValueOnce({ data: { boardId: 41, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } })
+      .mockResolvedValueOnce({ data: { boardId: 42, season: 2026, rankings: secondAccountRankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    await screen.findByText("Alpha Runner");
+
+    auth.user = { username: "second", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Second Account First")).toBeInTheDocument();
+    expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
+  });
+
+  it("ignores a superseded guest-sheet response after login", async () => {
+    const guestRequest = deferred();
+    const accountRequest = deferred();
+    auth.user = null;
+    boardMocks.getDefaultSheet.mockReturnValue(guestRequest.promise);
+    boardMocks.getMySheet.mockReturnValue(accountRequest.promise);
+    const view = renderMasterSheet();
+
+    auth.user = { username: "demo", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      accountRequest.resolve({ data: { boardId: 42, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    });
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+
+    await act(async () => {
+      guestRequest.resolve({ data: { boardId: null, season: 2026, rankings: [{ ...rankings[0], fullName: "Stale Guest Player" }, rankings[1]], isDefault: true, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    });
+
+    expect(screen.queryByText("Stale Guest Player")).not.toBeInTheDocument();
+    expect(screen.getByText("Alpha Runner")).toBeInTheDocument();
   });
 
   it("shows guests the public default sheet and asks them to sign up to save", async () => {

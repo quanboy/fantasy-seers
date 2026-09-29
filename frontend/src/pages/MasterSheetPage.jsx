@@ -429,6 +429,7 @@ function GuestRankingsNotice({ notice, viewing, saving, onView, onBack, onDiscar
 export default function MasterSheetPage() {
   const { user } = useAuth();
   const isGuest = !user;
+  const accountIdentity = user?.username ?? null;
   const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
@@ -475,6 +476,7 @@ export default function MasterSheetPage() {
   useEffect(() => () => clearTimeout(revealTimerRef.current), []);
 
   useEffect(() => {
+    let active = true;
     setLoading(true);
     setError(null);
     setDirty(false);
@@ -484,6 +486,7 @@ export default function MasterSheetPage() {
     setViewingGuest(false);
     (isGuest ? boardsApi.getDefaultSheet() : boardsApi.getMySheet())
       .then(({ data }) => {
+        if (!active) return;
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
         if (isGuest) {
@@ -529,9 +532,16 @@ export default function MasterSheetPage() {
         setScoringFormat(data.scoringFormat);
         setSuperflex(Boolean(data.superflex));
       })
-      .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
-      .finally(() => setLoading(false));
-  }, [isGuest]);
+      .catch((err) => {
+        if (active) setError(err.response?.data?.message || "Failed to load rankings");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [accountIdentity, isGuest]);
 
   useEffect(() => {
     if (viewingGuest && guestNotice) {
@@ -607,7 +617,7 @@ export default function MasterSheetPage() {
 
     setGuestNotice((current) => {
       if (current) return current;
-      const stored = loadGuestDraft(format);
+      const stored = loadGuestDraft(format, { players: accountSheet.rankings });
       if (!stored || sameOrder(stored, accountSheet.rankings)) return null;
       return { type: accountSheet.locked ? "locked" : "offer", rankings: stored, sheet: format };
     });

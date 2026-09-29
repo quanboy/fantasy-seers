@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = {BoardController.class, VoteController.class})
@@ -66,7 +67,10 @@ class PublicBoardAccessTest {
 
     @Test
     void guestCannotReadPersonalBoards() throws Exception {
-        mockMvc.perform(get("/api/v1/boards/my-sheet")).andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/api/v1/boards/my-sheet"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.message").value("Authentication required"));
         mockMvc.perform(get("/api/v1/boards/11")).andExpect(status().isUnauthorized());
         verifyNoInteractions(boardService);
     }

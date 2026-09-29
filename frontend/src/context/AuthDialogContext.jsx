@@ -36,7 +36,11 @@ export function AuthDialogProvider({ children }) {
     restoreFocusRef.current = false;
     const opener = openerRef.current;
     openerRef.current = null;
-    if (opener?.isConnected) opener.focus();
+    if (opener?.isConnected) {
+      opener.focus();
+    } else {
+      document.querySelector("[data-auth-focus-fallback]")?.focus();
+    }
   }, [dialog]);
 
   const value = useMemo(() => ({ openAuthDialog }), [openAuthDialog]);

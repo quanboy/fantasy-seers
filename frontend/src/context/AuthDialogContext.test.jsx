@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -35,6 +36,24 @@ function renderWithTrigger({ mode = "login", returnTo, onAuthenticated } = {}) {
         </Routes>
       </AuthDialogProvider>
     </MemoryRouter>
+  );
+}
+
+function DisappearingTrigger() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const { openAuthDialog } = useAuthDialog();
+  return (
+    <main data-auth-focus-fallback tabIndex={-1}>
+      {!authenticated && (
+        <button
+          type="button"
+          onClick={() => openAuthDialog("login", { onAuthenticated: () => setAuthenticated(true) })}
+        >
+          Log in
+        </button>
+      )}
+      {authenticated && <p>Signed in</p>}
+    </main>
   );
 }
 
@@ -151,6 +170,26 @@ describe("AuthDialogProvider", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(auth.login).toHaveBeenCalledWith({ username: "demo", password: "safe-password" });
     expect(screen.getByLabelText("Current location")).toHaveTextContent("/props");
+  });
+
+  it("moves focus to the app when authentication removes the opening control", async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <AuthDialogProvider>
+          <DisappearingTrigger />
+        </AuthDialogProvider>
+      </MemoryRouter>
+    );
+
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+    const dialog = screen.getByRole("dialog");
+    await user.type(within(dialog).getByLabelText("Username"), "demo");
+    await user.type(within(dialog).getByLabelText("Password"), "safe-password");
+    await user.click(within(dialog).getByRole("button", { name: "Log in" }));
+
+    await screen.findByText("Signed in");
+    expect(screen.getByRole("main")).toHaveFocus();
   });
 
   it("goes to the requested page after logging in", async () => {

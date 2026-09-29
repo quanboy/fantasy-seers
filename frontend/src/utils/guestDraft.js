@@ -2,6 +2,8 @@
 // account drafts (fs_board_draft:<boardId>) and scoped to the board's format,
 // so a draft never lands on a board it wasn't made for.
 
+const memoryDrafts = new Map();
+
 function draftKey({ season, scoringFormat, superflex }) {
   return `fs_guest_draft:${season}:${scoringFormat}:${superflex ? "SF" : "1QB"}`;
 }
@@ -29,13 +31,18 @@ function matchesPlayers(rankings, players) {
  * current player pool.
  */
 export function loadGuestDraft(sheet, { players } = {}) {
-  let draft;
-  try {
-    draft = JSON.parse(localStorage.getItem(draftKey(sheet)));
-  } catch {
-    return null;
+  const key = draftKey(sheet);
+  let draft = memoryDrafts.get(key);
+  if (draft === undefined) {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored === null) return null;
+      draft = JSON.parse(stored);
+    } catch {
+      return null;
+    }
   }
-  const rankings = draft?.rankings;
+  const rankings = Array.isArray(draft) ? draft : draft?.rankings;
   if (!hasUniquePlayers(rankings)) return null;
   if (players && !matchesPlayers(rankings, players)) return null;
   return rankings;
@@ -43,9 +50,11 @@ export function loadGuestDraft(sheet, { players } = {}) {
 
 /** Stores the guest rankings; returns false if the browser refused. */
 export function saveGuestDraft(sheet, rankings) {
+  const key = draftKey(sheet);
+  memoryDrafts.set(key, rankings);
   try {
     localStorage.setItem(
-      draftKey(sheet),
+      key,
       JSON.stringify({ savedAt: new Date().toISOString(), rankings })
     );
     return true;
@@ -55,8 +64,10 @@ export function saveGuestDraft(sheet, rankings) {
 }
 
 export function clearGuestDraft(sheet) {
+  const key = draftKey(sheet);
+  memoryDrafts.delete(key);
   try {
-    localStorage.removeItem(draftKey(sheet));
+    localStorage.removeItem(key);
   } catch {
     // Nothing stored if storage is unavailable.
   }

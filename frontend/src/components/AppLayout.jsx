@@ -172,7 +172,7 @@ export default function AppLayout() {
       <div className="app-shell-body flex">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <main className="min-w-0 flex-1 px-4">
+        <main data-auth-focus-fallback tabIndex={-1} className="min-w-0 flex-1 px-4 outline-none">
           <Outlet />
         </main>
       </div>

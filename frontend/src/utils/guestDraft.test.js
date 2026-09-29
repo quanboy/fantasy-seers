@@ -12,6 +12,10 @@ const reordered = [players[2], players[0], players[1]];
 describe("guest drafts", () => {
   beforeEach(() => {
     localStorage.clear();
+    clearGuestDraft(halfPpr);
+    clearGuestDraft({ ...halfPpr, season: 2027 });
+    clearGuestDraft({ ...halfPpr, scoringFormat: "FULL_PPR" });
+    clearGuestDraft({ ...halfPpr, superflex: true });
   });
 
   afterEach(() => {
@@ -46,9 +50,7 @@ describe("guest drafts", () => {
   });
 
   it("ignores unreadable stored data", () => {
-    saveGuestDraft(halfPpr, reordered);
-    const [key] = Object.keys(localStorage);
-    localStorage.setItem(key, "{not json");
+    localStorage.setItem("fs_guest_draft:2026:HALF_PPR:1QB", "{not json");
 
     expect(loadGuestDraft(halfPpr, { players })).toBeNull();
   });
@@ -74,5 +76,16 @@ describe("guest drafts", () => {
     });
 
     expect(saveGuestDraft(halfPpr, reordered)).toBe(false);
+    expect(loadGuestDraft(halfPpr, { players })).toEqual(reordered);
+  });
+
+  it("prefers newer in-memory edits over an older stored draft", () => {
+    expect(saveGuestDraft(halfPpr, players)).toBe(true);
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("Quota exceeded", "QuotaExceededError");
+    });
+
+    expect(saveGuestDraft(halfPpr, reordered)).toBe(false);
+    expect(loadGuestDraft(halfPpr, { players })).toEqual(reordered);
   });
 });
