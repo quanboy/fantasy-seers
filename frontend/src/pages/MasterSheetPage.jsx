@@ -577,38 +577,47 @@ export default function MasterSheetPage() {
     }
   }, [boardId, dirty, locked, rankings, viewingGuest]);
 
-  const saveGuestRankings = useCallback(async (guestRankings, guestSheet) => {
+  const saveBoardRankings = useCallback(async ({ entries, onSuccess, onFailure }) => {
     const savingBoard = boardOwnerRef.current;
     setSaving(true);
     setError(null);
     try {
-      await boardsApi.upsertEntries(
-        savingBoard.boardId,
-        guestRankings.map((p, i) => ({ playerId: p.playerId, rank: i + 1 }))
-      );
+      await boardsApi.upsertEntries(savingBoard.boardId, entries);
       if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
-      clearGuestDraft(guestSheet);
       localStorage.removeItem(`fs_board_draft:${savingBoard.boardId}`);
-      setRankings(guestRankings);
       setIsDefault(false);
       setDirty(false);
       setDraftRestored(false);
-      setViewingGuest(false);
-      setGuestNotice(null);
+      onSuccess?.();
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
       if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
-      // Keep the guest rankings so the save can be retried.
-      saveGuestDraft(guestSheet, guestRankings);
-      setGuestNotice({ type: "offer", rankings: guestRankings, sheet: guestSheet });
-      setError(
-        `${err.response?.data?.message || "Failed to save rankings"}. Your guest rankings are still on this device.`
-      );
+      onFailure?.(err);
     } finally {
       if (sameBoardOwner(boardOwnerRef.current, savingBoard)) setSaving(false);
     }
   }, []);
+
+  const saveGuestRankings = useCallback(async (guestRankings, guestSheet) => {
+    await saveBoardRankings({
+      entries: guestRankings.map((p, i) => ({ playerId: p.playerId, rank: i + 1 })),
+      onSuccess: () => {
+        clearGuestDraft(guestSheet);
+        setRankings(guestRankings);
+        setViewingGuest(false);
+        setGuestNotice(null);
+      },
+      onFailure: (err) => {
+        // Keep the guest rankings so the save can be retried.
+        saveGuestDraft(guestSheet, guestRankings);
+        setGuestNotice({ type: "offer", rankings: guestRankings, sheet: guestSheet });
+        setError(
+          `${err.response?.data?.message || "Failed to save rankings"}. Your guest rankings are still on this device.`
+        );
+      },
+    });
+  }, [saveBoardRankings]);
 
   // Resolve guest rankings once the signed-in board has loaded.
   useEffect(() => {
@@ -755,30 +764,13 @@ export default function MasterSheetPage() {
       return;
     }
 
-    const savingBoard = boardOwnerRef.current;
-    setSaving(true);
-    setError(null);
-    try {
-      await boardsApi.upsertEntries(
-        savingBoard.boardId,
-        rankings.map((p) => ({
-          playerId: p.playerId,
-          rank: p.overallRank,
-        }))
-      );
-      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
-      setDirty(false);
-      setDraftRestored(false);
-      setIsDefault(false);
-      localStorage.removeItem(`fs_board_draft:${savingBoard.boardId}`);
-      setSaveMsg("Saved \u2713");
-      setTimeout(() => setSaveMsg(null), 3000);
-    } catch (err) {
-      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
-      setError(err.response?.data?.message || "Failed to save rankings");
-    } finally {
-      if (sameBoardOwner(boardOwnerRef.current, savingBoard)) setSaving(false);
-    }
+    await saveBoardRankings({
+      entries: rankings.map((p) => ({
+        playerId: p.playerId,
+        rank: p.overallRank,
+      })),
+      onFailure: (err) => setError(err.response?.data?.message || "Failed to save rankings"),
+    });
   };
 
   const togglePosition = (pos) => {
