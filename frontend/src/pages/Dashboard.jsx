@@ -58,8 +58,12 @@ export default function Dashboard() {
 
   const handleVoted = async () => {
     const votingAccount = accountIdentity;
+    const votingToken = localStorage.getItem("fs_token");
     const { data } = await userApi.getMe();
-    if (accountIdentityRef.current !== votingAccount) return false;
+    if (
+      accountIdentityRef.current !== votingAccount ||
+      localStorage.getItem("fs_token") !== votingToken
+    ) return false;
     setUser((current) => {
       if (!votingAccount || current?.username !== votingAccount) return current;
       const updated = { ...current, pointBank: data.pointBank };

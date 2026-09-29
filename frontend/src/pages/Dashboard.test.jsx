@@ -272,6 +272,41 @@ describe("Dashboard", () => {
     expect(screen.getByRole("dialog", { name: openProp.title })).toBeInTheDocument();
   });
 
+  it("does not apply a post-vote balance refresh to a newer session for the same account", async () => {
+    const user = userEvent.setup();
+    const balanceRequest = deferred();
+    auth.user = { username: "demo", pointBank: 1000, role: "USER" };
+    localStorage.setItem("fs_token", "first-token");
+    api.propsApi.vote.mockResolvedValue({
+      data: { yesPct: 100, noPct: 0, yesCount: 1, noCount: 0, yesWagerTotal: 10, noWagerTotal: 0 },
+    });
+    const view = renderFeed();
+
+    await user.click(await screen.findByRole("button", { name: "Yes" }));
+    await user.click(screen.getByRole("button", { name: /Lock In/ }));
+    const backButton = await screen.findByRole("button", { name: "Back to Feed" });
+    api.userApi.getMe.mockReturnValueOnce(balanceRequest.promise);
+    await user.click(backButton);
+
+    auth.user = { username: "demo", pointBank: 700, role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    localStorage.setItem("fs_user", JSON.stringify(auth.user));
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      balanceRequest.resolve({ data: { pointBank: 990 } });
+    });
+
+    expect(auth.user).toEqual({ username: "demo", pointBank: 700, role: "USER" });
+    expect(JSON.parse(localStorage.getItem("fs_user"))).toEqual(auth.user);
+  });
+
   it("closes an authenticated vote modal when the session becomes a guest", async () => {
     const user = userEvent.setup();
     auth.user = { username: "demo", pointBank: 1000, role: "USER" };
