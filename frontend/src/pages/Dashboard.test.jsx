@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -53,8 +53,17 @@ function renderFeed() {
   );
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("Dashboard", () => {
   beforeEach(() => {
+    localStorage.clear();
     auth.user = null;
     openAuthDialog.mockClear();
     api.propsApi.getPublic.mockReset();
@@ -124,6 +133,60 @@ describe("Dashboard", () => {
       expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument();
       expect(api.propsApi.vote).not.toHaveBeenCalled();
     });
+
+    it("ignores a resumed-vote response after the active account changes", async () => {
+      const user = userEvent.setup();
+      const propRequest = deferred();
+      const accountRequest = deferred();
+      api.propsApi.getById.mockReturnValue(propRequest.promise);
+      api.userApi.getMe.mockReturnValue(accountRequest.promise);
+      const view = renderFeed();
+
+      await user.click(await screen.findByRole("button", { name: "Yes" }));
+      const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+      await act(async () => {
+        auth.user = { username: "first", pointBank: 1000, role: "USER" };
+        onAuthenticated();
+      });
+      await waitFor(() => expect(api.propsApi.getById).toHaveBeenCalledWith(5));
+
+      auth.user = { username: "second", pointBank: 700, role: "USER" };
+      localStorage.setItem("fs_user", JSON.stringify(auth.user));
+      view.rerender(
+        <MemoryRouter initialEntries={["/props"]}>
+          <Routes>
+            <Route path="/props" element={<Dashboard />} />
+          </Routes>
+        </MemoryRouter>
+      );
+
+      await act(async () => {
+        propRequest.resolve({ data: openProp });
+        accountRequest.resolve({ data: { pointBank: 900 } });
+      });
+
+      expect(auth.user).toEqual({ username: "second", pointBank: 700, role: "USER" });
+      expect(JSON.parse(localStorage.getItem("fs_user"))).toEqual(auth.user);
+      expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument();
+    });
+
+    it("announces a resumed-vote load failure as an error", async () => {
+      const user = userEvent.setup();
+      api.propsApi.getById.mockRejectedValue(new Error("offline"));
+      api.userApi.getMe.mockResolvedValue({ data: { pointBank: 900 } });
+      renderFeed();
+
+      await user.click(await screen.findByRole("button", { name: "Yes" }));
+      const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+      await act(async () => {
+        auth.user = { username: "demo", pointBank: 1000, role: "USER" };
+        onAuthenticated();
+      });
+
+      const alert = await screen.findByRole("alert");
+      expect(alert).toHaveTextContent("Couldn't load that prop. Please try again.");
+      expect(within(alert).getByText("Couldn't load that prop. Please try again.")).toHaveClass("text-loss-400");
+    });
   });
 
   it("asks guests to log in when they try to vote, without leaving the feed", async () => {
@@ -144,5 +207,38 @@ describe("Dashboard", () => {
     expect(await screen.findByText("Will the Bills win on Sunday?")).toBeInTheDocument();
     expect(api.userApi.getMe).toHaveBeenCalled();
     expect(screen.getByText(/Make a call/)).toBeInTheDocument();
+  });
+
+  it("does not apply a post-vote balance refresh to a different account", async () => {
+    const user = userEvent.setup();
+    const balanceRequest = deferred();
+    auth.user = { username: "first", pointBank: 1000, role: "USER" };
+    api.propsApi.vote.mockResolvedValue({
+      data: { yesPct: 100, noPct: 0, yesCount: 1, noCount: 0, yesWagerTotal: 10, noWagerTotal: 0 },
+    });
+    const view = renderFeed();
+
+    await user.click(await screen.findByRole("button", { name: "Yes" }));
+    await user.click(screen.getByRole("button", { name: /Lock In/ }));
+    const backButton = await screen.findByRole("button", { name: "Back to Feed" });
+    api.userApi.getMe.mockReturnValueOnce(balanceRequest.promise);
+    await user.click(backButton);
+
+    auth.user = { username: "second", pointBank: 700, role: "USER" };
+    localStorage.setItem("fs_user", JSON.stringify(auth.user));
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      balanceRequest.resolve({ data: { pointBank: 990 } });
+    });
+
+    expect(auth.user).toEqual({ username: "second", pointBank: 700, role: "USER" });
+    expect(JSON.parse(localStorage.getItem("fs_user"))).toEqual(auth.user);
   });
 });

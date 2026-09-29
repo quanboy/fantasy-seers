@@ -608,7 +608,7 @@ export default function MasterSheetPage() {
       } else if (!accountSheet.hasWork) {
         saveGuestRankings(guestRankings, guestSheet);
       } else if (sameOrder(guestRankings, accountSheet.rankings)) {
-        clearGuestDraft(guestSheet);
+        saveGuestRankings(guestRankings, guestSheet);
       } else {
         setGuestNotice({ type: "conflict", rankings: guestRankings, sheet: guestSheet });
       }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAuthDialog } from "../context/AuthDialogContext";
@@ -14,6 +14,7 @@ function SkeletonCard() {
 export default function Dashboard() {
   const { user, setUser } = useAuth();
   const isGuest = !user;
+  const accountIdentity = user?.username ?? null;
   const { openAuthDialog } = useAuthDialog();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
@@ -25,6 +26,7 @@ export default function Dashboard() {
   // A vote a guest started before signing in; resumed once they're signed in.
   const [pendingVote, setPendingVote] = useState(null);
   const [voteNotice, setVoteNotice] = useState(null);
+  const pendingVoteAccountRef = useRef(null);
 
   const fetchProps = () => {
     setError(null);
@@ -48,10 +50,14 @@ export default function Dashboard() {
   }, [isGuest]);
 
   const handleVoted = async () => {
+    const votingAccount = accountIdentity;
     const { data } = await userApi.getMe();
-    const updated = { ...user, pointBank: data.pointBank };
-    localStorage.setItem("fs_user", JSON.stringify(updated));
-    setUser(updated);
+    setUser((current) => {
+      if (!votingAccount || current?.username !== votingAccount) return current;
+      const updated = { ...current, pointBank: data.pointBank };
+      localStorage.setItem("fs_user", JSON.stringify(updated));
+      return updated;
+    });
     setSelectedProp(null);
     fetchProps();
   };
@@ -62,27 +68,51 @@ export default function Dashboard() {
     : setSelectedProp;
 
   useEffect(() => {
-    if (!pendingVote || isGuest) return;
+    if (!pendingVote) {
+      pendingVoteAccountRef.current = null;
+      return;
+    }
+    if (isGuest) {
+      setPendingVote(null);
+      return;
+    }
+    if (pendingVoteAccountRef.current && pendingVoteAccountRef.current !== accountIdentity) {
+      setPendingVote(null);
+      return;
+    }
+    let active = true;
     const vote = pendingVote;
-    setPendingVote(null);
+    const votingAccount = accountIdentity;
+    pendingVoteAccountRef.current = votingAccount;
     Promise.all([propsApi.getById(vote.id), userApi.getMe()])
       .then(([{ data: prop }, { data: me }]) => {
+        if (!active) return;
         setUser((current) => {
+          if (current?.username !== votingAccount) return current;
           const updated = { ...current, pointBank: me.pointBank };
           localStorage.setItem("fs_user", JSON.stringify(updated));
           return updated;
         });
         if (prop.userChoice) {
-          setVoteNotice("You already voted on this prop.");
+          setVoteNotice({ type: "info", message: "You already voted on this prop." });
         } else if (prop.status !== "OPEN" || new Date(prop.closesAt) <= new Date()) {
-          setVoteNotice("Voting has closed.");
+          setVoteNotice({ type: "info", message: "Voting has closed." });
         } else {
           setSelectedProp({ ...prop, _initialChoice: vote._initialChoice, _initialWager: vote._initialWager });
         }
       })
-      .catch(() => setVoteNotice("Couldn't load that prop. Please try again."))
-      .finally(fetchProps);
-  }, [pendingVote, isGuest]);
+      .catch(() => {
+        if (active) setVoteNotice({ type: "error", message: "Couldn't load that prop. Please try again." });
+      })
+      .finally(() => {
+        if (!active) return;
+        setPendingVote(null);
+        fetchProps();
+      });
+    return () => {
+      active = false;
+    };
+  }, [pendingVote, isGuest, accountIdentity, setUser]);
 
   const filtered = useMemo(() => {
     if (sportFilter === "ALL") return props;
@@ -119,8 +149,13 @@ export default function Dashboard() {
         )}
 
         {voteNotice && (
-          <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3">
-            <p className="text-sm text-slate-200">{voteNotice}</p>
+          <div
+            role={voteNotice.type === "error" ? "alert" : "status"}
+            className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3"
+          >
+            <p className={`text-sm ${voteNotice.type === "error" ? "text-loss-400" : "text-slate-200"}`}>
+              {voteNotice.message}
+            </p>
             <button
               type="button"
               onClick={() => setVoteNotice(null)}

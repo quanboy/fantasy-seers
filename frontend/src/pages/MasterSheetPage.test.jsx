@@ -185,6 +185,15 @@ describe("MasterSheetPage", () => {
         expect(loadGuestDraft(guestSheet)).toBeNull();
       });
 
+      it("completes an explicit save before clearing an identical guest draft", async () => {
+        await renderGuestWithDraft();
+        await signInFromSave(account({ rankings: guestOrder, isDefault: false }));
+
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+        expect(savedIds()).toEqual([2, 1]);
+        expect(loadGuestDraft(guestSheet)).toBeNull();
+      });
+
       it("keeps the saved rankings and the guest draft when asked to", async () => {
         const user = userEvent.setup();
         await renderGuestWithDraft();
