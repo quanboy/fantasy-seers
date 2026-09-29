@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [pendingVote, setPendingVote] = useState(null);
   const [voteNotice, setVoteNotice] = useState(null);
   const pendingVoteAccountRef = useRef(null);
+  const accountIdentityRef = useRef(accountIdentity);
+  accountIdentityRef.current = accountIdentity;
 
   const fetchProps = () => {
     setError(null);
@@ -41,6 +43,8 @@ export default function Dashboard() {
     let active = true;
     setProfileIncomplete(false);
     setProfileBannerDismissed(false);
+    setSelectedProp(null);
+    setVoteNotice(null);
     fetchProps();
     if (isGuest) return () => { active = false; };
     userApi.getMe()
@@ -55,14 +59,15 @@ export default function Dashboard() {
   const handleVoted = async () => {
     const votingAccount = accountIdentity;
     const { data } = await userApi.getMe();
+    if (accountIdentityRef.current !== votingAccount) return false;
     setUser((current) => {
       if (!votingAccount || current?.username !== votingAccount) return current;
       const updated = { ...current, pointBank: data.pointBank };
       localStorage.setItem("fs_user", JSON.stringify(updated));
       return updated;
     });
-    setSelectedProp(null);
     fetchProps();
+    return true;
   };
 
   // Guests sign in first; the vote then reopens for explicit confirmation (never auto-submitted).
@@ -299,7 +304,7 @@ export default function Dashboard() {
       </div>
 
       {/* Vote Modal */}
-      {selectedProp && (
+      {selectedProp && !isGuest && (
         <VoteModal
           prop={selectedProp}
           userPoints={user?.pointBank}

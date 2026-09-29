@@ -372,6 +372,11 @@ const sheetFormat = (sheet) => ({
 const sameOrder = (a, b) =>
   a.length === b.length && a.every((player, i) => player.playerId === b[i].playerId);
 
+const sameBoardOwner = (a, b) =>
+  a?.accountIdentity === b?.accountIdentity &&
+  a?.boardId === b?.boardId &&
+  a?.token === b?.token;
+
 function GuestRankingsNotice({ notice, viewing, saving, onView, onBack, onDiscard, onKeep, onReplace }) {
   const box = "mb-3 rounded-lg border px-4 py-3 text-sm";
   const action = "rounded-lg px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400";
@@ -430,11 +435,15 @@ export default function MasterSheetPage() {
   const { user } = useAuth();
   const isGuest = !user;
   const accountIdentity = user?.username ?? null;
-  const accountIdentityRef = useRef(accountIdentity);
-  accountIdentityRef.current = accountIdentity;
   const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
+  const boardOwnerRef = useRef(null);
+  boardOwnerRef.current = {
+    accountIdentity,
+    boardId,
+    token: localStorage.getItem("fs_token"),
+  };
   const [season, setSeason] = useState(null);
   const [rankings, setRankings] = useState([]);
   const [isDefault, setIsDefault] = useState(true);
@@ -569,17 +578,17 @@ export default function MasterSheetPage() {
   }, [boardId, dirty, locked, rankings, viewingGuest]);
 
   const saveGuestRankings = useCallback(async (guestRankings, guestSheet) => {
-    const savingAccount = accountIdentity;
+    const savingBoard = boardOwnerRef.current;
     setSaving(true);
     setError(null);
     try {
       await boardsApi.upsertEntries(
-        boardId,
+        savingBoard.boardId,
         guestRankings.map((p, i) => ({ playerId: p.playerId, rank: i + 1 }))
       );
-      if (accountIdentityRef.current !== savingAccount) return;
+      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
       clearGuestDraft(guestSheet);
-      localStorage.removeItem(`fs_board_draft:${boardId}`);
+      localStorage.removeItem(`fs_board_draft:${savingBoard.boardId}`);
       setRankings(guestRankings);
       setIsDefault(false);
       setDirty(false);
@@ -589,7 +598,7 @@ export default function MasterSheetPage() {
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
-      if (accountIdentityRef.current !== savingAccount) return;
+      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
       // Keep the guest rankings so the save can be retried.
       saveGuestDraft(guestSheet, guestRankings);
       setGuestNotice({ type: "offer", rankings: guestRankings, sheet: guestSheet });
@@ -597,9 +606,9 @@ export default function MasterSheetPage() {
         `${err.response?.data?.message || "Failed to save rankings"}. Your guest rankings are still on this device.`
       );
     } finally {
-      if (accountIdentityRef.current === savingAccount) setSaving(false);
+      if (sameBoardOwner(boardOwnerRef.current, savingBoard)) setSaving(false);
     }
-  }, [accountIdentity, boardId]);
+  }, []);
 
   // Resolve guest rankings once the signed-in board has loaded.
   useEffect(() => {
@@ -609,6 +618,10 @@ export default function MasterSheetPage() {
     if (saveIntent) {
       const { rankings: guestRankings, sheet: guestSheet } = saveIntent;
       setSaveIntent(null);
+      if (
+        saveIntent.accountIdentity !== accountIdentity ||
+        saveIntent.token !== localStorage.getItem("fs_token")
+      ) return;
       if (accountSheet.locked) {
         setGuestNotice({ type: "locked", rankings: guestRankings, sheet: guestSheet });
       } else if (!accountSheet.hasWork) {
@@ -627,7 +640,7 @@ export default function MasterSheetPage() {
       if (!stored || sameOrder(stored, accountSheet.rankings)) return null;
       return { type: accountSheet.locked ? "locked" : "offer", rankings: stored, sheet: format };
     });
-  }, [isGuest, accountSheet, saveIntent, saveGuestRankings]);
+  }, [isGuest, accountIdentity, accountSheet, saveIntent, saveGuestRankings]);
 
   const viewGuestRankings = () => {
     accountViewRef.current = { rankings, dirty, draftRestored };
@@ -742,26 +755,29 @@ export default function MasterSheetPage() {
       return;
     }
 
+    const savingBoard = boardOwnerRef.current;
     setSaving(true);
     setError(null);
     try {
       await boardsApi.upsertEntries(
-        boardId,
+        savingBoard.boardId,
         rankings.map((p) => ({
           playerId: p.playerId,
           rank: p.overallRank,
         }))
       );
+      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
       setDirty(false);
       setDraftRestored(false);
       setIsDefault(false);
-      localStorage.removeItem(`fs_board_draft:${boardId}`);
+      localStorage.removeItem(`fs_board_draft:${savingBoard.boardId}`);
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
+      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
       setError(err.response?.data?.message || "Failed to save rankings");
     } finally {
-      setSaving(false);
+      if (sameBoardOwner(boardOwnerRef.current, savingBoard)) setSaving(false);
     }
   };
 
@@ -944,7 +960,12 @@ export default function MasterSheetPage() {
                   const guestRankings = rankings;
                   const guestSheet = { season, scoringFormat, superflex };
                   openAuthDialog("signup", {
-                    onAuthenticated: () => setSaveIntent({ rankings: guestRankings, sheet: guestSheet }),
+                    onAuthenticated: (authenticatedUser) => setSaveIntent({
+                      rankings: guestRankings,
+                      sheet: guestSheet,
+                      accountIdentity: authenticatedUser.username,
+                      token: localStorage.getItem("fs_token"),
+                    }),
                   });
                 }}
                 className="btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold"

@@ -260,6 +260,8 @@ describe("Dashboard", () => {
         </Routes>
       </MemoryRouter>
     );
+    await user.click(screen.getByRole("button", { name: "Yes" }));
+    expect(screen.getByRole("dialog", { name: openProp.title })).toBeInTheDocument();
 
     await act(async () => {
       balanceRequest.resolve({ data: { pointBank: 990 } });
@@ -267,5 +269,26 @@ describe("Dashboard", () => {
 
     expect(auth.user).toEqual({ username: "second", pointBank: 700, role: "USER" });
     expect(JSON.parse(localStorage.getItem("fs_user"))).toEqual(auth.user);
+    expect(screen.getByRole("dialog", { name: openProp.title })).toBeInTheDocument();
+  });
+
+  it("closes an authenticated vote modal when the session becomes a guest", async () => {
+    const user = userEvent.setup();
+    auth.user = { username: "demo", pointBank: 1000, role: "USER" };
+    const view = renderFeed();
+
+    await user.click(await screen.findByRole("button", { name: "Yes" }));
+    expect(screen.getByRole("dialog", { name: openProp.title })).toBeInTheDocument();
+
+    auth.user = null;
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument());
   });
 });

@@ -27,13 +27,13 @@ export function AuthDialogProvider({ children }) {
     setDialog(null);
   }, []);
 
-  const handleAuthenticated = useCallback((dialogId) => {
+  const handleAuthenticated = useCallback((dialogId, authenticatedUser) => {
     const activeDialog = activeDialogRef.current;
     if (!activeDialog || activeDialog.id !== dialogId) return;
     const { returnTo, onAuthenticated } = activeDialog;
     close();
     if (returnTo) navigate(returnTo);
-    onAuthenticated?.();
+    onAuthenticated?.(authenticatedUser);
   }, [close, navigate]);
 
   const changeMode = useCallback((mode) => {
@@ -68,7 +68,7 @@ export function AuthDialogProvider({ children }) {
           mode={dialog.mode}
           onModeChange={changeMode}
           onClose={close}
-          onAuthenticated={() => handleAuthenticated(dialog.id)}
+          onAuthenticated={(authenticatedUser) => handleAuthenticated(dialog.id, authenticatedUser)}
         />
       )}
     </AuthDialogContext.Provider>

@@ -254,6 +254,7 @@ describe("AuthDialogProvider", () => {
     await user.click(within(dialog).getByRole("button", { name: "Log in" }));
 
     await waitFor(() => expect(onAuthenticated).toHaveBeenCalledTimes(1));
+    expect(onAuthenticated).toHaveBeenCalledWith({ username: "demo" });
   });
 
   it("does not resume a cancelled action, even after a later login", async () => {

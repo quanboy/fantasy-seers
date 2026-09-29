@@ -225,7 +225,14 @@ export default function VoteModal({ prop, onClose, onVoted, userPoints }) {
             </div>
 
             <button
-              onClick={async () => { try { await onVoted(); } finally { onClose(); } }}
+              onClick={async () => {
+                let shouldClose = true;
+                try {
+                  shouldClose = (await onVoted()) !== false;
+                } finally {
+                  if (shouldClose) onClose();
+                }
+              }}
               className="w-full py-4 rounded-lg font-semibold transition-all btn-ghost"
             >
               Back to Feed

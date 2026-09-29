@@ -76,8 +76,8 @@ function useSubmit(action, onSuccess, toMessage) {
     setError("");
     setLoading(true);
     try {
-      await action();
-      onSuccess();
+      const authenticatedUser = await action();
+      onSuccess(authenticatedUser);
     } catch (err) {
       setError(toMessage(err));
     } finally {
