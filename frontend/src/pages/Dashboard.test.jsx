@@ -209,6 +209,33 @@ describe("Dashboard", () => {
     expect(screen.getByText(/Make a call/)).toBeInTheDocument();
   });
 
+  it("resets profile state and ignores a late response when accounts change", async () => {
+    const firstProfile = deferred();
+    api.userApi.getMe
+      .mockReturnValueOnce(firstProfile.promise)
+      .mockResolvedValueOnce({ data: { favoriteNflTeam: "BUF" } });
+    auth.user = { username: "first", pointBank: 1000, role: "USER" };
+    const view = renderFeed();
+    await screen.findByText("Will the Bills win on Sunday?");
+    expect(api.userApi.getMe).toHaveBeenCalledTimes(1);
+
+    auth.user = { username: "second", pointBank: 700, role: "USER" };
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(api.userApi.getMe).toHaveBeenCalledTimes(2));
+
+    await act(async () => {
+      firstProfile.resolve({ data: {} });
+    });
+
+    expect(screen.queryByText(/Complete your profile/)).not.toBeInTheDocument();
+  });
+
   it("does not apply a post-vote balance refresh to a different account", async () => {
     const user = userEvent.setup();
     const balanceRequest = deferred();

@@ -142,8 +142,9 @@ describe("MasterSheetPage", () => {
 
       async function renderGuestWithDraft() {
         saveGuestDraft(guestSheet, guestOrder);
-        renderMasterSheet();
+        const view = renderMasterSheet();
         await screen.findByText("Guest rankings restored from this device");
+        return view;
       }
 
       async function signInFromSave(accountResponse) {
@@ -213,6 +214,39 @@ describe("MasterSheetPage", () => {
         await signInFromSave(account());
 
         expect(await screen.findByText(/Server unavailable/)).toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("ignores a guest-save response after the active account changes", async () => {
+        const saveRequest = deferred();
+        const secondAccountRankings = [
+          { ...rankings[0], fullName: "Second Account First" },
+          { ...rankings[1], fullName: "Second Account Second" },
+        ];
+        boardMocks.upsertEntries.mockReturnValue(saveRequest.promise);
+        const view = await renderGuestWithDraft();
+        await signInFromSave(account());
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+
+        auth.user = { username: "second", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({
+          boardId: 84,
+          rankings: secondAccountRankings,
+          isDefault: false,
+        }));
+        view.rerender(
+          <MemoryRouter>
+            <MasterSheetPage />
+          </MemoryRouter>
+        );
+        expect(await screen.findByText("Second Account First")).toBeInTheDocument();
+
+        await act(async () => {
+          saveRequest.resolve({ data: {} });
+        });
+
+        expect(screen.getByText("Second Account First")).toBeInTheDocument();
+        expect(screen.queryByText("Bravo Catcher")).not.toBeInTheDocument();
         expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
       });
 

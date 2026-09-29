@@ -38,16 +38,19 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    let active = true;
+    setProfileIncomplete(false);
+    setProfileBannerDismissed(false);
     fetchProps();
-    if (isGuest) return;
+    if (isGuest) return () => { active = false; };
     userApi.getMe()
       .then(({ data }) => {
-        if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
-          setProfileIncomplete(true);
-        }
+        if (!active) return;
+        setProfileIncomplete(!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater);
       })
       .catch(() => {});
-  }, [isGuest]);
+    return () => { active = false; };
+  }, [accountIdentity, isGuest]);
 
   const handleVoted = async () => {
     const votingAccount = accountIdentity;

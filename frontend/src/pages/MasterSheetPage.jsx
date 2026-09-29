@@ -430,6 +430,8 @@ export default function MasterSheetPage() {
   const { user } = useAuth();
   const isGuest = !user;
   const accountIdentity = user?.username ?? null;
+  const accountIdentityRef = useRef(accountIdentity);
+  accountIdentityRef.current = accountIdentity;
   const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
@@ -478,6 +480,7 @@ export default function MasterSheetPage() {
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setSaving(false);
     setError(null);
     setDirty(false);
     setDraftRestored(false);
@@ -566,6 +569,7 @@ export default function MasterSheetPage() {
   }, [boardId, dirty, locked, rankings, viewingGuest]);
 
   const saveGuestRankings = useCallback(async (guestRankings, guestSheet) => {
+    const savingAccount = accountIdentity;
     setSaving(true);
     setError(null);
     try {
@@ -573,6 +577,7 @@ export default function MasterSheetPage() {
         boardId,
         guestRankings.map((p, i) => ({ playerId: p.playerId, rank: i + 1 }))
       );
+      if (accountIdentityRef.current !== savingAccount) return;
       clearGuestDraft(guestSheet);
       localStorage.removeItem(`fs_board_draft:${boardId}`);
       setRankings(guestRankings);
@@ -584,6 +589,7 @@ export default function MasterSheetPage() {
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
+      if (accountIdentityRef.current !== savingAccount) return;
       // Keep the guest rankings so the save can be retried.
       saveGuestDraft(guestSheet, guestRankings);
       setGuestNotice({ type: "offer", rankings: guestRankings, sheet: guestSheet });
@@ -591,9 +597,9 @@ export default function MasterSheetPage() {
         `${err.response?.data?.message || "Failed to save rankings"}. Your guest rankings are still on this device.`
       );
     } finally {
-      setSaving(false);
+      if (accountIdentityRef.current === savingAccount) setSaving(false);
     }
-  }, [boardId]);
+  }, [accountIdentity, boardId]);
 
   // Resolve guest rankings once the signed-in board has loaded.
   useEffect(() => {

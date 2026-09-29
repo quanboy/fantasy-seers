@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useState } from "react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -60,6 +60,14 @@ function DisappearingTrigger() {
 async function openDialog(user) {
   await user.click(screen.getByRole("button", { name: "Open auth" }));
   return screen.getByRole("dialog");
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
 }
 
 describe("AuthDialogProvider", () => {
@@ -265,5 +273,27 @@ describe("AuthDialogProvider", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(onAuthenticated).not.toHaveBeenCalled();
+  });
+
+  it("does not resume an action when the dialog closes during an in-flight login", async () => {
+    const loginRequest = deferred();
+    const onAuthenticated = vi.fn();
+    auth.login.mockReturnValue(loginRequest.promise);
+    const user = userEvent.setup();
+    renderWithTrigger({ onAuthenticated });
+    const dialog = await openDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Username"), "demo");
+    await user.type(within(dialog).getByLabelText("Password"), "safe-password");
+    await user.click(within(dialog).getByRole("button", { name: "Log in" }));
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await act(async () => {
+      loginRequest.resolve({ username: "demo" });
+    });
+
+    expect(onAuthenticated).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

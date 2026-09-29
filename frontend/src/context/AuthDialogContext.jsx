@@ -9,26 +9,41 @@ export function AuthDialogProvider({ children }) {
   const [dialog, setDialog] = useState(null); // { mode, returnTo, onAuthenticated } while open
   const openerRef = useRef(null);
   const restoreFocusRef = useRef(false);
+  const activeDialogRef = useRef(null);
+  const nextDialogIdRef = useRef(0);
 
   // onAuthenticated resumes whatever asked for login (e.g. saving rankings); it runs
   // once after a successful login/signup and is dropped if the dialog is dismissed.
   const openAuthDialog = useCallback((mode = "login", { returnTo, onAuthenticated } = {}) => {
     openerRef.current = document.activeElement;
-    setDialog({ mode, returnTo, onAuthenticated });
+    const nextDialog = { id: ++nextDialogIdRef.current, mode, returnTo, onAuthenticated };
+    activeDialogRef.current = nextDialog;
+    setDialog(nextDialog);
   }, []);
 
   const close = useCallback(() => {
+    activeDialogRef.current = null;
     restoreFocusRef.current = true;
     setDialog(null);
   }, []);
 
-  const handleAuthenticated = useCallback(() => {
-    const returnTo = dialog?.returnTo;
-    const onAuthenticated = dialog?.onAuthenticated;
+  const handleAuthenticated = useCallback((dialogId) => {
+    const activeDialog = activeDialogRef.current;
+    if (!activeDialog || activeDialog.id !== dialogId) return;
+    const { returnTo, onAuthenticated } = activeDialog;
     close();
     if (returnTo) navigate(returnTo);
     onAuthenticated?.();
-  }, [dialog, close, navigate]);
+  }, [close, navigate]);
+
+  const changeMode = useCallback((mode) => {
+    setDialog((current) => {
+      if (!current) return current;
+      const nextDialog = { ...current, mode };
+      activeDialogRef.current = nextDialog;
+      return nextDialog;
+    });
+  }, []);
 
   // Return focus to whatever opened the dialog, if it is still on the page.
   useEffect(() => {
@@ -51,9 +66,9 @@ export function AuthDialogProvider({ children }) {
       {dialog && (
         <AuthDialog
           mode={dialog.mode}
-          onModeChange={(mode) => setDialog((current) => ({ ...current, mode }))}
+          onModeChange={changeMode}
           onClose={close}
-          onAuthenticated={handleAuthenticated}
+          onAuthenticated={() => handleAuthenticated(dialog.id)}
         />
       )}
     </AuthDialogContext.Provider>

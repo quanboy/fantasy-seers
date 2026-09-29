@@ -42,9 +42,18 @@ function renderLayout(initialEntry = "/") {
   );
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("AppLayout", () => {
   beforeEach(() => {
     auth.user = member;
+    auth.setUser.mockClear();
     auth.logout.mockClear();
     openAuthDialog.mockClear();
     getMe.mockReset();
@@ -165,5 +174,32 @@ describe("AppLayout", () => {
     renderLayout();
     await act(async () => { vi.advanceTimersByTime(60000); });
     expect(getMe).not.toHaveBeenCalled();
+  });
+
+  it("ignores an in-flight point refresh after the active account changes", async () => {
+    vi.useFakeTimers();
+    const refresh = deferred();
+    getMe.mockReturnValueOnce(refresh.promise);
+    auth.user = { username: "first", pointBank: 1000, role: "USER" };
+    const view = renderLayout();
+
+    await act(async () => { vi.advanceTimersByTime(30000); });
+    expect(getMe).toHaveBeenCalledTimes(1);
+
+    auth.user = { username: "second", pointBank: 700, role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route index element={<h1>Master Sheet</h1>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+    await act(async () => {
+      refresh.resolve({ data: { pointBank: 900 } });
+    });
+
+    expect(auth.setUser).not.toHaveBeenCalled();
   });
 });

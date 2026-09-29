@@ -21,22 +21,32 @@ export default function AppLayout() {
 
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
-  const signedIn = Boolean(user);
+  const accountIdentity = user?.username ?? null;
   useEffect(() => {
-    if (!signedIn) return undefined;
+    if (!accountIdentity) return undefined;
+    let active = true;
     const interval = setInterval(async () => {
+      const requestedToken = localStorage.getItem("fs_token");
       try {
         const { data } = await userApi.getMe();
         const current = userRef.current;
-        if (current && data.pointBank !== current.pointBank) {
+        if (
+          active &&
+          current?.username === accountIdentity &&
+          localStorage.getItem("fs_token") === requestedToken &&
+          data.pointBank !== current.pointBank
+        ) {
           const updated = { ...current, pointBank: data.pointBank };
           localStorage.setItem("fs_user", JSON.stringify(updated));
           setUser(updated);
         }
       } catch {}
     }, 30000);
-    return () => clearInterval(interval);
-  }, [signedIn, setUser]);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [accountIdentity, setUser]);
 
   useEffect(() => {
     const header = headerRef.current;
