@@ -122,7 +122,7 @@ export default function GroupsPage() {
           <div className="rounded-xl p-5 glass-card">
             <h2 className="font-display text-sm font-700 text-slate-100 mb-1">Join a Group</h2>
             <p className="mb-4 text-xs text-slate-400">
-              Your group invite code is separate from your registration code.
+              Ask the group owner for their 8-character invite code.
             </p>
             <form onSubmit={handleJoin} className="flex flex-col gap-3">
               <input

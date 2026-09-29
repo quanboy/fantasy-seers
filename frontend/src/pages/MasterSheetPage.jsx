@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
+import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
+import { clearGuestDraft, loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
 import {
   DndContext,
   closestCenter,
@@ -360,7 +363,73 @@ function getSaveStatus({ locked, saving, dirty, isDefault }) {
   return "Saved";
 }
 
+const sheetFormat = (sheet) => ({
+  season: sheet.season,
+  scoringFormat: sheet.scoringFormat,
+  superflex: Boolean(sheet.superflex),
+});
+
+const sameOrder = (a, b) =>
+  a.length === b.length && a.every((player, i) => player.playerId === b[i].playerId);
+
+function GuestRankingsNotice({ notice, viewing, saving, onView, onBack, onDiscard, onKeep, onReplace }) {
+  const box = "mb-3 rounded-lg border px-4 py-3 text-sm";
+  const action = "rounded-lg px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400";
+  const primary = `btn-oracle ${action}`;
+  const secondary = `border border-void-600 text-slate-300 hover:border-oracle-500 hover:text-slate-100 ${action}`;
+
+  if (viewing) {
+    return (
+      <div className={`${box} border-oracle-500/30 bg-oracle-500/10`} role="region" aria-label="Guest rankings">
+        <p className="text-slate-200">
+          {notice.type === "locked"
+            ? "Practice board: your guest rankings, kept only in this browser. The league has locked, so they can't be saved."
+            : "Viewing your guest rankings. Saving replaces your saved order."}
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" className={secondary} onClick={onBack}>Back to saved rankings</button>
+          <button type="button" className={secondary} onClick={onDiscard}>Discard guest rankings</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (notice.type === "conflict") {
+    return (
+      <div className={`${box} border-gold-500/30 bg-gold-500/10`} role="region" aria-label="Guest rankings">
+        <p className="text-slate-200">
+          <span className="font-semibold">You already have saved rankings.</span>{" "}
+          Keep them, or replace them with the rankings you made before signing in. Replacing overwrites your saved order.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" className={secondary} onClick={onKeep} disabled={saving}>Keep saved rankings</button>
+          <button type="button" className={primary} onClick={onReplace} disabled={saving}>Replace saved rankings</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`${box} border-oracle-500/20 bg-oracle-500/10`} role="region" aria-label="Guest rankings">
+      <p className="text-slate-200">
+        {notice.type === "locked"
+          ? "You have rankings from before you signed in, but the league has locked, so they can't be saved."
+          : "You have rankings from before you signed in. They haven't been saved to your account."}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button type="button" className={primary} onClick={onView}>
+          {notice.type === "locked" ? "View practice board" : "View guest rankings"}
+        </button>
+        <button type="button" className={secondary} onClick={onDiscard}>Discard guest rankings</button>
+      </div>
+    </div>
+  );
+}
+
 export default function MasterSheetPage() {
+  const { user } = useAuth();
+  const isGuest = !user;
+  const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
   const [season, setSeason] = useState(null);
@@ -374,6 +443,15 @@ export default function MasterSheetPage() {
   const [dirty, setDirty] = useState(false);
   const [saveMsg, setSaveMsg] = useState(null);
   const [draftRestored, setDraftRestored] = useState(false);
+  const [guestDraftStored, setGuestDraftStored] = useState(false);
+  // Signed-in board as loaded (before any guest rankings are shown over it).
+  const [accountSheet, setAccountSheet] = useState(null);
+  // Set when a guest pressed "Sign up to save" and then signed in.
+  const [saveIntent, setSaveIntent] = useState(null);
+  // Guest rankings waiting for a decision after sign-in: { type, rankings, sheet }.
+  const [guestNotice, setGuestNotice] = useState(null);
+  const [viewingGuest, setViewingGuest] = useState(false);
+  const accountViewRef = useRef(null);
   const [error, setError] = useState(null);
   const [selectedPositions, setSelectedPositions] = useState(["ALL"]);
   const [consensusNoticeDismissed, setConsensusNoticeDismissed] = useState(false);
@@ -397,12 +475,26 @@ export default function MasterSheetPage() {
   useEffect(() => () => clearTimeout(revealTimerRef.current), []);
 
   useEffect(() => {
-    boardsApi
-      .getMySheet()
+    setLoading(true);
+    setError(null);
+    setDirty(false);
+    setDraftRestored(false);
+    setAccountSheet(null);
+    setGuestNotice(null);
+    setViewingGuest(false);
+    (isGuest ? boardsApi.getDefaultSheet() : boardsApi.getMySheet())
       .then(({ data }) => {
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
-        if (!data.locked) {
+        if (isGuest) {
+          const guestDraft = loadGuestDraft(data, { players: data.rankings });
+          if (guestDraft) {
+            nextRankings = guestDraft;
+            setDirty(true);
+            setDraftRestored(true);
+            setGuestDraftStored(true);
+          }
+        } else if (!data.locked) {
           try {
             const draft = JSON.parse(localStorage.getItem(`fs_board_draft:${data.boardId}`));
             const serverIds = new Set(data.rankings.map((player) => player.playerId));
@@ -423,6 +515,13 @@ export default function MasterSheetPage() {
         } else {
           localStorage.removeItem(`fs_board_draft:${data.boardId}`);
         }
+        if (!isGuest) {
+          setAccountSheet({
+            ...data,
+            rankings: nextRankings,
+            hasWork: !data.isDefault || nextRankings !== data.rankings,
+          });
+        }
         setRankings(nextRankings);
         setSeason(data.season);
         setIsDefault(data.isDefault);
@@ -432,10 +531,20 @@ export default function MasterSheetPage() {
       })
       .catch((err) => setError(err.response?.data?.message || "Failed to load rankings"))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isGuest]);
 
   useEffect(() => {
-    if (!boardId || locked || !dirty) return;
+    if (viewingGuest && guestNotice) {
+      saveGuestDraft(guestNotice.sheet, rankings);
+      return;
+    }
+    if (!isGuest || !dirty || !season) return;
+    setGuestDraftStored(saveGuestDraft({ season, scoringFormat, superflex }, rankings));
+  }, [isGuest, viewingGuest, guestNotice, dirty, season, scoringFormat, superflex, rankings]);
+
+  useEffect(() => {
+    // Account drafts only ever hold the account's own edits, never guest rankings.
+    if (!boardId || locked || !dirty || viewingGuest) return;
     try {
       localStorage.setItem(
         `fs_board_draft:${boardId}`,
@@ -444,7 +553,93 @@ export default function MasterSheetPage() {
     } catch {
       // The explicit save button still works if storage is unavailable.
     }
-  }, [boardId, dirty, locked, rankings]);
+  }, [boardId, dirty, locked, rankings, viewingGuest]);
+
+  const saveGuestRankings = useCallback(async (guestRankings, guestSheet) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await boardsApi.upsertEntries(
+        boardId,
+        guestRankings.map((p, i) => ({ playerId: p.playerId, rank: i + 1 }))
+      );
+      clearGuestDraft(guestSheet);
+      localStorage.removeItem(`fs_board_draft:${boardId}`);
+      setRankings(guestRankings);
+      setIsDefault(false);
+      setDirty(false);
+      setDraftRestored(false);
+      setViewingGuest(false);
+      setGuestNotice(null);
+      setSaveMsg("Saved \u2713");
+      setTimeout(() => setSaveMsg(null), 3000);
+    } catch (err) {
+      // Keep the guest rankings so the save can be retried.
+      saveGuestDraft(guestSheet, guestRankings);
+      setGuestNotice({ type: "offer", rankings: guestRankings, sheet: guestSheet });
+      setError(
+        `${err.response?.data?.message || "Failed to save rankings"}. Your guest rankings are still on this device.`
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [boardId]);
+
+  // Resolve guest rankings once the signed-in board has loaded.
+  useEffect(() => {
+    if (isGuest || !accountSheet) return;
+    const format = sheetFormat(accountSheet);
+
+    if (saveIntent) {
+      const { rankings: guestRankings, sheet: guestSheet } = saveIntent;
+      setSaveIntent(null);
+      if (accountSheet.locked) {
+        setGuestNotice({ type: "locked", rankings: guestRankings, sheet: guestSheet });
+      } else if (!accountSheet.hasWork) {
+        saveGuestRankings(guestRankings, guestSheet);
+      } else if (sameOrder(guestRankings, accountSheet.rankings)) {
+        clearGuestDraft(guestSheet);
+      } else {
+        setGuestNotice({ type: "conflict", rankings: guestRankings, sheet: guestSheet });
+      }
+      return;
+    }
+
+    setGuestNotice((current) => {
+      if (current) return current;
+      const stored = loadGuestDraft(format);
+      if (!stored || sameOrder(stored, accountSheet.rankings)) return null;
+      return { type: accountSheet.locked ? "locked" : "offer", rankings: stored, sheet: format };
+    });
+  }, [isGuest, accountSheet, saveIntent, saveGuestRankings]);
+
+  const viewGuestRankings = () => {
+    accountViewRef.current = { rankings, dirty, draftRestored };
+    setRankings(guestNotice.rankings);
+    setViewingGuest(true);
+    setDirty(true);
+  };
+
+  const backToSavedRankings = () => {
+    const saved = accountViewRef.current;
+    if (!saved) return;
+    setRankings(saved.rankings);
+    setDirty(saved.dirty);
+    setDraftRestored(saved.draftRestored);
+    setViewingGuest(false);
+  };
+
+  const discardGuestRankings = () => {
+    clearGuestDraft(guestNotice.sheet);
+    if (viewingGuest) backToSavedRankings();
+    setGuestNotice(null);
+  };
+
+  const keepSavedRankings = () => {
+    setGuestNotice((current) => ({ ...current, type: "offer" }));
+  };
+
+  const editingLocked = locked && !viewingGuest;
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -490,7 +685,7 @@ export default function MasterSheetPage() {
 
   const handleDragEnd = useCallback(
     (event) => {
-      if (locked || searchActive) return;
+      if (editingLocked || searchActive) return;
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
@@ -514,10 +709,14 @@ export default function MasterSheetPage() {
 
       setDirty(true);
     },
-    [locked, searchActive, isAllSelected, filteredRankings, selectedPositions, recalcRanks]
+    [editingLocked, searchActive, isAllSelected, filteredRankings, selectedPositions, recalcRanks]
   );
 
   const handleSave = async () => {
+    if (viewingGuest && guestNotice && !locked) {
+      await saveGuestRankings(rankings, guestNotice.sheet);
+      return;
+    }
     if (locked) {
       setError("This board is locked and cannot be edited.");
       return;
@@ -634,7 +833,20 @@ export default function MasterSheetPage() {
         </div>
       )}
 
-      {locked && !loading && (
+      {guestNotice && !loading && (
+        <GuestRankingsNotice
+          notice={guestNotice}
+          viewing={viewingGuest}
+          saving={saving}
+          onView={viewGuestRankings}
+          onBack={backToSavedRankings}
+          onDiscard={discardGuestRankings}
+          onKeep={keepSavedRankings}
+          onReplace={() => saveGuestRankings(guestNotice.rankings, guestNotice.sheet)}
+        />
+      )}
+
+      {locked && !viewingGuest && !loading && (
         <div className="mb-3 rounded-lg border border-gold-500/30 bg-gold-500/10 px-4 py-3 text-sm text-gold-400">
           <span className="font-semibold">League lock complete.</span> Rankings can no longer be changed.
         </div>
@@ -642,9 +854,17 @@ export default function MasterSheetPage() {
 
       {dirty && !locked && !loading && (
         <p className="mb-2 text-xs text-gold-400" role="status">
-          {draftRestored
-            ? "Unsaved changes restored from this device"
-            : "Unsaved changes are protected on this device"}
+          {viewingGuest
+            ? "Guest rankings shown. Not saved to your account."
+            : isGuest
+            ? draftRestored
+              ? "Guest rankings restored from this device"
+              : guestDraftStored
+                ? "Saved on this device. Sign up to keep them in your account."
+                : "Sign up to keep these changes"
+            : draftRestored
+              ? "Unsaved changes restored from this device"
+              : "Unsaved changes are protected on this device"}
         </p>
       )}
 
@@ -701,6 +921,29 @@ export default function MasterSheetPage() {
             >
               {saveStatus}
             </span>
+            {isGuest ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const guestRankings = rankings;
+                  const guestSheet = { season, scoringFormat, superflex };
+                  openAuthDialog("signup", {
+                    onAuthenticated: () => setSaveIntent({ rankings: guestRankings, sheet: guestSheet }),
+                  });
+                }}
+                className="btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold"
+              >
+                Sign up to save
+              </button>
+            ) : viewingGuest && locked ? (
+              <button
+                type="button"
+                disabled
+                className="btn-oracle shrink-0 rounded-lg px-3 py-2 text-sm font-semibold opacity-50 cursor-not-allowed"
+              >
+                Practice only
+              </button>
+            ) : (
             <button
               onClick={handleSave}
               disabled={locked || !dirty || saving}
@@ -711,6 +954,7 @@ export default function MasterSheetPage() {
             >
               {locked ? "Locked" : saving ? "Saving..." : saveMsg || "Save"}
             </button>
+            )}
           </div>
         </div>
       )}
@@ -742,7 +986,7 @@ export default function MasterSheetPage() {
                     key={player.playerId}
                     player={player}
                     overallIndex={overallIndexMap.get(player.playerId)}
-                    locked={locked}
+                    locked={editingLocked}
                     searchActive={searchActive}
                     highlighted={revealedPlayer?.playerId === player.playerId}
                     onShowInBoard={showInBoard}

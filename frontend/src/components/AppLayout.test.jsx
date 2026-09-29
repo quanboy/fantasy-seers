@@ -1,21 +1,27 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AppLayout from "./AppLayout";
 
-const auth = {
-  user: { username: "demo", pointBank: 1000, role: "USER" },
-  setUser: vi.fn(),
-  logout: vi.fn(),
-};
+const member = { username: "demo", pointBank: 1000, role: "USER" };
+
+const { auth, getMe, openAuthDialog } = vi.hoisted(() => ({
+  auth: { user: null, setUser: vi.fn(), logout: vi.fn() },
+  getMe: vi.fn(),
+  openAuthDialog: vi.fn(),
+}));
+
+vi.mock("../context/AuthDialogContext", () => ({
+  useAuthDialog: () => ({ openAuthDialog }),
+}));
 
 vi.mock("../context/AuthContext", () => ({
   useAuth: () => auth,
 }));
 
 vi.mock("../api/client", () => ({
-  userApi: { getMe: vi.fn() },
+  userApi: { getMe },
 }));
 
 function LocationProbe() {
@@ -38,7 +44,15 @@ function renderLayout(initialEntry = "/") {
 
 describe("AppLayout", () => {
   beforeEach(() => {
+    auth.user = member;
     auth.logout.mockClear();
+    openAuthDialog.mockClear();
+    getMe.mockReset();
+    getMe.mockResolvedValue({ data: member });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("puts the brand and account controls in one global header above primary navigation", () => {
@@ -98,5 +112,58 @@ describe("AppLayout", () => {
     await user.keyboard("{Enter}");
 
     expect(screen.getByLabelText("Current location")).toHaveTextContent("/props");
+  });
+
+  it("offers guests Log in and Sign up dialogs instead of account controls", async () => {
+    const user = userEvent.setup();
+    auth.user = null;
+    renderLayout();
+
+    const header = screen.getByRole("banner");
+    await user.click(within(header).getByRole("button", { name: "Log in" }));
+    expect(openAuthDialog).toHaveBeenLastCalledWith("login");
+    await user.click(within(header).getByRole("button", { name: "Sign up" }));
+    expect(openAuthDialog).toHaveBeenLastCalledWith("signup");
+    expect(screen.getByLabelText("Current location")).toHaveTextContent("/");
+    expect(within(header).queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+    expect(within(header).queryByLabelText(/points/)).not.toBeInTheDocument();
+  });
+
+  it("shows guests only the public pages in navigation", () => {
+    auth.user = null;
+    renderLayout();
+
+    const nav = screen.getByRole("navigation", { name: "Primary navigation" });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Master Sheet",
+      "Props Feed",
+    ]);
+  });
+
+  it("shows members their private pages in navigation", () => {
+    renderLayout();
+
+    const nav = screen.getByRole("navigation", { name: "Primary navigation" });
+    expect(within(nav).getAllByRole("link").map((link) => link.textContent)).toEqual([
+      "Master Sheet",
+      "Props Feed",
+      "Leagues",
+      "Leaderboard",
+      "Profile",
+    ]);
+  });
+
+  it("refreshes the point bank for members but never polls the account for guests", async () => {
+    vi.useFakeTimers();
+    const { unmount } = renderLayout();
+    await act(async () => { vi.advanceTimersByTime(30000); });
+    expect(getMe).toHaveBeenCalledTimes(1);
+    unmount();
+
+    getMe.mockClear();
+    auth.user = null;
+    renderLayout();
+    await act(async () => { vi.advanceTimersByTime(60000); });
+    expect(getMe).not.toHaveBeenCalled();
   });
 });

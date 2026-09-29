@@ -147,6 +147,25 @@ public class BoardService {
         );
     }
 
+    /** Read-only default sheet for guests; never creates a board. */
+    @Transactional(readOnly = true)
+    public BoardSheetResponse getDefaultSheet(Integer season) {
+        List<RankedPlayerResponse> rankings = defaultBoardRankingService.getRankings().stream()
+                .map(this::toRankedPlayerResponse)
+                .toList();
+
+        return new BoardSheetResponse(
+                null,
+                season,
+                leagueFormat.getScoringFormat(),
+                leagueFormat.isSuperflex(),
+                false,
+                null,
+                true,
+                rankings
+        );
+    }
+
     private RankedPlayerResponse toRankedPlayerResponse(
             DefaultBoardRankingService.DefaultRanking ranking
     ) {

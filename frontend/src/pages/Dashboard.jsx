@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
 import { propsApi, userApi } from "../api/client";
 import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
@@ -12,6 +13,8 @@ function SkeletonCard() {
 
 export default function Dashboard() {
   const { user, setUser } = useAuth();
+  const isGuest = !user;
+  const { openAuthDialog } = useAuthDialog();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -19,6 +22,9 @@ export default function Dashboard() {
   const [profileBannerDismissed, setProfileBannerDismissed] = useState(false);
   const [profileIncomplete, setProfileIncomplete] = useState(false);
   const [sportFilter, setSportFilter] = useState("ALL");
+  // A vote a guest started before signing in; resumed once they're signed in.
+  const [pendingVote, setPendingVote] = useState(null);
+  const [voteNotice, setVoteNotice] = useState(null);
 
   const fetchProps = () => {
     setError(null);
@@ -31,6 +37,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchProps();
+    if (isGuest) return;
     userApi.getMe()
       .then(({ data }) => {
         if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
@@ -38,7 +45,7 @@ export default function Dashboard() {
         }
       })
       .catch(() => {});
-  }, []);
+  }, [isGuest]);
 
   const handleVoted = async () => {
     const { data } = await userApi.getMe();
@@ -48,6 +55,34 @@ export default function Dashboard() {
     setSelectedProp(null);
     fetchProps();
   };
+
+  // Guests sign in first; the vote then reopens for explicit confirmation (never auto-submitted).
+  const handleVote = isGuest
+    ? (vote) => openAuthDialog("login", { onAuthenticated: () => setPendingVote(vote) })
+    : setSelectedProp;
+
+  useEffect(() => {
+    if (!pendingVote || isGuest) return;
+    const vote = pendingVote;
+    setPendingVote(null);
+    Promise.all([propsApi.getById(vote.id), userApi.getMe()])
+      .then(([{ data: prop }, { data: me }]) => {
+        setUser((current) => {
+          const updated = { ...current, pointBank: me.pointBank };
+          localStorage.setItem("fs_user", JSON.stringify(updated));
+          return updated;
+        });
+        if (prop.userChoice) {
+          setVoteNotice("You already voted on this prop.");
+        } else if (prop.status !== "OPEN" || new Date(prop.closesAt) <= new Date()) {
+          setVoteNotice("Voting has closed.");
+        } else {
+          setSelectedProp({ ...prop, _initialChoice: vote._initialChoice, _initialWager: vote._initialWager });
+        }
+      })
+      .catch(() => setVoteNotice("Couldn't load that prop. Please try again."))
+      .finally(fetchProps);
+  }, [pendingVote, isGuest]);
 
   const filtered = useMemo(() => {
     if (sportFilter === "ALL") return props;
@@ -83,10 +118,24 @@ export default function Dashboard() {
           </div>
         )}
 
+        {voteNotice && (
+          <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3">
+            <p className="text-sm text-slate-200">{voteNotice}</p>
+            <button
+              type="button"
+              onClick={() => setVoteNotice(null)}
+              aria-label="Dismiss"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-void-700 hover:text-slate-200"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         {!loading && !error && (
           <div className="animate-fade-in">
             {/* Profile completion banner */}
-            {profileIncomplete && !profileBannerDismissed && (
+            {!isGuest && profileIncomplete && !profileBannerDismissed && (
               <div className="chip-gold rounded-lg px-4 py-3 mb-5 flex items-center justify-between">
                 <p className="text-sm text-gold-400">
                   Complete your profile — add your favorite teams and alma mater.{' '}
@@ -108,7 +157,7 @@ export default function Dashboard() {
             )}
 
             {/* Composer */}
-            <SubmitPropCard onSubmitted={fetchProps} />
+            {!isGuest && <SubmitPropCard onSubmitted={fetchProps} />}
 
             {/* Sport filter pills */}
             {sports.length > 2 && (
@@ -154,7 +203,7 @@ export default function Dashboard() {
                   <PropCard
                     key={prop.id}
                     prop={prop}
-                    onVote={setSelectedProp}
+                    onVote={handleVote}
                   />
                 ))}
               </div>
@@ -177,7 +226,7 @@ export default function Dashboard() {
                     <PropCard
                       key={prop.id}
                       prop={prop}
-                      onVote={setSelectedProp}
+                      onVote={handleVote}
                     />
                   ))}
                 </div>
@@ -201,7 +250,7 @@ export default function Dashboard() {
                     <PropCard
                       key={prop.id}
                       prop={prop}
-                      onVote={setSelectedProp}
+                      onVote={handleVote}
                     />
                   ))}
                 </div>

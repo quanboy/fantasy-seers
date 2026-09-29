@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { useAuthDialog } from "../context/AuthDialogContext";
 import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
 import PlayerSearchField from "./PlayerSearchField";
@@ -9,6 +10,7 @@ import { withPlayerSearchQuery } from "../utils/playerSearch";
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, setUser, logout } = useAuth();
+  const { openAuthDialog } = useAuthDialog();
   const location = useLocation();
   const navigate = useNavigate();
   const isMasterSheet = location.pathname === "/" || location.pathname === "/master-sheet";
@@ -19,7 +21,9 @@ export default function AppLayout() {
 
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
+  const signedIn = Boolean(user);
   useEffect(() => {
+    if (!signedIn) return undefined;
     const interval = setInterval(async () => {
       try {
         const { data } = await userApi.getMe();
@@ -32,7 +36,7 @@ export default function AppLayout() {
       } catch {}
     }, 30000);
     return () => clearInterval(interval);
-  }, [setUser]);
+  }, [signedIn, setUser]);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -71,6 +75,12 @@ export default function AppLayout() {
     if (!query) return;
     setPlayerQuery(query);
     updateMasterSheetQuery(query);
+  };
+
+  // Leave private pages before clearing the session so they don't prompt for login.
+  const handleSignOut = () => {
+    navigate("/");
+    logout();
   };
 
   const clearPlayerSearch = () => {
@@ -116,6 +126,7 @@ export default function AppLayout() {
 
           <div className="min-w-0 flex-1 lg:hidden" />
 
+          {user ? (
           <div className="flex h-10 items-center gap-2 sm:gap-3">
             <span className="max-w-[88px] truncate text-sm font-medium text-slate-400 sm:max-w-none">
               {user?.username}
@@ -131,12 +142,30 @@ export default function AppLayout() {
             </div>
 
             <button
-              onClick={logout}
+              onClick={handleSignOut}
               className="whitespace-nowrap rounded-lg px-2 py-1.5 text-xs text-slate-500 transition-colors hover:bg-void-800 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
             >
               Sign out
             </button>
           </div>
+          ) : (
+          <div className="flex h-10 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => openAuthDialog("login")}
+              className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-slate-300 transition-colors hover:bg-void-800 hover:text-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400"
+            >
+              Log in
+            </button>
+            <button
+              type="button"
+              onClick={() => openAuthDialog("signup")}
+              className="btn-oracle whitespace-nowrap px-3 py-1.5 text-sm"
+            >
+              Sign up
+            </button>
+          </div>
+          )}
         </div>
       </header>
 

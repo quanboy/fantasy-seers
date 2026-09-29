@@ -1,16 +1,29 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
+import { loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
+  getDefaultSheet: vi.fn(),
   upsertEntries: vi.fn(),
+}));
+
+const auth = vi.hoisted(() => ({ user: null }));
+const openAuthDialog = vi.hoisted(() => vi.fn());
+
+vi.mock("../context/AuthDialogContext", () => ({
+  useAuthDialog: () => ({ openAuthDialog }),
 }));
 
 vi.mock("../api/client", () => ({
   boardsApi: boardMocks,
+}));
+
+vi.mock("../context/AuthContext", () => ({
+  useAuth: () => auth,
 }));
 
 const rankings = [
@@ -48,7 +61,9 @@ function renderMasterSheet(initialEntry = "/") {
 describe("MasterSheetPage", () => {
   beforeEach(() => {
     localStorage.clear();
+    auth.user = { username: "demo", role: "USER" };
     boardMocks.getMySheet.mockReset();
+    boardMocks.getDefaultSheet.mockReset();
     boardMocks.upsertEntries.mockReset();
     boardMocks.getMySheet.mockResolvedValue({
       data: {
@@ -62,6 +77,204 @@ describe("MasterSheetPage", () => {
       },
     });
     boardMocks.upsertEntries.mockResolvedValue({ data: {} });
+  });
+
+  describe("for guests", () => {
+    const guestSheet = { season: 2026, scoringFormat: "HALF_PPR", superflex: false };
+
+    beforeEach(() => {
+      auth.user = null;
+      boardMocks.getDefaultSheet.mockResolvedValue({
+        data: { boardId: null, ...guestSheet, rankings, isDefault: true, locked: false },
+      });
+    });
+
+    it("restores guest rankings saved on this device", async () => {
+      saveGuestDraft(guestSheet, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Bravo Catcher, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.getByText("Guest rankings restored from this device")).toBeInTheDocument();
+      expect(boardMocks.getMySheet).not.toHaveBeenCalled();
+    });
+
+    it("ignores guest rankings that no longer match the board", async () => {
+      saveGuestDraft(guestSheet, [rankings[1]]);
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
+    });
+
+    it("ignores guest rankings made for a different scoring format", async () => {
+      saveGuestDraft({ ...guestSheet, scoringFormat: "FULL_PPR" }, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+    });
+
+    describe("then signs in", () => {
+      const guestOrder = [...rankings].reverse();
+      const account = (overrides) => ({
+        data: { boardId: 42, ...guestSheet, rankings, isDefault: true, locked: false, ...overrides },
+      });
+
+      async function renderGuestWithDraft() {
+        saveGuestDraft(guestSheet, guestOrder);
+        renderMasterSheet();
+        await screen.findByText("Guest rankings restored from this device");
+      }
+
+      async function signInFromSave(accountResponse) {
+        boardMocks.getMySheet.mockResolvedValue(accountResponse);
+        fireEvent.click(screen.getByRole("button", { name: "Sign up to save" }));
+        const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+        await act(async () => {
+          auth.user = { username: "demo", role: "USER" };
+          onAuthenticated();
+        });
+      }
+
+      const savedIds = () => boardMocks.upsertEntries.mock.calls.at(-1)[1].map((entry) => entry.playerId);
+
+      it("saves the guest rankings to a new account's empty board", async () => {
+        await renderGuestWithDraft();
+        await signInFromSave(account());
+
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+        expect(savedIds()).toEqual([2, 1]);
+        expect(await screen.findByRole("button", { name: "Saved ✓" })).toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toBeNull();
+      });
+
+      it("asks before replacing rankings the account already saved", async () => {
+        const user = userEvent.setup();
+        await renderGuestWithDraft();
+        await signInFromSave(account({ isDefault: false }));
+
+        expect(await screen.findByText(/You already have saved rankings/)).toBeInTheDocument();
+        expect(screen.getByText(/Replacing overwrites your saved order/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: "Replace saved rankings" }));
+
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+        expect(savedIds()).toEqual([2, 1]);
+        expect(loadGuestDraft(guestSheet)).toBeNull();
+      });
+
+      it("keeps the saved rankings and the guest draft when asked to", async () => {
+        const user = userEvent.setup();
+        await renderGuestWithDraft();
+        await signInFromSave(account({ isDefault: false }));
+
+        await user.click(await screen.findByRole("button", { name: "Keep saved rankings" }));
+
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(screen.getByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+        expect(screen.getByRole("button", { name: "View guest rankings" })).toBeInTheDocument();
+      });
+
+      it("keeps the guest draft and shows the error when saving it fails", async () => {
+        boardMocks.upsertEntries.mockRejectedValue({ response: { data: { message: "Server unavailable" } } });
+        await renderGuestWithDraft();
+        await signInFromSave(account());
+
+        expect(await screen.findByText(/Server unavailable/)).toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("keeps a locked account board unchanged and offers the guest version as practice", async () => {
+        const user = userEvent.setup();
+        await renderGuestWithDraft();
+        await signInFromSave(account({ isDefault: false, locked: true }));
+
+        expect(await screen.findByText(/league has locked/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+
+        await user.click(screen.getByRole("button", { name: "View practice board" }));
+
+        expect(screen.getByRole("button", { name: /Move Bravo Catcher, currently ranked 1/ })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Practice only" })).toBeDisabled();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+      });
+
+      it("after a header login, shows the account board and offers the guest rankings without saving them", async () => {
+        const user = userEvent.setup();
+        const accountDraft = JSON.stringify({ rankings: [] });
+        localStorage.setItem("fs_board_draft:42", accountDraft);
+        boardMocks.getMySheet.mockResolvedValue(account({ isDefault: false }));
+        saveGuestDraft(guestSheet, guestOrder);
+        auth.user = { username: "demo", role: "USER" };
+
+        renderMasterSheet();
+
+        expect(await screen.findByRole("button", { name: "View guest rankings" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: "View guest rankings" }));
+        expect(screen.getByRole("button", { name: /Move Bravo Catcher, currently ranked 1/ })).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(localStorage.getItem("fs_board_draft:42")).toBe(accountDraft);
+
+        await user.click(screen.getByRole("button", { name: "Back to saved rankings" }));
+        expect(screen.getByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+
+        await user.click(screen.getByRole("button", { name: "Discard guest rankings" }));
+        expect(loadGuestDraft(guestSheet)).toBeNull();
+        expect(screen.queryByRole("button", { name: "View guest rankings" })).not.toBeInTheDocument();
+      });
+    });
+
+    it("never restores guest rankings onto a signed-in board", async () => {
+      auth.user = { username: "demo", role: "USER" };
+      saveGuestDraft({ season: 2026, scoringFormat: "FULL_PPR", superflex: false }, [...rankings].reverse());
+
+      renderMasterSheet();
+
+      expect(
+        await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows guests the public default sheet and asks them to sign up to save", async () => {
+    auth.user = null;
+    boardMocks.getDefaultSheet.mockResolvedValue({
+      data: {
+        boardId: null,
+        season: 2026,
+        rankings,
+        isDefault: true,
+        locked: false,
+        scoringFormat: "HALF_PPR",
+        superflex: false,
+      },
+    });
+
+    renderMasterSheet();
+
+    expect(
+      await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })
+    ).toBeInTheDocument();
+    expect(boardMocks.getMySheet).not.toHaveBeenCalled();
+
+    const toolbar = screen.getByRole("toolbar", { name: "Ranking controls" });
+    fireEvent.click(within(toolbar).getByRole("button", { name: "Sign up to save" }));
+    expect(openAuthDialog).toHaveBeenCalledWith("signup", expect.objectContaining({ onAuthenticated: expect.any(Function) }));
+    expect(within(toolbar).queryByRole("button", { name: "Save Rankings" })).not.toBeInTheDocument();
   });
 
   it("restores a local draft, warns before unload, and clears it after saving", async () => {

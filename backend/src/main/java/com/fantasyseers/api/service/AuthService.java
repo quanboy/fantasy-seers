@@ -6,7 +6,6 @@ import com.fantasyseers.api.entity.User;
 import com.fantasyseers.api.repository.UserRepository;
 import com.fantasyseers.api.security.JwtUtils;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityManager;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -26,32 +26,9 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final EntityManager entityManager;
-    private final String requiredInviteCode;
-
-    public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtUtils jwtUtils,
-                       AuthenticationManager authenticationManager,
-                       UserDetailsService userDetailsService,
-                       EntityManager entityManager,
-                       @Value("${registration.invite-code:}") String requiredInviteCode) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtils = jwtUtils;
-        this.authenticationManager = authenticationManager;
-        this.userDetailsService = userDetailsService;
-        this.entityManager = entityManager;
-        this.requiredInviteCode = requiredInviteCode;
-    }
 
     @Transactional
     public AuthDto.AuthResponse register(AuthDto.RegisterRequest request) {
-        if (!requiredInviteCode.isBlank()) {
-            if (request.inviteCode() == null || !requiredInviteCode.equals(request.inviteCode().trim())) {
-                throw new IllegalArgumentException("Invalid invite code");
-            }
-        }
-
         if (userRepository.existsByUsername(request.username())) {
             throw new IllegalArgumentException("Username already taken");
         }
@@ -64,9 +41,6 @@ public class AuthService {
             .email(request.email())
             .password(passwordEncoder.encode(request.password()))
             .pointBank(1000)
-            .favoriteNflTeam(request.favoriteNflTeam())
-            .favoriteNbaTeam(request.favoriteNbaTeam())
-            .almaMater(request.almaMater())
             .build();
 
         userRepository.save(user);
