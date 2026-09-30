@@ -369,8 +369,24 @@ const sheetFormat = (sheet) => ({
   superflex: Boolean(sheet.superflex),
 });
 
+const sameSheetFormat = (a, b) =>
+  a?.season === b?.season &&
+  a?.scoringFormat === b?.scoringFormat &&
+  Boolean(a?.superflex) === Boolean(b?.superflex);
+
 const sameOrder = (a, b) =>
   a.length === b.length && a.every((player, i) => player.playerId === b[i].playerId);
+
+const samePlayerPool = (a, b) => {
+  if (a.length !== b.length) return false;
+  const guestPlayerIds = new Set(a.map((player) => player.playerId));
+  const playerIds = new Set(b.map((player) => player.playerId));
+  return (
+    guestPlayerIds.size === a.length &&
+    playerIds.size === b.length &&
+    a.every((player) => playerIds.has(player.playerId))
+  );
+};
 
 const sameBoardOwner = (a, b) =>
   a?.accountIdentity === b?.accountIdentity &&
@@ -435,6 +451,7 @@ export default function MasterSheetPage() {
   const { user } = useAuth();
   const isGuest = !user;
   const accountIdentity = user?.username ?? null;
+  const sessionToken = localStorage.getItem("fs_token");
   const { openAuthDialog } = useAuthDialog();
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
@@ -442,7 +459,7 @@ export default function MasterSheetPage() {
   boardOwnerRef.current = {
     accountIdentity,
     boardId,
-    token: localStorage.getItem("fs_token"),
+    token: sessionToken,
   };
   const [season, setSeason] = useState(null);
   const [rankings, setRankings] = useState([]);
@@ -488,6 +505,13 @@ export default function MasterSheetPage() {
 
   useEffect(() => {
     let active = true;
+    const requestedAccount = accountIdentity;
+    const requestedToken = sessionToken;
+    const isCurrentSession = () => (
+      active &&
+      boardOwnerRef.current.accountIdentity === requestedAccount &&
+      localStorage.getItem("fs_token") === requestedToken
+    );
     setLoading(true);
     setSaving(false);
     setError(null);
@@ -498,7 +522,7 @@ export default function MasterSheetPage() {
     setViewingGuest(false);
     (isGuest ? boardsApi.getDefaultSheet() : boardsApi.getMySheet())
       .then(({ data }) => {
-        if (!active) return;
+        if (!isCurrentSession()) return;
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
         if (isGuest) {
@@ -545,15 +569,15 @@ export default function MasterSheetPage() {
         setSuperflex(Boolean(data.superflex));
       })
       .catch((err) => {
-        if (active) setError(err.response?.data?.message || "Failed to load rankings");
+        if (isCurrentSession()) setError(err.response?.data?.message || "Failed to load rankings");
       })
       .finally(() => {
-        if (active) setLoading(false);
+        if (isCurrentSession()) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [accountIdentity, isGuest]);
+  }, [accountIdentity, isGuest, sessionToken]);
 
   useEffect(() => {
     if (viewingGuest && guestNotice) {
@@ -631,6 +655,13 @@ export default function MasterSheetPage() {
         saveIntent.accountIdentity !== accountIdentity ||
         saveIntent.token !== localStorage.getItem("fs_token")
       ) return;
+      if (
+        !sameSheetFormat(guestSheet, format) ||
+        !samePlayerPool(guestRankings, accountSheet.rankings)
+      ) {
+        setError("Your guest rankings don't match the current board, so they were not saved.");
+        return;
+      }
       if (accountSheet.locked) {
         setGuestNotice({ type: "locked", rankings: guestRankings, sheet: guestSheet });
       } else if (!accountSheet.hasWork) {

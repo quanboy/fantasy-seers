@@ -93,7 +93,7 @@ describe("Dashboard", () => {
       const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
       await act(async () => {
         auth.user = { username: "demo", pointBank: 1000, role: "USER" };
-        onAuthenticated();
+        onAuthenticated(auth.user);
       });
       return user;
     }
@@ -146,7 +146,7 @@ describe("Dashboard", () => {
       const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
       await act(async () => {
         auth.user = { username: "first", pointBank: 1000, role: "USER" };
-        onAuthenticated();
+        onAuthenticated(auth.user);
       });
       await waitFor(() => expect(api.propsApi.getById).toHaveBeenCalledWith(5));
 
@@ -170,6 +170,50 @@ describe("Dashboard", () => {
       expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument();
     });
 
+    it("does not start vote reconciliation under a different account", async () => {
+      const user = userEvent.setup();
+      renderFeed();
+
+      await user.click(await screen.findByRole("button", { name: "Yes" }));
+      const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+      await act(async () => {
+        localStorage.setItem("fs_token", "first-token");
+        onAuthenticated({ username: "first", pointBank: 1000, role: "USER" });
+        auth.user = { username: "second", pointBank: 700, role: "USER" };
+        localStorage.setItem("fs_token", "second-token");
+      });
+
+      expect(api.propsApi.getById).not.toHaveBeenCalled();
+      expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument();
+    });
+
+    it("ignores a resumed-vote response from an older token for the same account", async () => {
+      const user = userEvent.setup();
+      const propRequest = deferred();
+      const accountRequest = deferred();
+      api.propsApi.getById.mockReturnValue(propRequest.promise);
+      api.userApi.getMe.mockReturnValue(accountRequest.promise);
+      renderFeed();
+
+      await user.click(await screen.findByRole("button", { name: "Yes" }));
+      const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+      await act(async () => {
+        auth.user = { username: "demo", pointBank: 1000, role: "USER" };
+        localStorage.setItem("fs_token", "first-token");
+        onAuthenticated(auth.user);
+      });
+      await waitFor(() => expect(api.propsApi.getById).toHaveBeenCalledWith(5));
+
+      localStorage.setItem("fs_token", "second-token");
+      await act(async () => {
+        propRequest.resolve({ data: openProp });
+        accountRequest.resolve({ data: { pointBank: 900 } });
+      });
+
+      expect(auth.user).toEqual({ username: "demo", pointBank: 1000, role: "USER" });
+      expect(screen.queryByRole("dialog", { name: openProp.title })).not.toBeInTheDocument();
+    });
+
     it("announces a resumed-vote load failure as an error", async () => {
       const user = userEvent.setup();
       api.propsApi.getById.mockRejectedValue(new Error("offline"));
@@ -180,7 +224,7 @@ describe("Dashboard", () => {
       const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
       await act(async () => {
         auth.user = { username: "demo", pointBank: 1000, role: "USER" };
-        onAuthenticated();
+        onAuthenticated(auth.user);
       });
 
       const alert = await screen.findByRole("alert");
@@ -234,6 +278,70 @@ describe("Dashboard", () => {
     });
 
     expect(screen.queryByText(/Complete your profile/)).not.toBeInTheDocument();
+  });
+
+  it("ignores a stale personalized feed response after the account changes", async () => {
+    const firstFeed = deferred();
+    const secondProp = { ...openProp, id: 6, title: "Second account prop" };
+    api.propsApi.getPublic
+      .mockReturnValueOnce(firstFeed.promise)
+      .mockResolvedValueOnce({ data: { content: [secondProp] } });
+    auth.user = { username: "first", pointBank: 1000, role: "USER" };
+    localStorage.setItem("fs_token", "first-token");
+    const view = renderFeed();
+
+    auth.user = { username: "second", pointBank: 700, role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Second account prop")).toBeInTheDocument();
+
+    await act(async () => {
+      firstFeed.resolve({
+        data: { content: [{ ...openProp, title: "First account private prop" }] },
+      });
+    });
+
+    expect(screen.getByText("Second account prop")).toBeInTheDocument();
+    expect(screen.queryByText("First account private prop")).not.toBeInTheDocument();
+  });
+
+  it("reloads the personalized feed when the JWT changes for the same account", async () => {
+    const firstFeed = deferred();
+    const secondProp = { ...openProp, id: 6, title: "New session prop" };
+    api.propsApi.getPublic
+      .mockReturnValueOnce(firstFeed.promise)
+      .mockResolvedValueOnce({ data: { content: [secondProp] } });
+    auth.user = { username: "demo", pointBank: 1000, role: "USER" };
+    localStorage.setItem("fs_token", "first-token");
+    const view = renderFeed();
+    await waitFor(() => expect(api.propsApi.getPublic).toHaveBeenCalledTimes(1));
+
+    auth.user = { username: "demo", pointBank: 700, role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("New session prop")).toBeInTheDocument();
+    expect(api.propsApi.getPublic).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      firstFeed.resolve({ data: { content: [{ ...openProp, title: "Stale session prop" }] } });
+    });
+
+    expect(screen.getByText("New session prop")).toBeInTheDocument();
+    expect(screen.queryByText("Stale session prop")).not.toBeInTheDocument();
   });
 
   it("does not apply a post-vote balance refresh to a different account", async () => {

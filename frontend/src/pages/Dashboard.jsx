@@ -15,6 +15,7 @@ export default function Dashboard() {
   const { user, setUser } = useAuth();
   const isGuest = !user;
   const accountIdentity = user?.username ?? null;
+  const sessionToken = localStorage.getItem("fs_token");
   const { openAuthDialog } = useAuthDialog();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
@@ -26,17 +27,28 @@ export default function Dashboard() {
   // A vote a guest started before signing in; resumed once they're signed in.
   const [pendingVote, setPendingVote] = useState(null);
   const [voteNotice, setVoteNotice] = useState(null);
-  const pendingVoteAccountRef = useRef(null);
   const accountIdentityRef = useRef(accountIdentity);
   accountIdentityRef.current = accountIdentity;
 
   const fetchProps = () => {
+    const requestedAccount = accountIdentityRef.current;
+    const requestedToken = localStorage.getItem("fs_token");
+    const isCurrentSession = () => (
+      accountIdentityRef.current === requestedAccount &&
+      localStorage.getItem("fs_token") === requestedToken
+    );
     setError(null);
     propsApi
       .getPublic()
-      .then(({ data }) => setProps(data.content || data))
-      .catch((err) => setError(err.response?.data?.message || "Failed to load props."))
-      .finally(() => setLoading(false));
+      .then(({ data }) => {
+        if (isCurrentSession()) setProps(data.content || data);
+      })
+      .catch((err) => {
+        if (isCurrentSession()) setError(err.response?.data?.message || "Failed to load props.");
+      })
+      .finally(() => {
+        if (isCurrentSession()) setLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -54,7 +66,7 @@ export default function Dashboard() {
       })
       .catch(() => {});
     return () => { active = false; };
-  }, [accountIdentity, isGuest]);
+  }, [accountIdentity, isGuest, sessionToken]);
 
   const handleVoted = async () => {
     const votingAccount = accountIdentity;
@@ -76,29 +88,37 @@ export default function Dashboard() {
 
   // Guests sign in first; the vote then reopens for explicit confirmation (never auto-submitted).
   const handleVote = isGuest
-    ? (vote) => openAuthDialog("login", { onAuthenticated: () => setPendingVote(vote) })
+    ? (vote) => openAuthDialog("login", {
+        onAuthenticated: (authenticatedUser) => setPendingVote({
+          vote,
+          accountIdentity: authenticatedUser?.username ?? null,
+          token: localStorage.getItem("fs_token"),
+        }),
+      })
     : setSelectedProp;
 
   useEffect(() => {
-    if (!pendingVote) {
-      pendingVoteAccountRef.current = null;
-      return;
-    }
+    if (!pendingVote) return;
+    const { vote, accountIdentity: votingAccount, token: votingToken } = pendingVote;
     if (isGuest) {
       setPendingVote(null);
       return;
     }
-    if (pendingVoteAccountRef.current && pendingVoteAccountRef.current !== accountIdentity) {
+    if (
+      votingAccount !== accountIdentity ||
+      votingToken !== localStorage.getItem("fs_token")
+    ) {
       setPendingVote(null);
       return;
     }
     let active = true;
-    const vote = pendingVote;
-    const votingAccount = accountIdentity;
-    pendingVoteAccountRef.current = votingAccount;
+    const isCurrentVotingSession = () => (
+      accountIdentityRef.current === votingAccount &&
+      localStorage.getItem("fs_token") === votingToken
+    );
     Promise.all([propsApi.getById(vote.id), userApi.getMe()])
       .then(([{ data: prop }, { data: me }]) => {
-        if (!active) return;
+        if (!active || !isCurrentVotingSession()) return;
         setUser((current) => {
           if (current?.username !== votingAccount) return current;
           const updated = { ...current, pointBank: me.pointBank };
@@ -114,12 +134,14 @@ export default function Dashboard() {
         }
       })
       .catch(() => {
-        if (active) setVoteNotice({ type: "error", message: "Couldn't load that prop. Please try again." });
+        if (active && isCurrentVotingSession()) {
+          setVoteNotice({ type: "error", message: "Couldn't load that prop. Please try again." });
+        }
       })
       .finally(() => {
         if (!active) return;
         setPendingVote(null);
-        fetchProps();
+        if (isCurrentVotingSession()) fetchProps();
       });
     return () => {
       active = false;

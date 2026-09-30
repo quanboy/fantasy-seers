@@ -169,6 +169,28 @@ describe("MasterSheetPage", () => {
         expect(loadGuestDraft(guestSheet)).toBeNull();
       });
 
+      it("does not save guest rankings into a board with a different format", async () => {
+        await renderGuestWithDraft();
+        await signInFromSave(account({ scoringFormat: "FULL_PPR" }));
+
+        expect(await screen.findByText(/don't match the current board/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("does not save guest rankings into a board with a different player pool", async () => {
+        const replacementPool = [
+          { ...rankings[0], playerId: 3, fullName: "Replacement Runner" },
+          { ...rankings[1], playerId: 4, fullName: "Replacement Catcher" },
+        ];
+        await renderGuestWithDraft();
+        await signInFromSave(account({ rankings: replacementPool }));
+
+        expect(await screen.findByText(/don't match the current board/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
       it("asks before replacing rankings the account already saved", async () => {
         const user = userEvent.setup();
         await renderGuestWithDraft();
@@ -381,6 +403,58 @@ describe("MasterSheetPage", () => {
 
     expect(await screen.findByText("Second Account First")).toBeInTheDocument();
     expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
+  });
+
+  it("reloads the board when the JWT changes for the same account", async () => {
+    const firstBoard = deferred();
+    const secondSessionRankings = [
+      { ...rankings[0], fullName: "New Session First" },
+      { ...rankings[1], fullName: "New Session Second" },
+    ];
+    boardMocks.getMySheet
+      .mockReturnValueOnce(firstBoard.promise)
+      .mockResolvedValueOnce({
+        data: {
+          boardId: 84,
+          season: 2026,
+          rankings: secondSessionRankings,
+          isDefault: false,
+          locked: false,
+          scoringFormat: "FULL_PPR",
+          superflex: false,
+        },
+      });
+    localStorage.setItem("fs_token", "first-token");
+    const view = renderMasterSheet();
+    await waitFor(() => expect(boardMocks.getMySheet).toHaveBeenCalledTimes(1));
+
+    auth.user = { username: "demo", role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("New Session First")).toBeInTheDocument();
+    expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      firstBoard.resolve({
+        data: {
+          boardId: 42,
+          season: 2026,
+          rankings: [{ ...rankings[0], fullName: "Stale Session Player" }, rankings[1]],
+          isDefault: false,
+          locked: false,
+          scoringFormat: "FULL_PPR",
+          superflex: false,
+        },
+      });
+    });
+
+    expect(screen.getByText("New Session First")).toBeInTheDocument();
+    expect(screen.queryByText("Stale Session Player")).not.toBeInTheDocument();
   });
 
   it("ignores a superseded guest-sheet response after login", async () => {
