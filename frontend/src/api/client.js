@@ -30,8 +30,12 @@ api.interceptors.response.use(
     const url = err.config?.url || ''
     const isAuthRoute = url.startsWith('/auth/')
     // An expired session drops to guest mode in place (no reload), so unsaved work survives.
-    const sentToken = Boolean(err.config?.headers?.Authorization)
-    if (err.response?.status === 401 && !isAuthRoute && sentToken && localStorage.getItem('fs_token')) {
+    const authorization = err.config?.headers?.Authorization
+    const sentToken = typeof authorization === 'string' && authorization.startsWith('Bearer ')
+      ? authorization.slice('Bearer '.length)
+      : null
+    const currentToken = localStorage.getItem('fs_token')
+    if (err.response?.status === 401 && !isAuthRoute && sentToken && sentToken === currentToken) {
       localStorage.removeItem('fs_token')
       localStorage.removeItem('fs_user')
       showSessionExpiredToast()

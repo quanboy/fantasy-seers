@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import api, { userApi } from "../api/client";
 import { AuthProvider, useAuth } from "./AuthContext";
@@ -11,6 +11,31 @@ function fakeToken(expiresInSeconds) {
 function WhoAmI() {
   const { user } = useAuth();
   return <p>{user ? `Signed in as ${user.username}` : "Browsing as guest"}</p>;
+}
+
+function AuthActions() {
+  const { user, login, logout, cancelPendingAuth } = useAuth();
+  return (
+    <>
+      <p>{user ? `Signed in as ${user.username}` : "Browsing as guest"}</p>
+      <button type="button" onClick={() => login({ username: "first" })}>First login</button>
+      <button type="button" onClick={() => login({ username: "second" })}>Second login</button>
+      <button type="button" onClick={logout}>Log out</button>
+      <button type="button" onClick={cancelPendingAuth}>Cancel authentication</button>
+    </>
+  );
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+function authResponse(config, username, token) {
+  return { data: { username, token, role: "USER" }, status: 200, statusText: "OK", headers: {}, config };
 }
 
 function respondWith(status) {
@@ -72,5 +97,64 @@ describe("AuthProvider session expiry", () => {
 
     expect(screen.getByText("Signed in as demo")).toBeInTheDocument();
     expect(localStorage.getItem("fs_token")).not.toBeNull();
+  });
+
+  it("does not let an older login overwrite a newer authenticated session", async () => {
+    const firstRequest = deferred();
+    const secondRequest = deferred();
+    let requestCount = 0;
+    api.defaults.adapter = (config) => (++requestCount === 1 ? firstRequest.promise : secondRequest.promise);
+    render(<AuthProvider><AuthActions /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "First login" }));
+    fireEvent.click(screen.getByRole("button", { name: "Second login" }));
+
+    await act(async () => {
+      secondRequest.resolve(authResponse({}, "second", "second-token"));
+    });
+    expect(screen.getByText("Signed in as second")).toBeInTheDocument();
+
+    await act(async () => {
+      firstRequest.resolve(authResponse({}, "first", "first-token"));
+    });
+
+    expect(screen.getByText("Signed in as second")).toBeInTheDocument();
+    expect(localStorage.getItem("fs_token")).toBe("second-token");
+  });
+
+  it("does not authenticate after the active request is cancelled", async () => {
+    const loginRequest = deferred();
+    api.defaults.adapter = () => loginRequest.promise;
+    render(<AuthProvider><AuthActions /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "First login" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel authentication" }));
+
+    await act(async () => {
+      loginRequest.resolve(authResponse({}, "first", "first-token"));
+    });
+
+    expect(screen.getByText("Browsing as guest")).toBeInTheDocument();
+    expect(localStorage.getItem("fs_token")).toBeNull();
+  });
+
+  it("does not let an older logout erase a newer login", async () => {
+    const logoutRequest = deferred();
+    api.defaults.adapter = (config) => {
+      if (config.url.endsWith("/logout")) return logoutRequest.promise;
+      return Promise.resolve(authResponse(config, "second", "second-token"));
+    };
+    render(<AuthProvider><AuthActions /></AuthProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+    fireEvent.click(screen.getByRole("button", { name: "Second login" }));
+    expect(await screen.findByText("Signed in as second")).toBeInTheDocument();
+
+    await act(async () => {
+      logoutRequest.resolve({ data: {}, status: 200, statusText: "OK", headers: {}, config: {} });
+    });
+
+    expect(screen.getByText("Signed in as second")).toBeInTheDocument();
+    expect(localStorage.getItem("fs_token")).toBe("second-token");
   });
 });

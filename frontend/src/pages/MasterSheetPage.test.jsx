@@ -1,9 +1,10 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
-import { loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
+import { clearGuestDraft, loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
+import * as sessionIdentity from "../utils/sessionIdentity";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
@@ -58,7 +59,19 @@ function renderMasterSheet(initialEntry = "/") {
   );
 }
 
+function deferred() {
+  let resolve;
+  const promise = new Promise((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("MasterSheetPage", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   beforeEach(() => {
     localStorage.clear();
     auth.user = { username: "demo", role: "USER" };
@@ -130,8 +143,9 @@ describe("MasterSheetPage", () => {
 
       async function renderGuestWithDraft() {
         saveGuestDraft(guestSheet, guestOrder);
-        renderMasterSheet();
+        const view = renderMasterSheet();
         await screen.findByText("Guest rankings restored from this device");
+        return view;
       }
 
       async function signInFromSave(accountResponse) {
@@ -140,7 +154,7 @@ describe("MasterSheetPage", () => {
         const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
         await act(async () => {
           auth.user = { username: "demo", role: "USER" };
-          onAuthenticated();
+          onAuthenticated(auth.user);
         });
       }
 
@@ -156,6 +170,28 @@ describe("MasterSheetPage", () => {
         expect(loadGuestDraft(guestSheet)).toBeNull();
       });
 
+      it("does not save guest rankings into a board with a different format", async () => {
+        await renderGuestWithDraft();
+        await signInFromSave(account({ scoringFormat: "FULL_PPR" }));
+
+        expect(await screen.findByText(/don't match the current board/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("does not save guest rankings into a board with a different player pool", async () => {
+        const replacementPool = [
+          { ...rankings[0], playerId: 3, fullName: "Replacement Runner" },
+          { ...rankings[1], playerId: 4, fullName: "Replacement Catcher" },
+        ];
+        await renderGuestWithDraft();
+        await signInFromSave(account({ rankings: replacementPool }));
+
+        expect(await screen.findByText(/don't match the current board/)).toBeInTheDocument();
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
       it("asks before replacing rankings the account already saved", async () => {
         const user = userEvent.setup();
         await renderGuestWithDraft();
@@ -167,6 +203,15 @@ describe("MasterSheetPage", () => {
         expect(screen.getByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
 
         await user.click(screen.getByRole("button", { name: "Replace saved rankings" }));
+
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+        expect(savedIds()).toEqual([2, 1]);
+        expect(loadGuestDraft(guestSheet)).toBeNull();
+      });
+
+      it("completes an explicit save before clearing an identical guest draft", async () => {
+        await renderGuestWithDraft();
+        await signInFromSave(account({ rankings: guestOrder, isDefault: false }));
 
         await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
         expect(savedIds()).toEqual([2, 1]);
@@ -192,6 +237,67 @@ describe("MasterSheetPage", () => {
         await signInFromSave(account());
 
         expect(await screen.findByText(/Server unavailable/)).toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("ignores a guest-save response after the active account changes", async () => {
+        const saveRequest = deferred();
+        const secondAccountRankings = [
+          { ...rankings[0], fullName: "Second Account First" },
+          { ...rankings[1], fullName: "Second Account Second" },
+        ];
+        boardMocks.upsertEntries.mockReturnValue(saveRequest.promise);
+        const view = await renderGuestWithDraft();
+        await signInFromSave(account());
+        await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+
+        auth.user = { username: "second", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({
+          boardId: 84,
+          rankings: secondAccountRankings,
+          isDefault: false,
+        }));
+        view.rerender(
+          <MemoryRouter>
+            <MasterSheetPage />
+          </MemoryRouter>
+        );
+        expect(await screen.findByText("Second Account First")).toBeInTheDocument();
+
+        await act(async () => {
+          saveRequest.resolve({ data: {} });
+        });
+
+        expect(screen.getByText("Second Account First")).toBeInTheDocument();
+        expect(screen.queryByText("Bravo Catcher")).not.toBeInTheDocument();
+        expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
+      });
+
+      it("does not carry a save intent into a different account", async () => {
+        const firstBoard = deferred();
+        boardMocks.getMySheet
+          .mockReturnValueOnce(firstBoard.promise)
+          .mockResolvedValueOnce(account({ boardId: 84 }));
+        const view = await renderGuestWithDraft();
+
+        fireEvent.click(screen.getByRole("button", { name: "Sign up to save" }));
+        const [, { onAuthenticated }] = openAuthDialog.mock.calls.at(-1);
+        await act(async () => {
+          auth.user = { username: "first", role: "USER" };
+          onAuthenticated(auth.user);
+        });
+        await waitFor(() => expect(boardMocks.getMySheet).toHaveBeenCalledTimes(1));
+
+        auth.user = { username: "second", role: "USER" };
+        view.rerender(
+          <MemoryRouter>
+            <MasterSheetPage />
+          </MemoryRouter>
+        );
+        await waitFor(() => expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2));
+        await screen.findByText("Alpha Runner");
+
+        expect(boardMocks.upsertEntries).not.toHaveBeenCalled();
         expect(loadGuestDraft(guestSheet)).toEqual(guestOrder);
       });
 
@@ -235,6 +341,33 @@ describe("MasterSheetPage", () => {
         expect(loadGuestDraft(guestSheet)).toBeNull();
         expect(screen.queryByRole("button", { name: "View guest rankings" })).not.toBeInTheDocument();
       });
+
+      it("offers an in-memory guest draft after header login when storage rejected it", async () => {
+        vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+          throw new DOMException("Quota exceeded", "QuotaExceededError");
+        });
+        expect(saveGuestDraft(guestSheet, guestOrder)).toBe(false);
+        auth.user = { username: "demo", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({ isDefault: false }));
+
+        renderMasterSheet();
+
+        expect(await screen.findByRole("button", { name: "View guest rankings" })).toBeInTheDocument();
+      });
+
+      it("does not offer a stored guest draft that no longer matches the account player pool", async () => {
+        saveGuestDraft(guestSheet, [
+          { ...rankings[0], playerId: 999 },
+          { ...rankings[1], playerId: 1000 },
+        ]);
+        auth.user = { username: "demo", role: "USER" };
+        boardMocks.getMySheet.mockResolvedValue(account({ isDefault: false }));
+
+        renderMasterSheet();
+
+        expect(await screen.findByRole("button", { name: /Move Alpha Runner, currently ranked 1/ })).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: "View guest rankings" })).not.toBeInTheDocument();
+      });
     });
 
     it("never restores guest rankings onto a signed-in board", async () => {
@@ -248,6 +381,245 @@ describe("MasterSheetPage", () => {
       ).toBeInTheDocument();
       expect(screen.queryByText(/restored from this device/)).not.toBeInTheDocument();
     });
+  });
+
+  it("reloads the board when the authenticated account changes", async () => {
+    const secondAccountRankings = [
+      { ...rankings[1], fullName: "Second Account First", overallRank: 1 },
+      { ...rankings[0], fullName: "Second Account Second", overallRank: 2 },
+    ];
+    boardMocks.getMySheet
+      .mockResolvedValueOnce({ data: { boardId: 41, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } })
+      .mockResolvedValueOnce({ data: { boardId: 42, season: 2026, rankings: secondAccountRankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    await screen.findByText("Alpha Runner");
+
+    auth.user = { username: "second", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Second Account First")).toBeInTheDocument();
+    expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not turn a previous account's dirty rankings into a guest draft", async () => {
+    const guestRequest = deferred();
+    const sheet = { season: 2026, scoringFormat: "FULL_PPR", superflex: false };
+    clearGuestDraft(sheet);
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    expect(await screen.findByText("Unsaved changes restored from this device")).toBeInTheDocument();
+
+    boardMocks.getDefaultSheet.mockReturnValue(guestRequest.promise);
+    auth.user = null;
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("Alpha Runner")).not.toBeInTheDocument();
+    expect(loadGuestDraft(sheet)).toBeNull();
+
+    await act(async () => {
+      guestRequest.resolve({
+        data: { boardId: null, ...sheet, rankings, isDefault: true, locked: false },
+      });
+    });
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+    expect(screen.queryByText("Guest rankings restored from this device")).not.toBeInTheDocument();
+  });
+
+  it("reloads the board when the JWT changes for the same account", async () => {
+    const firstBoard = deferred();
+    const secondSessionRankings = [
+      { ...rankings[0], fullName: "New Session First" },
+      { ...rankings[1], fullName: "New Session Second" },
+    ];
+    boardMocks.getMySheet
+      .mockReturnValueOnce(firstBoard.promise)
+      .mockResolvedValueOnce({
+        data: {
+          boardId: 84,
+          season: 2026,
+          rankings: secondSessionRankings,
+          isDefault: false,
+          locked: false,
+          scoringFormat: "FULL_PPR",
+          superflex: false,
+        },
+      });
+    localStorage.setItem("fs_token", "first-token");
+    const view = renderMasterSheet();
+    await waitFor(() => expect(boardMocks.getMySheet).toHaveBeenCalledTimes(1));
+
+    auth.user = { username: "demo", role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("New Session First")).toBeInTheDocument();
+    expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
+
+    await act(async () => {
+      firstBoard.resolve({
+        data: {
+          boardId: 42,
+          season: 2026,
+          rankings: [{ ...rankings[0], fullName: "Stale Session Player" }, rankings[1]],
+          isDefault: false,
+          locked: false,
+          scoringFormat: "FULL_PPR",
+          superflex: false,
+        },
+      });
+    });
+
+    expect(screen.getByText("New Session First")).toBeInTheDocument();
+    expect(screen.queryByText("Stale Session Player")).not.toBeInTheDocument();
+  });
+
+  it("shows a load error without reviving the previous account's board", async () => {
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+
+    auth.user = { username: "second", role: "USER" };
+    boardMocks.getMySheet.mockRejectedValue(new Error("offline"));
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Failed to load rankings")).toBeInTheDocument();
+    expect(screen.queryByText("Alpha Runner")).not.toBeInTheDocument();
+    expect(document.querySelector(".skeleton")).not.toBeInTheDocument();
+  });
+
+  it("ignores a superseded guest-sheet response after login", async () => {
+    const guestRequest = deferred();
+    const accountRequest = deferred();
+    auth.user = null;
+    boardMocks.getDefaultSheet.mockReturnValue(guestRequest.promise);
+    boardMocks.getMySheet.mockReturnValue(accountRequest.promise);
+    const view = renderMasterSheet();
+
+    auth.user = { username: "demo", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    await act(async () => {
+      accountRequest.resolve({ data: { boardId: 42, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    });
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+
+    await act(async () => {
+      guestRequest.resolve({ data: { boardId: null, season: 2026, rankings: [{ ...rankings[0], fullName: "Stale Guest Player" }, rankings[1]], isDefault: true, locked: false, scoringFormat: "FULL_PPR", superflex: false } });
+    });
+
+    expect(screen.queryByText("Stale Guest Player")).not.toBeInTheDocument();
+    expect(screen.getByText("Alpha Runner")).toBeInTheDocument();
+  });
+
+  it("ignores an ordinary save response after the active account changes", async () => {
+    const saveRequest = deferred();
+    const secondAccountRankings = [
+      { ...rankings[0], fullName: "Second Account First" },
+      { ...rankings[1], fullName: "Second Account Second" },
+    ];
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    boardMocks.upsertEntries.mockReturnValue(saveRequest.promise);
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    const user = userEvent.setup();
+
+    await user.click(await screen.findByRole("button", { name: "Save Rankings" }));
+    await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+
+    auth.user = { username: "second", role: "USER" };
+    boardMocks.getMySheet.mockResolvedValue({
+      data: {
+        boardId: 84,
+        season: 2026,
+        rankings: secondAccountRankings,
+        isDefault: false,
+        locked: false,
+        scoringFormat: "FULL_PPR",
+        superflex: false,
+      },
+    });
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+    expect(await screen.findByText("Second Account First")).toBeInTheDocument();
+
+    await act(async () => {
+      saveRequest.resolve({ data: {} });
+    });
+
+    expect(screen.getByText("Second Account First")).toBeInTheDocument();
+    expect(screen.queryByText("Bravo Catcher")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Saved ✓" })).not.toBeInTheDocument();
+  });
+
+  it("does not let an older queued timer clear a newer save confirmation", async () => {
+    const saveTimerCallbacks = [];
+    const realSetTimeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation((callback, delay, ...args) => {
+      if (delay === 3000) {
+        saveTimerCallbacks.push(callback);
+        return 1000 + saveTimerCallbacks.length;
+      }
+      return realSetTimeout(callback, delay, ...args);
+    });
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    localStorage.setItem("fs_board_draft:84", JSON.stringify({ rankings: [...rankings].reverse() }));
+    boardMocks.getMySheet
+      .mockResolvedValueOnce({
+        data: { boardId: 42, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false },
+      })
+      .mockResolvedValueOnce({
+        data: { boardId: 84, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false },
+      });
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save Rankings" }));
+    await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+    expect(saveTimerCallbacks).toHaveLength(1);
+
+    auth.user = { username: "second", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Saved|Save Rankings/ }));
+    await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+    expect(saveTimerCallbacks).toHaveLength(2);
+
+    vi.spyOn(sessionIdentity, "sameSession").mockReturnValue(true);
+    act(() => saveTimerCallbacks[0]());
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+
+    act(() => saveTimerCallbacks[1]());
+    expect(screen.queryByRole("button", { name: /Saved/ })).not.toBeInTheDocument();
   });
 
   it("shows guests the public default sheet and asks them to sign up to save", async () => {

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import AppRoutes from "./AppRoutes";
 
 const { auth, page } = vi.hoisted(() => ({
-  auth: { user: null, loading: false, login: null, register: null },
+  auth: { user: null, loading: false, login: null, register: null, cancelPendingAuth: vi.fn() },
   page: (name) => ({ default: () => <h1>{name}</h1> }),
 }));
 
@@ -38,8 +38,10 @@ function renderAt(path) {
 describe("AppRoutes", () => {
   beforeEach(() => {
     auth.user = null;
+    auth.cancelPendingAuth.mockReset();
     auth.login = vi.fn(async () => {
       auth.user = { username: "demo", role: "USER" };
+      return auth.user;
     });
   });
 

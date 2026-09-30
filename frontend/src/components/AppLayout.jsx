@@ -6,6 +6,7 @@ import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
 import PlayerSearchField from "./PlayerSearchField";
 import { withPlayerSearchQuery } from "../utils/playerSearch";
+import { captureSession, sameSession } from "../utils/sessionIdentity";
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -21,22 +22,34 @@ export default function AppLayout() {
 
   const userRef = useRef(user);
   useEffect(() => { userRef.current = user; }, [user]);
-  const signedIn = Boolean(user);
+  const accountIdentity = user?.username ?? null;
   useEffect(() => {
-    if (!signedIn) return undefined;
+    if (!accountIdentity) return undefined;
+    let active = true;
     const interval = setInterval(async () => {
+      const requestedSession = captureSession({ accountIdentity });
       try {
         const { data } = await userApi.getMe();
         const current = userRef.current;
-        if (current && data.pointBank !== current.pointBank) {
+        if (
+          active &&
+          sameSession(
+            requestedSession,
+            captureSession({ accountIdentity: current?.username })
+          ) &&
+          data.pointBank !== current.pointBank
+        ) {
           const updated = { ...current, pointBank: data.pointBank };
           localStorage.setItem("fs_user", JSON.stringify(updated));
           setUser(updated);
         }
       } catch {}
     }, 30000);
-    return () => clearInterval(interval);
-  }, [signedIn, setUser]);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [accountIdentity, setUser]);
 
   useEffect(() => {
     const header = headerRef.current;
@@ -172,7 +185,7 @@ export default function AppLayout() {
       <div className="app-shell-body flex">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-        <main className="min-w-0 flex-1 px-4">
+        <main data-auth-focus-fallback tabIndex={-1} className="min-w-0 flex-1 px-4 outline-none">
           <Outlet />
         </main>
       </div>

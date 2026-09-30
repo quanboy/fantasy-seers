@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAuthDialog } from "../context/AuthDialogContext";
@@ -6,6 +6,7 @@ import { propsApi, userApi } from "../api/client";
 import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
 import SubmitPropCard from "../components/SubmitPropCard";
+import { captureSession, sameSession } from "../utils/sessionIdentity";
 
 function SkeletonCard() {
   return <div className="skeleton h-28 mb-4" />;
@@ -14,6 +15,8 @@ function SkeletonCard() {
 export default function Dashboard() {
   const { user, setUser } = useAuth();
   const isGuest = !user;
+  const accountIdentity = user?.username ?? null;
+  const sessionToken = localStorage.getItem("fs_token");
   const { openAuthDialog } = useAuthDialog();
   const [props, setProps] = useState([]);
   const [selectedProp, setSelectedProp] = useState(null);
@@ -25,64 +28,122 @@ export default function Dashboard() {
   // A vote a guest started before signing in; resumed once they're signed in.
   const [pendingVote, setPendingVote] = useState(null);
   const [voteNotice, setVoteNotice] = useState(null);
+  const accountIdentityRef = useRef(accountIdentity);
+  accountIdentityRef.current = accountIdentity;
 
   const fetchProps = () => {
+    const requestedSession = captureSession({ accountIdentity: accountIdentityRef.current });
+    const isCurrentSession = () => sameSession(
+      requestedSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
+    );
     setError(null);
     propsApi
       .getPublic()
-      .then(({ data }) => setProps(data.content || data))
-      .catch((err) => setError(err.response?.data?.message || "Failed to load props."))
-      .finally(() => setLoading(false));
+      .then(({ data }) => {
+        if (isCurrentSession()) setProps(data.content || data);
+      })
+      .catch((err) => {
+        if (isCurrentSession()) setError(err.response?.data?.message || "Failed to load props.");
+      })
+      .finally(() => {
+        if (isCurrentSession()) setLoading(false);
+      });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    let active = true;
+    setLoading(true);
+    setProps([]);
+    setProfileIncomplete(false);
+    setProfileBannerDismissed(false);
+    setSelectedProp(null);
+    setVoteNotice(null);
     fetchProps();
-    if (isGuest) return;
+    if (isGuest) return () => { active = false; };
     userApi.getMe()
       .then(({ data }) => {
-        if (!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater) {
-          setProfileIncomplete(true);
-        }
+        if (!active) return;
+        setProfileIncomplete(!data.favoriteNflTeam && !data.favoriteNbaTeam && !data.almaMater);
       })
       .catch(() => {});
-  }, [isGuest]);
+    return () => { active = false; };
+  }, [accountIdentity, isGuest, sessionToken]);
 
   const handleVoted = async () => {
+    const votingSession = captureSession({ accountIdentity });
     const { data } = await userApi.getMe();
-    const updated = { ...user, pointBank: data.pointBank };
-    localStorage.setItem("fs_user", JSON.stringify(updated));
-    setUser(updated);
-    setSelectedProp(null);
+    if (!sameSession(
+      votingSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
+    )) return false;
+    setUser((current) => {
+      if (!votingSession.accountIdentity || current?.username !== votingSession.accountIdentity) return current;
+      const updated = { ...current, pointBank: data.pointBank };
+      localStorage.setItem("fs_user", JSON.stringify(updated));
+      return updated;
+    });
     fetchProps();
+    return true;
   };
 
   // Guests sign in first; the vote then reopens for explicit confirmation (never auto-submitted).
   const handleVote = isGuest
-    ? (vote) => openAuthDialog("login", { onAuthenticated: () => setPendingVote(vote) })
+    ? (vote) => openAuthDialog("login", {
+        onAuthenticated: (authenticatedUser) => setPendingVote({
+          vote,
+          session: captureSession({ accountIdentity: authenticatedUser?.username }),
+        }),
+      })
     : setSelectedProp;
 
   useEffect(() => {
-    if (!pendingVote || isGuest) return;
-    const vote = pendingVote;
-    setPendingVote(null);
+    if (!pendingVote) return;
+    const { vote, session: votingSession } = pendingVote;
+    if (isGuest) {
+      setPendingVote(null);
+      return;
+    }
+    if (!sameSession(votingSession, captureSession({ accountIdentity }))) {
+      setPendingVote(null);
+      return;
+    }
+    let active = true;
+    const isCurrentVotingSession = () => sameSession(
+      votingSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
+    );
     Promise.all([propsApi.getById(vote.id), userApi.getMe()])
       .then(([{ data: prop }, { data: me }]) => {
+        if (!active || !isCurrentVotingSession()) return;
         setUser((current) => {
+          if (current?.username !== votingSession.accountIdentity) return current;
           const updated = { ...current, pointBank: me.pointBank };
           localStorage.setItem("fs_user", JSON.stringify(updated));
           return updated;
         });
         if (prop.userChoice) {
-          setVoteNotice("You already voted on this prop.");
+          setVoteNotice({ type: "info", message: "You already voted on this prop." });
         } else if (prop.status !== "OPEN" || new Date(prop.closesAt) <= new Date()) {
-          setVoteNotice("Voting has closed.");
+          setVoteNotice({ type: "info", message: "Voting has closed." });
         } else {
           setSelectedProp({ ...prop, _initialChoice: vote._initialChoice, _initialWager: vote._initialWager });
         }
       })
-      .catch(() => setVoteNotice("Couldn't load that prop. Please try again."))
-      .finally(fetchProps);
-  }, [pendingVote, isGuest]);
+      .catch(() => {
+        if (active && isCurrentVotingSession()) {
+          setVoteNotice({ type: "error", message: "Couldn't load that prop. Please try again." });
+        }
+      })
+      .finally(() => {
+        if (!active) return;
+        setPendingVote(null);
+        if (isCurrentVotingSession()) fetchProps();
+      });
+    return () => {
+      active = false;
+    };
+  }, [pendingVote, isGuest, accountIdentity, setUser]);
 
   const filtered = useMemo(() => {
     if (sportFilter === "ALL") return props;
@@ -119,8 +180,13 @@ export default function Dashboard() {
         )}
 
         {voteNotice && (
-          <div role="status" className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3">
-            <p className="text-sm text-slate-200">{voteNotice}</p>
+          <div
+            role={voteNotice.type === "error" ? "alert" : "status"}
+            className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-void-600 bg-void-800 px-4 py-3"
+          >
+            <p className={`text-sm ${voteNotice.type === "error" ? "text-loss-400" : "text-slate-200"}`}>
+              {voteNotice.message}
+            </p>
             <button
               type="button"
               onClick={() => setVoteNotice(null)}
@@ -261,7 +327,7 @@ export default function Dashboard() {
       </div>
 
       {/* Vote Modal */}
-      {selectedProp && (
+      {selectedProp && !isGuest && (
         <VoteModal
           prop={selectedProp}
           userPoints={user?.pointBank}
