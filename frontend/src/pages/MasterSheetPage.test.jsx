@@ -3,7 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import MasterSheetPage, { reorderFilteredPlayers } from "./MasterSheetPage";
-import { loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
+import { clearGuestDraft, loadGuestDraft, saveGuestDraft } from "../utils/guestDraft";
+import * as sessionIdentity from "../utils/sessionIdentity";
 
 const boardMocks = vi.hoisted(() => ({
   getMySheet: vi.fn(),
@@ -405,6 +406,35 @@ describe("MasterSheetPage", () => {
     expect(boardMocks.getMySheet).toHaveBeenCalledTimes(2);
   });
 
+  it("does not turn a previous account's dirty rankings into a guest draft", async () => {
+    const guestRequest = deferred();
+    const sheet = { season: 2026, scoringFormat: "FULL_PPR", superflex: false };
+    clearGuestDraft(sheet);
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    expect(await screen.findByText("Unsaved changes restored from this device")).toBeInTheDocument();
+
+    boardMocks.getDefaultSheet.mockReturnValue(guestRequest.promise);
+    auth.user = null;
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByText("Alpha Runner")).not.toBeInTheDocument();
+    expect(loadGuestDraft(sheet)).toBeNull();
+
+    await act(async () => {
+      guestRequest.resolve({
+        data: { boardId: null, ...sheet, rankings, isDefault: true, locked: false },
+      });
+    });
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+    expect(screen.queryByText("Guest rankings restored from this device")).not.toBeInTheDocument();
+  });
+
   it("reloads the board when the JWT changes for the same account", async () => {
     const firstBoard = deferred();
     const secondSessionRankings = [
@@ -455,6 +485,24 @@ describe("MasterSheetPage", () => {
 
     expect(screen.getByText("New Session First")).toBeInTheDocument();
     expect(screen.queryByText("Stale Session Player")).not.toBeInTheDocument();
+  });
+
+  it("shows a load error without reviving the previous account's board", async () => {
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+    expect(await screen.findByText("Alpha Runner")).toBeInTheDocument();
+
+    auth.user = { username: "second", role: "USER" };
+    boardMocks.getMySheet.mockRejectedValue(new Error("offline"));
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText("Failed to load rankings")).toBeInTheDocument();
+    expect(screen.queryByText("Alpha Runner")).not.toBeInTheDocument();
+    expect(document.querySelector(".skeleton")).not.toBeInTheDocument();
   });
 
   it("ignores a superseded guest-sheet response after login", async () => {
@@ -526,6 +574,52 @@ describe("MasterSheetPage", () => {
     expect(screen.getByText("Second Account First")).toBeInTheDocument();
     expect(screen.queryByText("Bravo Catcher")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Saved ✓" })).not.toBeInTheDocument();
+  });
+
+  it("does not let an older queued timer clear a newer save confirmation", async () => {
+    const saveTimerCallbacks = [];
+    const realSetTimeout = globalThis.setTimeout;
+    vi.spyOn(globalThis, "setTimeout").mockImplementation((callback, delay, ...args) => {
+      if (delay === 3000) {
+        saveTimerCallbacks.push(callback);
+        return 1000 + saveTimerCallbacks.length;
+      }
+      return realSetTimeout(callback, delay, ...args);
+    });
+    localStorage.setItem("fs_board_draft:42", JSON.stringify({ rankings: [...rankings].reverse() }));
+    localStorage.setItem("fs_board_draft:84", JSON.stringify({ rankings: [...rankings].reverse() }));
+    boardMocks.getMySheet
+      .mockResolvedValueOnce({
+        data: { boardId: 42, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false },
+      })
+      .mockResolvedValueOnce({
+        data: { boardId: 84, season: 2026, rankings, isDefault: false, locked: false, scoringFormat: "FULL_PPR", superflex: false },
+      });
+    auth.user = { username: "first", role: "USER" };
+    const view = renderMasterSheet();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Save Rankings" }));
+    await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+    expect(saveTimerCallbacks).toHaveLength(1);
+
+    auth.user = { username: "second", role: "USER" };
+    view.rerender(
+      <MemoryRouter>
+        <MasterSheetPage />
+      </MemoryRouter>
+    );
+    fireEvent.click(await screen.findByRole("button", { name: /Saved|Save Rankings/ }));
+    await waitFor(() => expect(boardMocks.upsertEntries).toHaveBeenCalledTimes(2));
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+    expect(saveTimerCallbacks).toHaveLength(2);
+
+    vi.spyOn(sessionIdentity, "sameSession").mockReturnValue(true);
+    act(() => saveTimerCallbacks[0]());
+    expect(screen.getByRole("button", { name: /Saved/ })).toBeInTheDocument();
+
+    act(() => saveTimerCallbacks[1]());
+    expect(screen.queryByRole("button", { name: /Saved/ })).not.toBeInTheDocument();
   });
 
   it("shows guests the public default sheet and asks them to sign up to save", async () => {

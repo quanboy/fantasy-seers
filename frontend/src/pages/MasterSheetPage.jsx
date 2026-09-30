@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
 import { boardsApi } from "../api/client";
 import { useAuth } from "../context/AuthContext";
 import { useAuthDialog } from "../context/AuthDialogContext";
@@ -460,6 +460,7 @@ export default function MasterSheetPage() {
   const [scoringFormat, setScoringFormat] = useState(null);
   const [superflex, setSuperflex] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadedSession, setLoadedSession] = useState(null);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saveMsg, setSaveMsg] = useState(null);
@@ -478,6 +479,8 @@ export default function MasterSheetPage() {
   const [consensusNoticeDismissed, setConsensusNoticeDismissed] = useState(false);
   const [revealedPlayer, setRevealedPlayer] = useState(null);
   const revealTimerRef = useRef(null);
+  const saveMsgTimerRef = useRef(null);
+  const saveMsgGenerationRef = useRef(0);
   const searchQuery = searchParams.get("q") ?? "";
   const normalizedSearchQuery = searchQuery.trim().toLowerCase();
   const searchActive = Boolean(normalizedSearchQuery);
@@ -493,9 +496,12 @@ export default function MasterSheetPage() {
     return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
   }, [dirty]);
 
-  useEffect(() => () => clearTimeout(revealTimerRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(revealTimerRef.current);
+    clearTimeout(saveMsgTimerRef.current);
+  }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let active = true;
     const requestedSession = captureSession({ accountIdentity });
     const isCurrentSession = () => (
@@ -506,6 +512,18 @@ export default function MasterSheetPage() {
       )
     );
     setLoading(true);
+    setLoadedSession(null);
+    setBoardId(null);
+    setSeason(null);
+    setRankings([]);
+    setIsDefault(true);
+    setLocked(false);
+    setScoringFormat(null);
+    setSuperflex(false);
+    clearTimeout(saveMsgTimerRef.current);
+    saveMsgTimerRef.current = null;
+    saveMsgGenerationRef.current += 1;
+    setSaveMsg(null);
     setSaving(false);
     setError(null);
     setDirty(false);
@@ -516,6 +534,7 @@ export default function MasterSheetPage() {
     (isGuest ? boardsApi.getDefaultSheet() : boardsApi.getMySheet())
       .then(({ data }) => {
         if (!isCurrentSession()) return;
+        setLoadedSession(requestedSession);
         setBoardId(data.boardId);
         let nextRankings = data.rankings;
         if (isGuest) {
@@ -562,7 +581,9 @@ export default function MasterSheetPage() {
         setSuperflex(Boolean(data.superflex));
       })
       .catch((err) => {
-        if (isCurrentSession()) setError(err.response?.data?.message || "Failed to load rankings");
+        if (!isCurrentSession()) return;
+        setLoadedSession(requestedSession);
+        setError(err.response?.data?.message || "Failed to load rankings");
       })
       .finally(() => {
         if (isCurrentSession()) setLoading(false);
@@ -573,15 +594,17 @@ export default function MasterSheetPage() {
   }, [accountIdentity, isGuest, sessionToken]);
 
   useEffect(() => {
+    if (!sameSession(loadedSession, captureSession({ accountIdentity }))) return;
     if (viewingGuest && guestNotice) {
       saveGuestDraft(guestNotice.sheet, rankings);
       return;
     }
     if (!isGuest || !dirty || !season) return;
     setGuestDraftStored(saveGuestDraft({ season, scoringFormat, superflex }, rankings));
-  }, [isGuest, viewingGuest, guestNotice, dirty, season, scoringFormat, superflex, rankings]);
+  }, [loadedSession, accountIdentity, sessionToken, isGuest, viewingGuest, guestNotice, dirty, season, scoringFormat, superflex, rankings]);
 
   useEffect(() => {
+    if (!sameSession(loadedSession, captureSession({ accountIdentity }))) return;
     // Account drafts only ever hold the account's own edits, never guest rankings.
     if (!boardId || locked || !dirty || viewingGuest) return;
     try {
@@ -592,7 +615,7 @@ export default function MasterSheetPage() {
     } catch {
       // The explicit save button still works if storage is unavailable.
     }
-  }, [boardId, dirty, locked, rankings, viewingGuest]);
+  }, [loadedSession, accountIdentity, sessionToken, boardId, dirty, locked, rankings, viewingGuest]);
 
   const saveBoardRankings = useCallback(async ({ entries, onSuccess, onFailure }) => {
     const savingBoard = boardOwnerRef.current;
@@ -607,7 +630,16 @@ export default function MasterSheetPage() {
       setDraftRestored(false);
       onSuccess?.();
       setSaveMsg("Saved \u2713");
-      setTimeout(() => setSaveMsg(null), 3000);
+      clearTimeout(saveMsgTimerRef.current);
+      const confirmationGeneration = ++saveMsgGenerationRef.current;
+      saveMsgTimerRef.current = setTimeout(() => {
+        if (
+          confirmationGeneration === saveMsgGenerationRef.current &&
+          sameSession(boardOwnerRef.current, savingBoard)
+        ) {
+          setSaveMsg(null);
+        }
+      }, 3000);
     } catch (err) {
       if (!sameSession(boardOwnerRef.current, savingBoard)) return;
       onFailure?.(err);
@@ -638,6 +670,7 @@ export default function MasterSheetPage() {
 
   // Resolve guest rankings once the signed-in board has loaded.
   useEffect(() => {
+    if (!sameSession(loadedSession, captureSession({ accountIdentity }))) return;
     if (isGuest || !accountSheet) return;
     const format = sheetFormat(accountSheet);
 
@@ -670,7 +703,7 @@ export default function MasterSheetPage() {
       if (!stored || sameOrder(stored, accountSheet.rankings)) return null;
       return { type: accountSheet.locked ? "locked" : "offer", rankings: stored, sheet: format };
     });
-  }, [isGuest, accountIdentity, accountSheet, saveIntent, saveGuestRankings]);
+  }, [loadedSession, isGuest, accountIdentity, sessionToken, accountSheet, saveIntent, saveGuestRankings]);
 
   const viewGuestRankings = () => {
     accountViewRef.current = { rankings, dirty, draftRestored };
@@ -835,10 +868,14 @@ export default function MasterSheetPage() {
     : !isDefault
       ? "border-win-500/30 bg-win-500/10 text-win-400"
       : "border-void-600 bg-void-800 text-slate-400";
+  const pageLoading = loading || !sameSession(
+    loadedSession,
+    captureSession({ accountIdentity })
+  );
 
   return (
     <div className="mx-auto w-full py-4 sm:py-6">
-      {!loading && rankings.length > 0 && (
+      {!pageLoading && rankings.length > 0 && (
         <BoardGuide
           season={season}
           isDefault={isDefault}
@@ -851,7 +888,7 @@ export default function MasterSheetPage() {
         />
       )}
 
-      {!loading && (
+      {!pageLoading && (
         <PlayerSearchField
           value={searchQuery}
           onChange={(event) => updateSearchQuery(event.target.value)}
@@ -861,7 +898,7 @@ export default function MasterSheetPage() {
         />
       )}
 
-      {isDefault && !locked && !consensusNoticeDismissed && !loading && (
+      {isDefault && !locked && !consensusNoticeDismissed && !pageLoading && (
         <div className="mb-3 flex items-start justify-between gap-3 rounded-lg border border-oracle-500/20 bg-oracle-500/10 px-4 py-3">
           <p className="text-sm text-slate-200">
             <span className="font-semibold">Consensus rankings are your starting point.</span>{" "}
@@ -878,7 +915,7 @@ export default function MasterSheetPage() {
         </div>
       )}
 
-      {guestNotice && !loading && (
+      {guestNotice && !pageLoading && (
         <GuestRankingsNotice
           notice={guestNotice}
           viewing={viewingGuest}
@@ -891,13 +928,13 @@ export default function MasterSheetPage() {
         />
       )}
 
-      {locked && !viewingGuest && !loading && (
+      {locked && !viewingGuest && !pageLoading && (
         <div className="mb-3 rounded-lg border border-gold-500/30 bg-gold-500/10 px-4 py-3 text-sm text-gold-400">
           <span className="font-semibold">League lock complete.</span> Rankings can no longer be changed.
         </div>
       )}
 
-      {dirty && !locked && !loading && (
+      {dirty && !locked && !pageLoading && (
         <p className="mb-2 text-xs text-gold-400" role="status">
           {viewingGuest
             ? "Guest rankings shown. Not saved to your account."
@@ -913,27 +950,27 @@ export default function MasterSheetPage() {
         </p>
       )}
 
-      {searchActive && !loading && (
+      {searchActive && !pageLoading && (
         <p className="mb-2 text-xs text-slate-400" role="status">
           Search results are view-only. Clear search to reorder players.
         </p>
       )}
 
-      {revealedPlayer && !searchActive && (
+      {revealedPlayer && !searchActive && !pageLoading && (
         <p className="mb-2 text-xs text-oracle-300" role="status">
           {revealedPlayer.fullName} is shown in the full board.
         </p>
       )}
 
       {/* Error */}
-      {error && (
+      {!pageLoading && error && (
         <div className="alert-error mb-4 rounded-lg px-4 py-3">
           <p className="text-sm text-loss-400">{error}</p>
         </div>
       )}
 
       {/* Ranking controls */}
-      {!loading && (
+      {!pageLoading && (
         <div
           role="toolbar"
           aria-label="Ranking controls"
@@ -1009,7 +1046,7 @@ export default function MasterSheetPage() {
       )}
 
       {/* Loading */}
-      {loading && (
+      {pageLoading && (
         <div className="glass-card p-4 space-y-2">
           {Array.from({ length: 10 }).map((_, i) => (
             <SkeletonRow key={i} />
@@ -1018,7 +1055,7 @@ export default function MasterSheetPage() {
       )}
 
       {/* Player list */}
-      {!loading && filteredRankings.length > 0 && (
+      {!pageLoading && filteredRankings.length > 0 && (
         <div className="-mx-2 overflow-hidden rounded-xl border border-void-700 bg-void-900 sm:mx-0">
           <ColumnHeader />
           <DndContext
@@ -1046,7 +1083,7 @@ export default function MasterSheetPage() {
         </div>
       )}
 
-      {!loading && rankings.length > 0 && filteredRankings.length === 0 && (
+      {!pageLoading && rankings.length > 0 && filteredRankings.length === 0 && (
         <div className="rounded-xl border border-void-700 bg-void-900 px-6 py-10 text-center">
           <p className="text-sm font-semibold text-slate-200">
             No players match this search and position filter.
@@ -1058,7 +1095,7 @@ export default function MasterSheetPage() {
       )}
 
       {/* Empty state */}
-      {!loading && rankings.length === 0 && !error && (
+      {!pageLoading && rankings.length === 0 && !error && (
         <div className="glass-card p-8 text-center">
           <p className="text-slate-500 text-sm">No players available.</p>
         </div>
