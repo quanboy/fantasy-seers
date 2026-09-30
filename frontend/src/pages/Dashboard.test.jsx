@@ -344,6 +344,37 @@ describe("Dashboard", () => {
     expect(screen.queryByText("Stale session prop")).not.toBeInTheDocument();
   });
 
+  it("hides the previous account's feed while the new session loads", async () => {
+    const nextFeed = deferred();
+    api.propsApi.getPublic
+      .mockResolvedValueOnce({
+        data: { content: [{ ...openProp, title: "First account private prop" }] },
+      })
+      .mockReturnValueOnce(nextFeed.promise);
+    auth.user = { username: "first", pointBank: 1000, role: "USER" };
+    localStorage.setItem("fs_token", "first-token");
+    const view = renderFeed();
+    expect(await screen.findByText("First account private prop")).toBeInTheDocument();
+
+    auth.user = { username: "second", pointBank: 700, role: "USER" };
+    localStorage.setItem("fs_token", "second-token");
+    view.rerender(
+      <MemoryRouter initialEntries={["/props"]}>
+        <Routes>
+          <Route path="/props" element={<Dashboard />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(api.propsApi.getPublic).toHaveBeenCalledTimes(2));
+
+    expect(screen.queryByText("First account private prop")).not.toBeInTheDocument();
+
+    await act(async () => {
+      nextFeed.resolve({ data: { content: [{ ...openProp, title: "Second account prop" }] } });
+    });
+    expect(await screen.findByText("Second account prop")).toBeInTheDocument();
+  });
+
   it("does not apply a post-vote balance refresh to a different account", async () => {
     const user = userEvent.setup();
     const balanceRequest = deferred();
@@ -368,7 +399,7 @@ describe("Dashboard", () => {
         </Routes>
       </MemoryRouter>
     );
-    await user.click(screen.getByRole("button", { name: "Yes" }));
+    await user.click(await screen.findByRole("button", { name: "Yes" }));
     expect(screen.getByRole("dialog", { name: openProp.title })).toBeInTheDocument();
 
     await act(async () => {

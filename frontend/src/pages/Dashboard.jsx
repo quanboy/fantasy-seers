@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useAuthDialog } from "../context/AuthDialogContext";
@@ -6,6 +6,7 @@ import { propsApi, userApi } from "../api/client";
 import PropCard from "../components/PropCard";
 import VoteModal from "../components/VoteModal";
 import SubmitPropCard from "../components/SubmitPropCard";
+import { captureSession, sameSession } from "../utils/sessionIdentity";
 
 function SkeletonCard() {
   return <div className="skeleton h-28 mb-4" />;
@@ -31,11 +32,10 @@ export default function Dashboard() {
   accountIdentityRef.current = accountIdentity;
 
   const fetchProps = () => {
-    const requestedAccount = accountIdentityRef.current;
-    const requestedToken = localStorage.getItem("fs_token");
-    const isCurrentSession = () => (
-      accountIdentityRef.current === requestedAccount &&
-      localStorage.getItem("fs_token") === requestedToken
+    const requestedSession = captureSession({ accountIdentity: accountIdentityRef.current });
+    const isCurrentSession = () => sameSession(
+      requestedSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
     );
     setError(null);
     propsApi
@@ -51,8 +51,10 @@ export default function Dashboard() {
       });
   };
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     let active = true;
+    setLoading(true);
+    setProps([]);
     setProfileIncomplete(false);
     setProfileBannerDismissed(false);
     setSelectedProp(null);
@@ -69,15 +71,14 @@ export default function Dashboard() {
   }, [accountIdentity, isGuest, sessionToken]);
 
   const handleVoted = async () => {
-    const votingAccount = accountIdentity;
-    const votingToken = localStorage.getItem("fs_token");
+    const votingSession = captureSession({ accountIdentity });
     const { data } = await userApi.getMe();
-    if (
-      accountIdentityRef.current !== votingAccount ||
-      localStorage.getItem("fs_token") !== votingToken
-    ) return false;
+    if (!sameSession(
+      votingSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
+    )) return false;
     setUser((current) => {
-      if (!votingAccount || current?.username !== votingAccount) return current;
+      if (!votingSession.accountIdentity || current?.username !== votingSession.accountIdentity) return current;
       const updated = { ...current, pointBank: data.pointBank };
       localStorage.setItem("fs_user", JSON.stringify(updated));
       return updated;
@@ -91,36 +92,32 @@ export default function Dashboard() {
     ? (vote) => openAuthDialog("login", {
         onAuthenticated: (authenticatedUser) => setPendingVote({
           vote,
-          accountIdentity: authenticatedUser?.username ?? null,
-          token: localStorage.getItem("fs_token"),
+          session: captureSession({ accountIdentity: authenticatedUser?.username }),
         }),
       })
     : setSelectedProp;
 
   useEffect(() => {
     if (!pendingVote) return;
-    const { vote, accountIdentity: votingAccount, token: votingToken } = pendingVote;
+    const { vote, session: votingSession } = pendingVote;
     if (isGuest) {
       setPendingVote(null);
       return;
     }
-    if (
-      votingAccount !== accountIdentity ||
-      votingToken !== localStorage.getItem("fs_token")
-    ) {
+    if (!sameSession(votingSession, captureSession({ accountIdentity }))) {
       setPendingVote(null);
       return;
     }
     let active = true;
-    const isCurrentVotingSession = () => (
-      accountIdentityRef.current === votingAccount &&
-      localStorage.getItem("fs_token") === votingToken
+    const isCurrentVotingSession = () => sameSession(
+      votingSession,
+      captureSession({ accountIdentity: accountIdentityRef.current })
     );
     Promise.all([propsApi.getById(vote.id), userApi.getMe()])
       .then(([{ data: prop }, { data: me }]) => {
         if (!active || !isCurrentVotingSession()) return;
         setUser((current) => {
-          if (current?.username !== votingAccount) return current;
+          if (current?.username !== votingSession.accountIdentity) return current;
           const updated = { ...current, pointBank: me.pointBank };
           localStorage.setItem("fs_user", JSON.stringify(updated));
           return updated;

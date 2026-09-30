@@ -24,6 +24,7 @@ import { useSearchParams } from "react-router-dom";
 import PlayerSearchField from "../components/PlayerSearchField";
 import { withPlayerSearchQuery } from "../utils/playerSearch";
 import { getNflTeamInfo } from "../utils/teams";
+import { captureSession, sameSession } from "../utils/sessionIdentity";
 
 const POSITIONS = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
 const PLAYER_GRID_COLUMNS =
@@ -388,11 +389,6 @@ const samePlayerPool = (a, b) => {
   );
 };
 
-const sameBoardOwner = (a, b) =>
-  a?.accountIdentity === b?.accountIdentity &&
-  a?.boardId === b?.boardId &&
-  a?.token === b?.token;
-
 function GuestRankingsNotice({ notice, viewing, saving, onView, onBack, onDiscard, onKeep, onReplace }) {
   const box = "mb-3 rounded-lg border px-4 py-3 text-sm";
   const action = "rounded-lg px-3 py-1.5 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-oracle-400";
@@ -456,11 +452,7 @@ export default function MasterSheetPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [boardId, setBoardId] = useState(null);
   const boardOwnerRef = useRef(null);
-  boardOwnerRef.current = {
-    accountIdentity,
-    boardId,
-    token: sessionToken,
-  };
+  boardOwnerRef.current = captureSession({ accountIdentity, boardId });
   const [season, setSeason] = useState(null);
   const [rankings, setRankings] = useState([]);
   const [isDefault, setIsDefault] = useState(true);
@@ -505,12 +497,13 @@ export default function MasterSheetPage() {
 
   useEffect(() => {
     let active = true;
-    const requestedAccount = accountIdentity;
-    const requestedToken = sessionToken;
+    const requestedSession = captureSession({ accountIdentity });
     const isCurrentSession = () => (
       active &&
-      boardOwnerRef.current.accountIdentity === requestedAccount &&
-      localStorage.getItem("fs_token") === requestedToken
+      sameSession(
+        requestedSession,
+        captureSession({ accountIdentity: boardOwnerRef.current.accountIdentity })
+      )
     );
     setLoading(true);
     setSaving(false);
@@ -607,7 +600,7 @@ export default function MasterSheetPage() {
     setError(null);
     try {
       await boardsApi.upsertEntries(savingBoard.boardId, entries);
-      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
+      if (!sameSession(boardOwnerRef.current, savingBoard)) return;
       localStorage.removeItem(`fs_board_draft:${savingBoard.boardId}`);
       setIsDefault(false);
       setDirty(false);
@@ -616,10 +609,10 @@ export default function MasterSheetPage() {
       setSaveMsg("Saved \u2713");
       setTimeout(() => setSaveMsg(null), 3000);
     } catch (err) {
-      if (!sameBoardOwner(boardOwnerRef.current, savingBoard)) return;
+      if (!sameSession(boardOwnerRef.current, savingBoard)) return;
       onFailure?.(err);
     } finally {
-      if (sameBoardOwner(boardOwnerRef.current, savingBoard)) setSaving(false);
+      if (sameSession(boardOwnerRef.current, savingBoard)) setSaving(false);
     }
   }, []);
 
@@ -651,10 +644,7 @@ export default function MasterSheetPage() {
     if (saveIntent) {
       const { rankings: guestRankings, sheet: guestSheet } = saveIntent;
       setSaveIntent(null);
-      if (
-        saveIntent.accountIdentity !== accountIdentity ||
-        saveIntent.token !== localStorage.getItem("fs_token")
-      ) return;
+      if (!sameSession(saveIntent.session, captureSession({ accountIdentity }))) return;
       if (
         !sameSheetFormat(guestSheet, format) ||
         !samePlayerPool(guestRankings, accountSheet.rankings)
@@ -986,8 +976,7 @@ export default function MasterSheetPage() {
                     onAuthenticated: (authenticatedUser) => setSaveIntent({
                       rankings: guestRankings,
                       sheet: guestSheet,
-                      accountIdentity: authenticatedUser.username,
-                      token: localStorage.getItem("fs_token"),
+                      session: captureSession({ accountIdentity: authenticatedUser.username }),
                     }),
                   });
                 }}

@@ -5,7 +5,11 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AuthDialogProvider, useAuthDialog } from "./AuthDialogContext";
 
-const auth = vi.hoisted(() => ({ login: vi.fn(), register: vi.fn() }));
+const auth = vi.hoisted(() => ({
+  login: vi.fn(),
+  register: vi.fn(),
+  cancelPendingAuth: vi.fn(),
+}));
 
 vi.mock("./AuthContext", () => ({
   useAuth: () => auth,
@@ -74,6 +78,7 @@ describe("AuthDialogProvider", () => {
   beforeEach(() => {
     auth.login.mockReset();
     auth.register.mockReset();
+    auth.cancelPendingAuth.mockReset();
     auth.login.mockResolvedValue({ username: "demo" });
     auth.register.mockResolvedValue({ username: "newseer" });
   });
@@ -289,6 +294,7 @@ describe("AuthDialogProvider", () => {
     await user.click(within(dialog).getByRole("button", { name: "Log in" }));
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(auth.cancelPendingAuth).toHaveBeenCalled();
 
     await act(async () => {
       loginRequest.resolve({ username: "demo" });
@@ -296,5 +302,38 @@ describe("AuthDialogProvider", () => {
 
     expect(onAuthenticated).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("invalidates an older auth attempt before opening a new dialog", () => {
+    renderWithTrigger();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open auth" }));
+
+    expect(auth.cancelPendingAuth).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("dialog")).toHaveAccessibleName("Log in");
+  });
+
+  it("cancels an in-flight login when switching to sign up", async () => {
+    const loginRequest = deferred();
+    const onAuthenticated = vi.fn();
+    auth.login.mockReturnValue(loginRequest.promise);
+    const user = userEvent.setup();
+    renderWithTrigger({ onAuthenticated });
+    const dialog = await openDialog(user);
+
+    await user.type(within(dialog).getByLabelText("Username"), "demo");
+    await user.type(within(dialog).getByLabelText("Password"), "safe-password");
+    await user.click(within(dialog).getByRole("button", { name: "Log in" }));
+    await user.click(within(dialog).getByRole("button", { name: "Create an account" }));
+
+    expect(dialog).toHaveAccessibleName("Sign up");
+    expect(auth.cancelPendingAuth).toHaveBeenCalled();
+
+    await act(async () => {
+      loginRequest.resolve({ username: "demo" });
+    });
+
+    expect(dialog).toHaveAccessibleName("Sign up");
+    expect(onAuthenticated).not.toHaveBeenCalled();
   });
 });

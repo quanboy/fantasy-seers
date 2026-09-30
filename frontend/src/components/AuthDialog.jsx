@@ -64,10 +64,16 @@ function SubmitButton({ loading, label, busyLabel }) {
 }
 
 // Shared submit handling: one request at a time, inline error on failure.
-function useSubmit(action, onSuccess, toMessage) {
+function useSubmit(action, onSuccess, toMessage, cancelPendingAuth) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const inFlight = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
+    cancelPendingAuth();
+  }, [cancelPendingAuth]);
 
   const submit = async (event) => {
     event.preventDefault();
@@ -77,12 +83,13 @@ function useSubmit(action, onSuccess, toMessage) {
     setLoading(true);
     try {
       const authenticatedUser = await action();
+      if (!mountedRef.current || !authenticatedUser) return;
       onSuccess(authenticatedUser);
     } catch (err) {
-      setError(toMessage(err));
+      if (mountedRef.current) setError(toMessage(err));
     } finally {
       inFlight.current = false;
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -90,9 +97,14 @@ function useSubmit(action, onSuccess, toMessage) {
 }
 
 function LoginForm({ onAuthenticated, onSwitch }) {
-  const { login } = useAuth();
+  const { login, cancelPendingAuth } = useAuth();
   const [form, setForm] = useState({ username: "", password: "" });
-  const { error, loading, submit } = useSubmit(() => login(form), onAuthenticated, getLoginErrorMessage);
+  const { error, loading, submit } = useSubmit(
+    () => login(form),
+    onAuthenticated,
+    getLoginErrorMessage,
+    cancelPendingAuth
+  );
 
   return (
     <>
@@ -143,12 +155,13 @@ function LoginForm({ onAuthenticated, onSwitch }) {
 }
 
 function SignupForm({ onAuthenticated, onSwitch }) {
-  const { register } = useAuth();
+  const { register, cancelPendingAuth } = useAuth();
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const { error, loading, submit } = useSubmit(
     () => register(form),
     onAuthenticated,
-    (err) => err.response?.data?.message || "Registration failed"
+    (err) => err.response?.data?.message || "Registration failed",
+    cancelPendingAuth
   );
 
   return (

@@ -6,6 +6,7 @@ import { userApi } from "../api/client";
 import Sidebar from "./Sidebar";
 import PlayerSearchField from "./PlayerSearchField";
 import { withPlayerSearchQuery } from "../utils/playerSearch";
+import { captureSession, sameSession } from "../utils/sessionIdentity";
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -26,14 +27,16 @@ export default function AppLayout() {
     if (!accountIdentity) return undefined;
     let active = true;
     const interval = setInterval(async () => {
-      const requestedToken = localStorage.getItem("fs_token");
+      const requestedSession = captureSession({ accountIdentity });
       try {
         const { data } = await userApi.getMe();
         const current = userRef.current;
         if (
           active &&
-          current?.username === accountIdentity &&
-          localStorage.getItem("fs_token") === requestedToken &&
+          sameSession(
+            requestedSession,
+            captureSession({ accountIdentity: current?.username })
+          ) &&
           data.pointBank !== current.pointBank
         ) {
           const updated = { ...current, pointBank: data.pointBank };
